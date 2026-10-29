@@ -79,3 +79,16 @@ The surface helper also verifies an already-completed cache without importing
 Torch. This lightweight path rejects changed input/model or output bytes; the
 focused surface suite now passes three tests. The active downstream inference
 snapshot remains immutable and records the earlier helper implementation.
+
+
+**R-010 — regeneration must compete with a retained strong parent:** fresh raw
+outputs can improve over a tiny original yet regress against an already repaired
+reference. The downstream experiment fixes candidate hashes before regeneration
+and evaluates both geometries on identical source frames/masks. It preserves
+historical physics evidence rather than imputing it to a new reconstruction.
+Reconstruction now publishes a separate `quality` report of producer image
+agreement and temporal warnings, with explicit unassessed dimensions and no
+readiness approval. All-frame tracker reliability is retained separately. The
+new report is CPU-tested; the active inference snapshot is unchanged, so new
+publication-path GPU acceptance remains for a subsequent run. No model default,
+mesh size, trajectory or training reward was changed from these observations.

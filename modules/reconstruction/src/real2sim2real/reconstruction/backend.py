@@ -51,6 +51,10 @@ def run(request, phase, *, check_backend=False):
     output = Path(request["output"])
     video = Path(request["input"])
     options = request["options"]
+    from .quality import QualityLimits, quality_report
+
+    quality_limits = QualityLimits(**options.get("quality_limits", {}))
+    quality_limits.validate()
     prompts = option_path(request, "prompts")
     weights = option_path(request, "weights")
     sam2_weights = option_path(request, "sam2_weights")
@@ -403,6 +407,18 @@ def run(request, phase, *, check_backend=False):
             world_to_camera=np.broadcast_to(np.eye(4), (count, 4, 4)),
         )
         np.savez_compressed(output / "geometry.npz", **geometry)
+        quality = quality_report(
+            poses,
+            times,
+            image_iou=motion.get("fp_full_image_iou"),
+            tracker_reliable=motion.get("fp_reliable"),
+            limits=quality_limits,
+        )
+        quality["sources"] = dict(
+            geometry_sha256=digest(output / "geometry.npz"),
+            tracking_sha256=digest(output / "object_motion.pkl"),
+        )
+        write_json(output / "quality_report.json", quality)
         write_json(
             output / "reconstruction.json",
             dict(
@@ -427,6 +443,7 @@ def run(request, phase, *, check_backend=False):
             "timeline": output / "timeline.json",
             "mesh": export / "object_mesh/output_aligned.glb",
             "diagnostics": output / "reconstruction.json",
+            "quality": output / "quality_report.json",
             "depth": depth / "aligned.h5",
             "object_masks": export / f"object_masks/{camera}.h5",
             "human_masks": export / f"human_masks/{camera}.h5",

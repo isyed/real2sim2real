@@ -156,7 +156,8 @@ def run(request, phase, *, check_backend=False):
 
     if phase == "depth":
         depth = output / "depth"
-        depth.mkdir(exist_ok=check_backend)
+        if not check_backend:
+            depth.mkdir()
         step(
             "depth",
             [
@@ -276,7 +277,8 @@ def run(request, phase, *, check_backend=False):
 
     if phase == "metric_mesh":
         mesh_dir = output / "mesh"
-        mesh_dir.mkdir(exist_ok=check_backend)
+        if not check_backend:
+            mesh_dir.mkdir()
         # Separate process avoids keeping SAM3D and tracking models resident together.
         step(
             "metric_mesh",

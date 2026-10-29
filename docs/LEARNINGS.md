@@ -74,3 +74,8 @@ batches with a memory-mapped array. Coordinate/transform rejection tests pass;
 a real two-frame model decode produced finite forward-facing surfaces with
 18,439 vertices and 36,874 faces per frame. Full campaign video review is pending.
 The display does not repair pose or establish grasp/contact readiness.
+
+The surface helper also verifies an already-completed cache without importing
+Torch. This lightweight path rejects changed input/model or output bytes; the
+focused surface suite now passes three tests. The active downstream inference
+snapshot remains immutable and records the earlier helper implementation.

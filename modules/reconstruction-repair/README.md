@@ -34,3 +34,19 @@ Its decoder is CPU-only. Set `execution.cpu_only: true`.
 The accepted output is a reconstruction candidate, not an actor-training
 approval. Reference contact, physical contact, object stability and task
 completion must be evaluated separately.
+
+For an independently calibrated mesh whose fresh seed floats above a reviewed
+resting surface, `support_seed.propose_resting_seed` offers a bounded CPU
+plane-normal search. The caller must explicitly identify the frame's resting
+phase; the helper does not infer or propagate contact. It selects the smallest
+sampled translation passing the actual parent's image, depth and support checks,
+returns the original seed unchanged on rejection, and records every attempted
+move. Default maximum translation is 5 cm. This is a seed hypothesis requiring
+fresh tracking, not a trajectory repair or permission to train a controller.
+
+After selection, `real2sim2real.comparison_video.render` can show source RGB
+beside complete before/after object and human surfaces. Decode saved humans with
+`human_surface.decode_surface` first. The CPU renderer preserves all source
+frames, checks matching timelines, verifies the encoded video by decoding it,
+and caches only matching video/geometry/surface identities. Its transparent
+silhouettes do not establish occlusion, grasp or physical correctness.

@@ -101,3 +101,14 @@ before requesting another mesh resize. Keep unsuccessful calibration hypotheses
 and their failed validation evidence, so regeneration does not accidentally
 reintroduce a previously rejected change. These findings support the existing
 separate gates; they do not establish a new automatic correction rule.
+
+**R-011 — a good resized seed may still float:** foreground-depth registration
+can improve silhouette overlap while placing a resting object above its inferred
+support. Keep resting clearance separate from nonpenetration. The optional
+`support_seed.propose_resting_seed` helper requires an explicitly reviewed resting
+frame and tries bounded plane-normal translations, retaining actual-parent image,
+depth and support vetoes. It returns the original seed on rejection and never
+propagates a resting assumption to the trajectory. Synthetic tests cover bounded
+selection, parent preservation, insufficient correction bounds and mandatory
+phase evidence. A downstream predicted-data seed passed the checks after a small
+translation; full tracking and physics validation remain pending.

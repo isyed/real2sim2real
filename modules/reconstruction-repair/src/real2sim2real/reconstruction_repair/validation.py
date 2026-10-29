@@ -114,7 +114,8 @@ def proposal_validate(bundle: ReconstructionBundle, parent: dict, proposal: Repa
                 check(f'{metric}_{stat}_regressed', f'Preserve {metric} {stat}', before.summary[metric][stat] is not None,
                       after.summary[metric][stat], config.motion_regression_ratio)
         check('contact_evidence_missing', 'Required hand/contact evidence is present', config.require_contact_evidence)
-        check('hand_surface_separation_regressed', 'Hand-to-object separation preservation', 'hand_points_world' in o)
+        check('hand_surface_separation_regressed', 'Reconstructed hand-point separation preservation; not measured physical contact', 'hand_points_world' in o,
+              float(gap_delta.max()) if 'hand_points_world' in o else None, config.max_contact_gap_increase_m)
         check('semantic_orientation_regressed', 'Preserve previously correct semantic orientation',
               before.summary['semantic_facing_agreement']['mean'] is not None)
         check('no_declared_benefit', 'At least one declared improvement')

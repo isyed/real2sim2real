@@ -32,3 +32,16 @@ image/depth, metric-size, support and continuity evidence. Downstream acceptance
 reports now retain each measure separately. Do not select a reconstruction from
 `tracking_reliable_frames` alone. No new automatic acceptance threshold has been
 promoted into the reconstruction algorithm from this observation.
+
+**R-006 — model-family cache isolation:** a global human-model `TORCH_HOME`
+selected a DINO repository without the object model's required pretrained weights.
+An offline mesh worker failed after the human and depth phases had completed.
+Object generation now receives its own HF/Torch cache directories. Regression
+coverage checks the routing for every GPU phase. Both required object DINO models
+were loaded from their correct local cache on CPU with networking/GPU disabled.
+The preceding inference outputs were preserved and hash-verified for a downstream
+continuation. GPU mesh acceptance after this fix is still pending.
+
+The backend now exposes `--check-backend`: this imports the real model CLI with
+CUDA hidden and requests help, catching transitive package omissions before
+inference. It is a dependency check, not a complete model-weight or GPU test.

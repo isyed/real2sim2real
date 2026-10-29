@@ -51,3 +51,10 @@ now pass in offline containers with GPU access disabled. A rebuilt reconstructio
 wheel was checked for the worker and restored transform/batch modules. The repair
 suite currently passes 126 tests; the adapter suite passes 26 with one optional
 Torch interop skip. Full reconstruction acceptance is in progress, not yet passed.
+
+The first full execution completed RGB segmentation, MoGe2 depth, direct human
+motion and human-aligned depth. It stopped when mesh generation selected the wrong
+Torch model cache. The cache-routing fix passes its CPU regression check; both
+required DINO weights load offline on CPU from the corrected cache. Mesh/tracking
+and complete-artifact validation after that fix remain pending. The original run
+and completed intermediate predictions are retained by the downstream caller.

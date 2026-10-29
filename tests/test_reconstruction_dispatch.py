@@ -72,3 +72,56 @@ def test_input_mutation_rejected_before_any_model(tmp_path):
 def test_dispatcher_imports_without_scientific_dependencies():
     code = 'import sys; from real2sim2real.reconstruction import stage; assert not ({"torch","numpy","av","trimesh"} & sys.modules.keys())'
     subprocess.run([sys.executable, "-c", code], check=True)
+
+
+def test_full_backend_check_hides_cuda_and_only_requests_help(tmp_path, monkeypatch):
+    from real2sim2real.reconstruction import backend
+
+    r = request(tmp_path)
+    weights = tmp_path / "weights"
+    for name in [
+        "sam3d_body/checkpoints/sam-3d-body-dinov3/model.ckpt",
+        "sam3d_body/checkpoints/sam-3d-body-dinov3/assets/mhr_model.pt",
+    ]:
+        p = weights / name
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_bytes(b"not loaded")
+    prompts = tmp_path / "prompts.json"
+    prompts.write_text("{}")
+    r["options"].update(
+        weights=str(weights),
+        sam2_weights=str(weights),
+        sam3d_weights=str(weights),
+        prompts=str(prompts),
+    )
+    monkeypatch.setattr(backend, "engine_paths", lambda: (tmp_path, tmp_path, tmp_path))
+    monkeypatch.setattr(backend.os, "environ", {"CUDA_VISIBLE_DEVICES": "0"})
+    captured = []
+    monkeypatch.setattr(
+        backend.subprocess,
+        "run",
+        lambda args, **kwargs: captured.append((args, kwargs)),
+    )
+    backend.run(r, "human", check_backend=True)
+    assert len(captured) == 1
+    argv, kwargs = captured[0]
+    assert argv[-1] == "--help" and kwargs["env"]["CUDA_VISIBLE_DEVICES"] == ""
+    assert "run_sam3d_mhr_export.py" in argv[1]
+    assert not Path(r["output"]).exists()
+    with pytest.raises(ValueError, match="model phases"):
+        backend.run(r, "publish", check_backend=True)
+
+
+def test_object_and_human_model_caches_are_separate(tmp_path):
+    from real2sim2real.reconstruction.backend import cache_environment
+
+    human = tmp_path / "human-models"
+    obj = tmp_path / "object-models"
+    for phase in stage.GPU_PHASES:
+        env = cache_environment(phase, human, obj)
+        if phase == "metric_mesh":
+            assert Path(env["TORCH_HOME"]) == obj / "torch_home"
+            assert Path(env["HF_HOME"]) == obj / "hf_home"
+        else:
+            assert Path(env["TORCH_HOME"]) == human / "sam3d_body/torch_home"
+            assert Path(env["HF_HOME"]) == human / "hf_home"

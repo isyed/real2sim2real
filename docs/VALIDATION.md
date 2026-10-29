@@ -63,3 +63,29 @@ The offline dependency-check path is also tested across all six model phases:
 it requests only CLI help, hides CUDA and creates no inference output directory.
 This prevents a preflight from leaving an empty model-output directory that could
 block the actual run. The focused dispatcher/backend suite passes 15 tests.
+
+
+## Full reconstruction acceptance after integration fixes
+
+Two complete reconstruction artifacts have now passed schema/hash checks. One
+resumed from verified completed segmentation/human/depth predictions after fixing
+model-cache selection; the second exercised the entire fresh RGB-to-artifact
+chain. All source frames were retained (858 and 719 respectively). The module's
+point-map checks passed and the same aligned-depth hash was recorded for mesh
+generation and tracking. Runtime used separate offline model containers; this
+does not establish a fresh build of the optional combined image.
+
+The caller retained original outputs and generated full-source-timeline overlays
+for review. Both regenerated objects have markedly better silhouette agreement
+and initial floor placement than their original outputs. These comparisons do
+not isolate a single causal algorithm change or establish absolute metric scale.
+Temporal jumps and human/floor alignment warnings remain. No reconstruction
+repair, robot retargeting, physics or actor training was run in this acceptance.
+Those stages remain separate validation requirements. Detailed scenario results
+and artifact identities are held by the downstream project.
+
+The execution fixes promoted during acceptance are phase-isolated workers,
+complete human preprocessing source packaging, per-model cache routing, and a
+full-backend offline dependency-check mode without inference side effects.
+No evidence-dependent resize, smoothing or human-position correction has been
+silently promoted into reconstruction defaults.

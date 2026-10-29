@@ -121,3 +121,20 @@ weights directory, offline flags and bounded render/refiner batch settings. The
 normal object-motion backend uses it too. Checkpoint/configuration presence is
 not a model-loading test: downstream acceptance separately loaded both actual
 checkpoints on CPU and checked finite tensors before requesting a GPU retry.
+
+**R-013 — report paired gate measurements, not just failure labels:** improving
+average silhouette fit or smoothing a trajectory can still damage previously
+good frames, predicted-depth agreement or reconstructed hand separation. Gate
+reports now retain the actual maximum paired hand-gap increase and its threshold,
+explicitly distinguishing reconstructed hand points from physical contact. The
+acceptance rule is unchanged; historical immutable runs retain their original
+reports. A rejected temporal proposal must never replace its tracking parent,
+even when it greatly reduces acceleration. Keep size/support hypotheses and
+local motion acceptance separate, and mark experimental tracking candidates as
+review-only when global checks fail.
+
+A downstream full-clip tracking execution completed using the bounded resting
+seed and explicit runtime. It improved average image fit, while local regressions
+and discontinuities remained. This validates the launch path, not reference or
+actor readiness. No new automatic smoothing, resizing or gate relaxation follows
+from that result.

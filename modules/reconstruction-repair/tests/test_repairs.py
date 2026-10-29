@@ -143,6 +143,8 @@ def test_contact_regression_rejects_outline_improvement(make_bundle):
     v = validate(b, p, only("pose_recovery"))
     assert not v["accepted"]
     assert "hand_surface_separation_regressed" in v["reasons"]
+    gate = next(g for g in v["checked_gates"] if g["id"] == "hand_surface_separation_regressed")
+    assert gate["observed"] > gate["threshold"] == 0.005
 
 
 def test_missing_contact_is_not_treated_as_zero_error(make_bundle):

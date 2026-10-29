@@ -135,3 +135,9 @@ Explicit tracking-runtime and dispatcher checks pass 16 tests. The object-motion
 backend now verifies both score/refiner model files even for its offline CLI
 preflight. A separate offline CPU check loaded both real configurations and
 checkpoints (116 and 134 tensors); this does not validate GPU kernels or tracking.
+
+The repair suite passes 13 tests after adding numeric paired hand-separation
+reporting. Its regression test verifies that a rejected outline improvement
+records an observed increase above the unchanged 0.005 m limit. No acceptance
+threshold changed. A real standalone GPU tracker subsequently completed a full
+clip with explicit checkpoints; reconstruction quality remains separately gated.

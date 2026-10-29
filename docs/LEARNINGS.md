@@ -112,3 +112,12 @@ propagates a resting assumption to the trajectory. Synthetic tests cover bounded
 selection, parent preservation, insufficient correction bounds and mandatory
 phase evidence. A downstream predicted-data seed passed the checks after a small
 translation; full tracking and physics validation remain pending.
+
+**R-012 — standalone tracking must share the pipeline's explicit model runtime:**
+a direct vendor CLI invocation can import successfully yet search for checkpoints
+relative to source code. The reusable `tracking_runtime.tracking_environment`
+checks both score/refiner configurations and checkpoints, supplies the explicit
+weights directory, offline flags and bounded render/refiner batch settings. The
+normal object-motion backend uses it too. Checkpoint/configuration presence is
+not a model-loading test: downstream acceptance separately loaded both actual
+checkpoints on CPU and checked finite tensors before requesting a GPU retry.

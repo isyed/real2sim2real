@@ -140,3 +140,10 @@ Compare a fresh output against any retained strong candidate before replacing it
 After a repair changes geometry or poses, recompute image agreement: copying old
 tracker scores would describe the wrong trajectory. Downstream matched-mask
 comparisons and physical evaluation remain separate from this producer report.
+
+Standalone FoundationPose tracking must use the same explicit settings as the
+pipeline: `tracking_runtime.tracking_environment(weights_directory)` validates
+both model configurations/checkpoints and returns the weights/cache-independent
+runtime settings. Do not rely on the vendor CLI's source-relative weights
+fallback. CLI-help checks verify imports; loading the actual checkpoints on CPU
+is a separate preflight and neither certifies GPU execution.

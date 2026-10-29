@@ -56,7 +56,7 @@ The first full execution completed RGB segmentation, MoGe2 depth, direct human
 motion and human-aligned depth. It stopped when mesh generation selected the wrong
 Torch model cache. The cache-routing fix passes its CPU regression check; both
 required DINO weights load offline on CPU from the corrected cache. Mesh/tracking
-and complete-artifact validation after that fix remain pending. The original run
+and complete-artifact validation subsequently passed, as recorded below. The original run
 and completed intermediate predictions are retained by the downstream caller.
 
 The offline dependency-check path is also tested across all six model phases:
@@ -96,7 +96,9 @@ invalid-input tests. A real licensed MHR model was decoded on CPU for two retain
 frames, producing finite 18,439-vertex surfaces and 36,874-triangle topology. This
 is mesh decoding, not a new prediction or retargeting test. The focused core,
 module-contract, pipeline, dispatcher and surface suite passes 35 tests. Complete
-new comparison videos using this surface path remain under downstream review.
+new comparison videos using this surface path are verified by decoding every
+encoded frame; downstream receipts distinguish completed videos from pending
+renders and record the source geometry and human-surface hashes.
 
 
 The quality-report tests verify that successful tracker flags cannot hide poor
@@ -106,3 +108,13 @@ The focused core/module/dispatcher/surface/quality suite passes 39 tests. The
 quality role was added after the active run's source freeze; its newly integrated
 publication path has not yet completed a fresh GPU campaign. Retrospective
 reports must be kept separate from historical published artifact manifests.
+
+
+Three additional fresh RGB-to-artifact executions completed with source-frame
+counts of 778, 896 and 708. Their source snapshots and input/output hashes are
+retained by the downstream caller. Matched retained-reference comparisons use
+identical masks and sample frames rather than stale tracker scores from a
+replaced trajectory. All three fresh outputs have worse sampled silhouette
+agreement than the corresponding retained parents; successful execution is
+therefore not a claim of improved reconstruction. No additional physical
+execution or actor training is established by these runs.

@@ -72,7 +72,8 @@ on CPU into full-resolution, full-timeline surface vertices and model faces. It
 records native-to-OpenCV unit/axis conversion and content hashes, and uses bounded
 batches with a memory-mapped array. Coordinate/transform rejection tests pass;
 a real two-frame model decode produced finite forward-facing surfaces with
-18,439 vertices and 36,874 faces per frame. Full campaign video review is pending.
+18,439 vertices and 36,874 faces per frame. Complete source timelines are now
+decoded in downstream comparisons; final video verification is recorded there.
 The display does not repair pose or establish grasp/contact readiness.
 
 The surface helper also verifies an already-completed cache without importing
@@ -92,3 +93,11 @@ readiness approval. All-frame tracker reliability is retained separately. The
 new report is CPU-tested; the active inference snapshot is unchanged, so new
 publication-path GPU acceptance remains for a subsequent run. No model default,
 mesh size, trajectory or training reward was changed from these observations.
+
+
+A repeated fresh reconstruction with nearly unchanged mesh dimensions can still
+produce worse tracking. Diagnose image agreement, depth drift and temporal jumps
+before requesting another mesh resize. Keep unsuccessful calibration hypotheses
+and their failed validation evidence, so regeneration does not accidentally
+reintroduce a previously rejected change. These findings support the existing
+separate gates; they do not establish a new automatic correction rule.

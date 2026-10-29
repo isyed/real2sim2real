@@ -46,8 +46,8 @@
     },
     {
       "path": "docs/LEARNINGS.md",
-      "bytes": 7533,
-      "sha256": "dc904a8206ad372c102c3013b80c888988065b9aeb61bbed19ad5aa3f2690057"
+      "bytes": 8075,
+      "sha256": "30d38e613a3adacb827e2bfed61aa23ed0ab7b9ca430b017d684367e69480be3"
     },
     {
       "path": "docs/REPRODUCIBILITY.md",
@@ -61,8 +61,8 @@
     },
     {
       "path": "docs/VALIDATION.md",
-      "bytes": 6364,
-      "sha256": "9d5119096a98bb1450d99f5187e06f7b24a64c8f35834d83e06350458c360d4c"
+      "bytes": 7106,
+      "sha256": "4a9a55b5a090fc5828e7173608f99950fba670ac47a1537f52b63dbfae4ae6ba"
     },
     {
       "path": "examples/full-pipeline.json",

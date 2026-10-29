@@ -7,7 +7,7 @@ performance until the corresponding acceptance test has run.
 
 | ID | Finding | Module change | Evidence and state |
 | --- | --- | --- | --- |
-| R-001 | Independently installed perception models may require incompatible environments. Selecting subprocess interpreters only for the GPU calls still leaves heavy export/packing imports in the parent environment. | Reconstruction now dispatches every phase, including packing, metric input preparation, object export and artifact publication, to an explicit worker environment. `backend_commands` accepts argument arrays for externally supervised container wrappers; `backend_pythons` remains supported. | CPU dispatcher tests and offline imports in separate segmentation, mesh and tracking environments pass. Full model execution through this dispatcher is pending. |
+| R-001 | Independently installed perception models may require incompatible environments. Selecting subprocess interpreters only for the GPU calls still leaves heavy export/packing imports in the parent environment. | Reconstruction now dispatches every phase, including packing, metric input preparation, object export and artifact publication, to an explicit worker environment. `backend_commands` accepts argument arrays for externally supervised container wrappers; `backend_pythons` remains supported. | CPU dispatcher tests and offline imports in separate segmentation, mesh and tracking environments pass. Acceptance passed on a verified full-clip continuation and a second fresh end-to-end clip, including all-frame tracking and artifact hash validation. |
 | R-002 | A partially completed model chain must not be confused with a complete reconstruction. | Record the executing phase, argv, start/finish times, failure type and per-phase logs. Stop at the first failure; refuse to overwrite a partial output directory. | Tested with a failing depth worker: later phases never start, and reuse of the partial directory is rejected. |
 | R-003 | Shared depth before mesh generation removes one inconsistent input path, but monocular scale remains a prediction. | Preserve the common camera, native depth grid and point-map validation in reconstruction. Compare independently the resulting size, image agreement, motion continuity, support and human proximity before selecting repair or retargeting. | Camera/depth round-trip and mismatched-camera rejection are CPU tested. Generalization across additional complete videos remains pending. |
 
@@ -40,7 +40,7 @@ Object generation now receives its own HF/Torch cache directories. Regression
 coverage checks the routing for every GPU phase. Both required object DINO models
 were loaded from their correct local cache on CPU with networking/GPU disabled.
 The preceding inference outputs were preserved and hash-verified for a downstream
-continuation. GPU mesh acceptance after this fix is still pending.
+continuation. GPU mesh generation, full-clip tracking and complete-artifact publication have passed on a verified continuation; a second fresh end-to-end clip has also completed successfully.
 
 The backend now exposes `--check-backend`: this imports the real model CLI with
 CUDA hidden and requests help, catching transitive package omissions before
@@ -50,3 +50,16 @@ inference. It is a dependency check, not a complete model-weight or GPU test.
 creating depth/mesh output directories. The check-only path is covered for all six
 model phases, including hidden CUDA and no inference output. This keeps a failed
 or repeated preflight from obstructing a later run.
+
+
+**R-008 — image agreement does not certify 3D continuity:** a full regenerated
+mesh can fit the observed silhouette well while its inferred depth jumps between
+adjacent frames. A visible-size hypothesis may also remain below one because a
+projected silhouette and visible-surface depth do not measure the full 3D object
+diameter. Preserve metric, silhouette, temporal, support and human-alignment
+checks separately. A passed metric diagnostic permits testing a hypothesis; it
+never approves a resize or a robot reference. The current calibration contract
+already records `approved_for_use=false`, requires fresh tracking after a resize,
+and documents foreshortening and surface/center-depth limitations. Acceptance
+review now exercises those distinctions on full new reconstructions. No new
+automatic resize or smoothing default has been introduced from this observation.

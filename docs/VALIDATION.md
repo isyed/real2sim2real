@@ -97,3 +97,12 @@ frames, producing finite 18,439-vertex surfaces and 36,874-triangle topology. Th
 is mesh decoding, not a new prediction or retargeting test. The focused core,
 module-contract, pipeline, dispatcher and surface suite passes 35 tests. Complete
 new comparison videos using this surface path remain under downstream review.
+
+
+The quality-report tests verify that successful tracker flags cannot hide poor
+image agreement or motion jumps, missing scores remain unassessed, invalid pose
+and time arrays fail, and good scores do not grant physical/readiness approval.
+The focused core/module/dispatcher/surface/quality suite passes 39 tests. The
+quality role was added after the active run's source freeze; its newly integrated
+publication path has not yet completed a fresh GPU campaign. Retrospective
+reports must be kept separate from historical published artifact manifests.

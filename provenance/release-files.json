@@ -46,8 +46,8 @@
     },
     {
       "path": "docs/LEARNINGS.md",
-      "bytes": 6671,
-      "sha256": "f11c5b4be89dc79778b2f2801d8300bb59096c607ac00d4dc9cf0e5c5ad302b2"
+      "bytes": 7533,
+      "sha256": "dc904a8206ad372c102c3013b80c888988065b9aeb61bbed19ad5aa3f2690057"
     },
     {
       "path": "docs/REPRODUCIBILITY.md",
@@ -61,8 +61,8 @@
     },
     {
       "path": "docs/VALIDATION.md",
-      "bytes": 5812,
-      "sha256": "3a9d56bc8511f7f91327b59ddb94782e5beedfec8b3b827dfd259d4b0fce0ffc"
+      "bytes": 6364,
+      "sha256": "9d5119096a98bb1450d99f5187e06f7b24a64c8f35834d83e06350458c360d4c"
     },
     {
       "path": "examples/full-pipeline.json",
@@ -1196,8 +1196,8 @@
     },
     {
       "path": "modules/reconstruction/README.md",
-      "bytes": 6273,
-      "sha256": "65de7b8ba33125f28d99b93689fb39f3a45ddf116609482a969b219020d42be1"
+      "bytes": 7517,
+      "sha256": "4606d371a7661b848e5621631e85f6f683cc4fbb5ae1de5eb18e093dd0ac5eff"
     },
     {
       "path": "modules/reconstruction/docker/Dockerfile",
@@ -2776,13 +2776,18 @@
     },
     {
       "path": "modules/reconstruction/src/real2sim2real/reconstruction/backend.py",
-      "bytes": 15781,
-      "sha256": "55c81327f6f3fb2b24c0f508e4c62fb2ec5db7a29ac49be9465fab8c15cccd9e"
+      "bytes": 16454,
+      "sha256": "bfd5fc9482208c504559c12934a21a86b682286ad4ec3b826f3d4f371c5e9858"
     },
     {
       "path": "modules/reconstruction/src/real2sim2real/reconstruction/metric.py",
       "bytes": 1685,
       "sha256": "6dcb12c74db2595a86a324593359bd47759278fd21787eaa96f1c1d3a700c95a"
+    },
+    {
+      "path": "modules/reconstruction/src/real2sim2real/reconstruction/quality.py",
+      "bytes": 5164,
+      "sha256": "86e0d118bd440f216fe3b6611c5d79cbd72c485619844295eeb154d179350a1e"
     },
     {
       "path": "modules/reconstruction/src/real2sim2real/reconstruction/stage.py",
@@ -2951,8 +2956,8 @@
     },
     {
       "path": "src/real2sim2real/human_surface.py",
-      "bytes": 4132,
-      "sha256": "667850aacf6d220715111d28379f86ffa3224ae0e1af0e1eea2b26a19e61a63b"
+      "bytes": 4375,
+      "sha256": "cce78c34bd3ed102850ba2fc0a8566f9a99b29f5a1cac638daa260d7db0b59f9"
     },
     {
       "path": "src/real2sim2real/pipeline.py",
@@ -2971,8 +2976,8 @@
     },
     {
       "path": "tests/test_human_surface.py",
-      "bytes": 2127,
-      "sha256": "1336fef581b7a5e62d9b0dbbc11c5dcc238f8a16aafb783a09a92006a9031843"
+      "bytes": 2358,
+      "sha256": "eaca3bc39baae2127cd91c90f32216eed87925e132736064dbf4a5cc9acb0f7c"
     },
     {
       "path": "tests/test_module_contracts.py",
@@ -2993,6 +2998,11 @@
       "path": "tests/test_reconstruction_dispatch.py",
       "bytes": 4668,
       "sha256": "2dd07155dcb859544097a651f192f98437a94565d157cc5421eb70904c0c015d"
+    },
+    {
+      "path": "tests/test_reconstruction_quality.py",
+      "bytes": 1890,
+      "sha256": "d31095b95892b2008f5bde1db2518df4013d79d9f9c8cb6d2b2b2566c4d285bb"
     }
   ]
 }

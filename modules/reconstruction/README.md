@@ -119,3 +119,24 @@ silently reused, and a completed cache is reused only after hash verification.
 This is surface decoding for inspection, not new pose estimation, repair,
 retargeting or evidence of physical contact. A translucent display is optional;
 it does not change the underlying reconstruction.
+
+
+### Execution validity and quality warnings
+
+New artifacts also include a `quality` role (`quality_report.json`). It separates
+producer-reported image-mask agreement and object motion discontinuities from
+`tracking_reliable_frames`. A tracker can finish every frame while image fit is
+poor. Missing image evidence is reported as unassessed; it is not a pass.
+
+The configurable `quality_limits` use per-frame bounds (default 8 cm translation,
+30 degrees rotation, IoU below 0.40 on more than 10% of frames). Interpret motion
+bounds with the reported frame interval and change them explicitly for different
+sampling rates/tasks. They are review heuristics, not physical laws. The report
+records limits, warning frame IDs and source geometry/tracking hashes; it never
+changes motion or approves retargeting/actor training. Human alignment, absolute
+metric scale, support and physical contact remain unassessed by this screen.
+
+Compare a fresh output against any retained strong candidate before replacing it.
+After a repair changes geometry or poses, recompute image agreement: copying old
+tracker scores would describe the wrong trajectory. Downstream matched-mask
+comparisons and physical evaluation remain separate from this producer report.

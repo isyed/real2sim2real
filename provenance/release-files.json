@@ -46,8 +46,8 @@
     },
     {
       "path": "docs/LEARNINGS.md",
-      "bytes": 5642,
-      "sha256": "05a4f505a809f27426154ceb2c13c5af75e55e01c8c343e3bbab8acbe78457e8"
+      "bytes": 6362,
+      "sha256": "e6cc7786c62ec5b8d8e5f3560b69fde653310f980228baa2bc91f8214db8973a"
     },
     {
       "path": "docs/REPRODUCIBILITY.md",
@@ -61,8 +61,8 @@
     },
     {
       "path": "docs/VALIDATION.md",
-      "bytes": 5329,
-      "sha256": "d8a9f15d1262e537906cb3ec093a8a9cd72c7c002dd9e2b1181b4df947877c49"
+      "bytes": 5812,
+      "sha256": "3a9d56bc8511f7f91327b59ddb94782e5beedfec8b3b827dfd259d4b0fce0ffc"
     },
     {
       "path": "examples/full-pipeline.json",
@@ -1196,8 +1196,8 @@
     },
     {
       "path": "modules/reconstruction/README.md",
-      "bytes": 5218,
-      "sha256": "c37f498492ad6acc3ba0ee75d5f7b60455c78409ef5dc2f64948ebfc5d7a6e6e"
+      "bytes": 6273,
+      "sha256": "65de7b8ba33125f28d99b93689fb39f3a45ddf116609482a969b219020d42be1"
     },
     {
       "path": "modules/reconstruction/docker/Dockerfile",
@@ -2950,6 +2950,11 @@
       "sha256": "922ac530dcc8a6623c9c2170281d8fcf409ddb9ed643cb5153b9aaa61f87c6e0"
     },
     {
+      "path": "src/real2sim2real/human_surface.py",
+      "bytes": 4132,
+      "sha256": "e1c847ef0c96c807bff087361eaf0864c383196c5743de571bb8616e292c8cac"
+    },
+    {
       "path": "src/real2sim2real/pipeline.py",
       "bytes": 6459,
       "sha256": "df0ba105c06e0d891c738eb052dd317336e04fe4897fd252dc66831fda84e364"
@@ -2963,6 +2968,11 @@
       "path": "src/real2sim2real/supervisor.py",
       "bytes": 2370,
       "sha256": "1f43f99b85cd318b8a9a9b8dbb3e4de162b9ff16b782f7c05830b4bbb8fd831c"
+    },
+    {
+      "path": "tests/test_human_surface.py",
+      "bytes": 828,
+      "sha256": "c5537d5d10e6cd195053c3b22b979751701d43aca9889aeb20ffd1eb893fb27f"
     },
     {
       "path": "tests/test_module_contracts.py",

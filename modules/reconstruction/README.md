@@ -96,3 +96,26 @@ available: verify the offline caches separately before starting a long run.
 Object generation uses `sam3d_weights/{hf_home,torch_home}`; human/depth workers
 use `weights/hf_home` and `weights/sam3d_body/torch_home`. These caches must not be
 interchanged, even when both contain a repository with the same model-family name.
+
+
+### Inspecting the full human surface
+
+The `human` artifact role contains parametric MHR motion and body shape, not
+only keypoints. Decode a complete surface without fitting another human model:
+
+```python
+from real2sim2real.human_surface import decode_surface
+receipt = decode_surface(
+    "output/human.npz", "licensed-assets/mhr_model.pt", "review/human_surface"
+)
+```
+
+This optional CPU operation requires Torch, NumPy and SciPy. It preserves all
+frames and uses bounded batches and an on-disk vertex array. `vertices.npy` is
+in OpenCV camera/world coordinates in metres; `faces.npy` retains model topology.
+An optional proper rigid `world_transform` is applied after native-centimetre
+conversion. The receipt pins input/model/output hashes. Partial outputs are not
+silently reused, and a completed cache is reused only after hash verification.
+This is surface decoding for inspection, not new pose estimation, repair,
+retargeting or evidence of physical contact. A translucent display is optional;
+it does not change the underlying reconstruction.

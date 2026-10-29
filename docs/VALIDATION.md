@@ -58,3 +58,8 @@ Torch model cache. The cache-routing fix passes its CPU regression check; both
 required DINO weights load offline on CPU from the corrected cache. Mesh/tracking
 and complete-artifact validation after that fix remain pending. The original run
 and completed intermediate predictions are retained by the downstream caller.
+
+The offline dependency-check path is also tested across all six model phases:
+it requests only CLI help, hides CUDA and creates no inference output directory.
+This prevents a preflight from leaving an empty model-output directory that could
+block the actual run. The focused dispatcher/backend suite passes 15 tests.

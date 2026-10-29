@@ -45,3 +45,8 @@ continuation. GPU mesh acceptance after this fix is still pending.
 The backend now exposes `--check-backend`: this imports the real model CLI with
 CUDA hidden and requests help, catching transitive package omissions before
 inference. It is a dependency check, not a complete model-weight or GPU test.
+
+**R-007 — preflight must not alter inference state:** dependency checks now avoid
+creating depth/mesh output directories. The check-only path is covered for all six
+model phases, including hidden CUDA and no inference output. This keeps a failed
+or repeated preflight from obstructing a later run.

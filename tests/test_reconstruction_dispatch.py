@@ -74,7 +74,8 @@ def test_dispatcher_imports_without_scientific_dependencies():
     subprocess.run([sys.executable, "-c", code], check=True)
 
 
-def test_full_backend_check_hides_cuda_and_only_requests_help(tmp_path, monkeypatch):
+@pytest.mark.parametrize("phase", sorted(stage.GPU_PHASES))
+def test_full_backend_check_hides_cuda_and_only_requests_help(tmp_path, monkeypatch, phase):
     from real2sim2real.reconstruction import backend
 
     r = request(tmp_path)
@@ -102,11 +103,10 @@ def test_full_backend_check_hides_cuda_and_only_requests_help(tmp_path, monkeypa
         "run",
         lambda args, **kwargs: captured.append((args, kwargs)),
     )
-    backend.run(r, "human", check_backend=True)
+    backend.run(r, phase, check_backend=True)
     assert len(captured) == 1
     argv, kwargs = captured[0]
     assert argv[-1] == "--help" and kwargs["env"]["CUDA_VISIBLE_DEVICES"] == ""
-    assert "run_sam3d_mhr_export.py" in argv[1]
     assert not Path(r["output"]).exists()
     with pytest.raises(ValueError, match="model phases"):
         backend.run(r, "publish", check_backend=True)

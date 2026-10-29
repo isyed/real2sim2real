@@ -81,3 +81,18 @@ a failure occurred. A failed output is retained for diagnosis and cannot silentl
 be reused. The final artifact is published only after all phases finish. The
 [learning register](../../docs/LEARNINGS.md) distinguishes CPU checks from model
 acceptance evidence.
+
+For a full CLI/dependency check in a selected backend environment, use:
+
+```bash
+python -m real2sim2real.reconstruction.backend \
+  --request /absolute/path/request.json --phase human --check-backend
+```
+
+Use a separate preflight output directory. This imports the actual model CLI
+with CUDA hidden and requests `--help`; it performs no inference. Check each
+model phase this way. Import checks do not prove that all model weights are
+available: verify the offline caches separately before starting a long run.
+Object generation uses `sam3d_weights/{hf_home,torch_home}`; human/depth workers
+use `weights/hf_home` and `weights/sam3d_body/torch_home`. These caches must not be
+interchanged, even when both contain a repository with the same model-family name.

@@ -26,10 +26,27 @@ def engine_paths():
     )
 
 
-def run(request, phase):
+def cache_environment(phase, weights, sam3d_weights):
+    """Keep object-model and human/depth model caches independent."""
+    if phase == "metric_mesh":
+        return dict(
+            HF_HOME=str(sam3d_weights / "hf_home"),
+            TORCH_HOME=str(sam3d_weights / "torch_home"),
+        )
+    return dict(
+        HF_HOME=str(weights / "hf_home"),
+        TORCH_HOME=str(weights / "sam3d_body/torch_home"),
+    )
+
+
+def run(request, phase, *, check_backend=False):
     import numpy as np
     from PIL import Image
     from .metric import pointmap, check_pointmap
+    from .stage import GPU_PHASES
+
+    if check_backend and phase not in GPU_PHASES:
+        raise ValueError("Backend import checks apply to model phases only")
 
     output = Path(request["output"])
     video = Path(request["input"])
@@ -51,8 +68,7 @@ def run(request, phase):
         PYTHONPATH=os.pathsep.join(map(str, [source, body, fp]))
         + os.pathsep
         + os.environ.get("PYTHONPATH", ""),
-        HF_HOME=str(weights / "hf_home"),
-        TORCH_HOME=str(weights / "sam3d_body/torch_home"),
+        **cache_environment(phase, weights, sam3d_weights),
         MHR_ASSETS_ROOT=str(weights / "sam3d_body"),
         SAM3D_BODY_ROOT=str(body),
         FOUNDATIONPOSE_WEIGHTS_DIR=str(weights / "foundationpose/nvlabs_pytorch"),
@@ -65,6 +81,11 @@ def run(request, phase):
         PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True",
     )
     os.environ.update(env)
+    if check_backend:
+        # Import the actual model CLI, not only this lightweight wrapper. A
+        # missing transitive source package must fail before allocating a GPU.
+        env["CUDA_VISIBLE_DEVICES"] = ""
+        os.environ["CUDA_VISIBLE_DEVICES"] = ""
     for path in [fp, body, source]:
         sys.path.insert(0, str(path))
     local = output / "source.0.color.mp4"
@@ -77,7 +98,10 @@ def run(request, phase):
     def step(name, args):
         # The worker already runs inside the selected backend environment.
         subprocess.run(
-            [sys.executable, *map(str, args)], env=env, cwd=source, check=True
+            [sys.executable, *map(str, args), *(["--help"] if check_backend else [])],
+            env=env,
+            cwd=source,
+            check=True,
         )
 
     if phase == "video":
@@ -132,7 +156,7 @@ def run(request, phase):
 
     if phase == "depth":
         depth = output / "depth"
-        depth.mkdir()
+        depth.mkdir(exist_ok=check_backend)
         step(
             "depth",
             [
@@ -252,7 +276,7 @@ def run(request, phase):
 
     if phase == "metric_mesh":
         mesh_dir = output / "mesh"
-        mesh_dir.mkdir()
+        mesh_dir.mkdir(exist_ok=check_backend)
         # Separate process avoids keeping SAM3D and tracking models resident together.
         step(
             "metric_mesh",
@@ -426,5 +450,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--phase", required=True)
     parser.add_argument("--request", type=Path, required=True)
+    parser.add_argument(
+        "--check-backend",
+        action="store_true",
+        help="Check the full model CLI imports with CUDA hidden, without inference",
+    )
     args = parser.parse_args()
-    run(json.loads(args.request.read_text()), args.phase)
+    run(
+        json.loads(args.request.read_text()),
+        args.phase,
+        check_backend=args.check_backend,
+    )

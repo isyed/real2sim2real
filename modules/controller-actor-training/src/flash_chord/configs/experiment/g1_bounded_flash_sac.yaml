@@ -1,0 +1,30 @@
+# @package _global_
+defaults:
+  - g1_recon_body_flash_sac
+  - override /curriculum: bounded_acquisition
+
+scene:
+  world_count: 256
+  # Enable explicitly when a verified support.usda accompanies the reference.
+  support: false
+
+action:
+  hand_closing:
+    _target_: flash_chord.runtime.actions.hand_closing.HandClosingConfig
+    start_distance: 0.20
+    closed_distance: 0.05
+    closure_rate: 4.0
+    target_rate: 6.0
+
+training:
+  replay:
+    capacity: 1000000
+    minimum_size: 100000
+    observation_storage_dtype: float16
+  checkpoint:
+    save_interval_environment_steps: 5000000
+
+logging:
+  mode: disabled
+  entity: null
+  experiment: bounded_acquisition

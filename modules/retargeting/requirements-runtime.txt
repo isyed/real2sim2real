@@ -1,0 +1,8 @@
+pin>=3
+pin-pink>=3
+qpsolvers[daqp]>=4
+torch==2.8.0
+py-soma-x==0.2.1
+viser>=1
+loop-rate-limiters>=1
+tqdm>=4

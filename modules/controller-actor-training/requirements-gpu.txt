@@ -1,0 +1,25 @@
+coacd==1.0.11
+hydra-core==1.3.2
+imageio-ffmpeg==0.6.0
+imgui-bundle==1.92.801
+mujoco==3.8.1
+mujoco-warp==3.8.1
+newton==1.2.0
+numpy==2.4.6
+omegaconf==2.3.1
+onnxruntime-gpu==1.28.0
+pillow==12.2.0
+pyarrow==24.0.0
+pyglet==2.1.14
+scipy==1.17.1; python_version < '3.12'
+scipy==1.18.0; python_version >= '3.12'
+trimesh==4.12.2
+usd-core==26.5
+viser==1.0.30
+warp-lang==1.14.0
+distrax==0.1.9
+flax==0.12.7
+jax[cuda13]==0.10.2
+optax==0.2.8
+safetensors==0.8.0
+wandb==0.22.2

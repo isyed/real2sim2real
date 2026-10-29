@@ -1,0 +1,8 @@
+mode: disabled
+entity: null
+project: real2sim2real
+experiment: sharpa
+run_name: ppo
+log_interval: 1
+upload_checkpoints: false
+upload_training_state: false

@@ -8,7 +8,8 @@
     "Explicit size-depth handoff before mesh generation",
     "Reference-relative assets and self-contained Parquet identity",
     "Bounded generic FlashSAC curriculum; episode-specific experimental helpers excluded",
-    "Stage supervision, artifact hashes and resumable orchestration"
+    "Stage supervision, artifact hashes and resumable orchestration",
+    "Restore SAM3D Body data transforms and batch preparation source; these are Python algorithms, not datasets"
   ],
   "files": [
     {
@@ -3141,6 +3142,42 @@
       "path": "licenses/UPSTREAM-LICENSE",
       "original_sha256": "e87dc2a40b553c5f52acb3909f479afbeac8c35a85328fceaa0cab15ed50b9fc",
       "sha256": "e87dc2a40b553c5f52acb3909f479afbeac8c35a85328fceaa0cab15ed50b9fc",
+      "adapted": false
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/data/__init__.py",
+      "original_sha256": "abe836cd309d15d814afb3cf18e6eb7abd0726ea6ecc3091335bb82d7236c379",
+      "sha256": "abe836cd309d15d814afb3cf18e6eb7abd0726ea6ecc3091335bb82d7236c379",
+      "adapted": false
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/data/transforms/common.py",
+      "original_sha256": "165697629df2fe23a62bb90daa2ac8a0f67cac09d70f36844b3c089a9af5a45f",
+      "sha256": "165697629df2fe23a62bb90daa2ac8a0f67cac09d70f36844b3c089a9af5a45f",
+      "adapted": false
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/data/transforms/__init__.py",
+      "original_sha256": "ca65add3a731bf54d9917382f34f4eb3c3d8a45e9813a72c7896338f331eb4fc",
+      "sha256": "ca65add3a731bf54d9917382f34f4eb3c3d8a45e9813a72c7896338f331eb4fc",
+      "adapted": false
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/data/transforms/bbox_utils.py",
+      "original_sha256": "0f49a3f857a09f98d1fd9c609df42f875899515f5e10a0ea6b25acd7a9197d79",
+      "sha256": "0f49a3f857a09f98d1fd9c609df42f875899515f5e10a0ea6b25acd7a9197d79",
+      "adapted": false
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/data/utils/io.py",
+      "original_sha256": "821bd310455dafeb1bbb0314d239d4802d6c889a203462ff964a90e5a62df079",
+      "sha256": "821bd310455dafeb1bbb0314d239d4802d6c889a203462ff964a90e5a62df079",
+      "adapted": false
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/data/utils/prepare_batch.py",
+      "original_sha256": "c0555035944f02cfdb9d811b377a3c1ffdd2bfbfe256ee6dc501c8d9409298d0",
+      "sha256": "c0555035944f02cfdb9d811b377a3c1ffdd2bfbfe256ee6dc501c8d9409298d0",
       "adapted": false
     }
   ],

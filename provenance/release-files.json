@@ -26,8 +26,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 3852,
-      "sha256": "9c1949c989ef40d149b76e09d530fca1ccb2021ac3bd4cfe6d9107362f465d54"
+      "bytes": 3965,
+      "sha256": "46cdf7d50195617ea73e39ea8259b0171895a99b42b511d81b7fe0521d1664da"
     },
     {
       "path": "docs/ARCHITECTURE.md",
@@ -45,6 +45,11 @@
       "sha256": "eff7b1db0800dfaec1c5cc7aadd6fe68cfdf45b2062d5c9714f2827043ed2638"
     },
     {
+      "path": "docs/LEARNINGS.md",
+      "bytes": 3383,
+      "sha256": "c82e0c5dd641f09dd0f4589c9b6dfa3e67323a46f9cd34a050564e7cae8663b4"
+    },
+    {
       "path": "docs/REPRODUCIBILITY.md",
       "bytes": 1916,
       "sha256": "bf5b54787f081a6d1c11711a7d3422e9655a56d833fa5279c693ba6e0a43aac3"
@@ -56,8 +61,8 @@
     },
     {
       "path": "docs/VALIDATION.md",
-      "bytes": 1756,
-      "sha256": "555a66836965a45687e9e2828f33c6ea77eba93a0ec57ebefb35b69b24948122"
+      "bytes": 2957,
+      "sha256": "14a005c1ceb44523cfaaf7489cf7119c007e42c7ce8678bbfa84ed9dd908a6b3"
     },
     {
       "path": "examples/full-pipeline.json",
@@ -1191,8 +1196,8 @@
     },
     {
       "path": "modules/reconstruction/README.md",
-      "bytes": 2852,
-      "sha256": "0ebdbc5c80cebb58f9f60aaeaa8bc2fcc7e9257ac2bc63034cd1727d18353e2f"
+      "bytes": 4458,
+      "sha256": "c0e252872c22fbdcc956df02e74c863f110095a0149a48490359cb786d207e45"
     },
     {
       "path": "modules/reconstruction/docker/Dockerfile",
@@ -2510,6 +2515,36 @@
       "sha256": "445b5408109232c770b892cbced52c34c3a104a76c685885e66963dcc349a41e"
     },
     {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/data/__init__.py",
+      "bytes": 53,
+      "sha256": "abe836cd309d15d814afb3cf18e6eb7abd0726ea6ecc3091335bb82d7236c379"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/data/transforms/__init__.py",
+      "bytes": 401,
+      "sha256": "ca65add3a731bf54d9917382f34f4eb3c3d8a45e9813a72c7896338f331eb4fc"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/data/transforms/bbox_utils.py",
+      "bytes": 11974,
+      "sha256": "0f49a3f857a09f98d1fd9c609df42f875899515f5e10a0ea6b25acd7a9197d79"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/data/transforms/common.py",
+      "bytes": 11721,
+      "sha256": "165697629df2fe23a62bb90daa2ac8a0f67cac09d70f36844b3c089a9af5a45f"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/data/utils/io.py",
+      "bytes": 3342,
+      "sha256": "821bd310455dafeb1bbb0314d239d4802d6c889a203462ff964a90e5a62df079"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/data/utils/prepare_batch.py",
+      "bytes": 2156,
+      "sha256": "c0555035944f02cfdb9d811b377a3c1ffdd2bfbfe256ee6dc501c8d9409298d0"
+    },
+    {
       "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/metadata/__init__.py",
       "bytes": 1825,
       "sha256": "0f8dc30002c8612ef4897dea399f8b7fa45ec4e5d8d78e149f976480a3b89b53"
@@ -2740,14 +2775,19 @@
       "sha256": "5a9c2803cb7f9b8154c016be1ba875b42792630193bd046acdcfbee9b1215223"
     },
     {
+      "path": "modules/reconstruction/src/real2sim2real/reconstruction/backend.py",
+      "bytes": 14566,
+      "sha256": "1dfd7f3f2b0c9a2090de1446097f810b628e6fbd666194650639e9416e9b2ecc"
+    },
+    {
       "path": "modules/reconstruction/src/real2sim2real/reconstruction/metric.py",
       "bytes": 1685,
       "sha256": "6dcb12c74db2595a86a324593359bd47759278fd21787eaa96f1c1d3a700c95a"
     },
     {
       "path": "modules/reconstruction/src/real2sim2real/reconstruction/stage.py",
-      "bytes": 12140,
-      "sha256": "56197350102d40f99d55a2cf774088fb3407e3bd4b066840bb1f94c500804b14"
+      "bytes": 3708,
+      "sha256": "def9fa50f7b28ab2257e7df158a8e559bc46d7a68757ccfc421004895cc5ef56"
     },
     {
       "path": "modules/retargeting/LICENSE",
@@ -2866,8 +2906,8 @@
     },
     {
       "path": "provenance/extraction.json",
-      "bytes": 162800,
-      "sha256": "0e5f26141a080b8c902f35eaadae56ce54d272f465cd4c11eaf69f2d1dd74b15"
+      "bytes": 164848,
+      "sha256": "1695e29f649471ec1777ca9bfa1563d2844f43c48b9fccede9e98dc338212679"
     },
     {
       "path": "pyproject.toml",
@@ -2938,6 +2978,11 @@
       "path": "tests/test_pipeline.py",
       "bytes": 4671,
       "sha256": "13f95e90bef9bb80cc45d95bc579fd443ba5697ce5a178b6480ded4f3d72ec51"
+    },
+    {
+      "path": "tests/test_reconstruction_dispatch.py",
+      "bytes": 2615,
+      "sha256": "96cc6c7b64d1572366554a40baead85e91745adc4b35ee75dcfc3e5086b84c7e"
     }
   ]
 }

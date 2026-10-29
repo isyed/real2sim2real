@@ -31,3 +31,23 @@ Not yet established by this extraction:
 The code is a modular extraction with CPU-verified handoffs. Its original
 backend implementations have been used in prior research workflows, but that
 history is not a substitute for validating this new combined entry point.
+
+## Isolated reconstruction workers
+
+The subsequent dispatcher update passes 26 core/adapter CPU tests, with the native
+Torch-dependent interop test skipped in the thin environment. Eight new tests
+cover argument-array container prefixes, malformed commands, changed input
+rejection, stopping on a failed phase, refusal to overwrite partial work, and
+importing the dispatcher without Torch/NumPy/PyAV/trimesh. CPU-only offline imports
+also pass in existing separate segmentation, mesh-generation and tracking
+containers. Video decoding was exercised separately. These checks do not yet
+establish full inference in the new phase layout.
+
+
+The more complete worker check found a missing SAM3D Body source package named
+`data` (transforms and batch preparation, not dataset assets). Those six files
+are restored with original headers and hashes. All six full model CLI imports
+now pass in offline containers with GPU access disabled. A rebuilt reconstruction
+wheel was checked for the worker and restored transform/batch modules. The repair
+suite currently passes 126 tests; the adapter suite passes 26 with one optional
+Torch interop skip. Full reconstruction acceptance is in progress, not yet passed.

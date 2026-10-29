@@ -52,3 +52,32 @@ executables. Install core and reconstruction distributions in each one.
 Run with a guarded GPU session only after CPU preparation. The new stage
 adapter's contract is CPU tested; end-to-end model inference in this packaging
 still needs a short acceptance clip.
+
+## Isolated phase execution and diagnostics
+
+The dispatcher uses only the standard library. Each phase runs in a worker, so
+packing and publishing do not accidentally require the calling environment to
+contain every model's dependencies. The phases, in order, are:
+
+`video`, `segment`, `pack_masks`, `depth`, `export_human`, `human`,
+`depth_alignment`, `metric_inputs`, `metric_mesh`, `object_export`,
+`object_motion`, `publish`.
+
+For container integrations, `backend_commands` maps a phase to an **argument
+array** such as `["/path/to/guarded-container-wrapper", "--", "python"]`.
+The dispatcher appends `-m real2sim2real.reconstruction.backend --phase ...
+--request ...`. A wrapper must expose the explicit request/input/output/model
+paths at the same absolute paths, install the module in its selected environment,
+and enforce container-aware GPU/time limits. It must not mount unrelated user
+files or reference data. CPU phases should run without GPU access.
+
+Without a command prefix, `backend_pythons` selects a phase interpreter; otherwise
+the calling Python is used. All execution uses argv, never shell interpolation.
+`backend_timeout_seconds` bounds each phase (default 7,200 seconds); retain a
+separate whole-stage deadline in the enclosing runner.
+
+`commands.json`, `phase_status.json` and `<phase>.log` identify what ran and where
+a failure occurred. A failed output is retained for diagnosis and cannot silently
+be reused. The final artifact is published only after all phases finish. The
+[learning register](../../docs/LEARNINGS.md) distinguishes CPU checks from model
+acceptance evidence.

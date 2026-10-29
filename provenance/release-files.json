@@ -1,0 +1,2943 @@
+{
+  "schema": "real2sim2real.release-files/1",
+  "excludes": [
+    "provenance/release-files.json"
+  ],
+  "files": [
+    {
+      "path": ".dockerignore",
+      "bytes": 113,
+      "sha256": "2e5497c9512ef1ad8ede2873e89a68d8c89ade15cb0537bd6e2aae49d65f27ab"
+    },
+    {
+      "path": ".gitignore",
+      "bytes": 238,
+      "sha256": "3b5e6fd52ad93e2578f2b67367ceb0e92e88a26684ca7aea1bf3db6be63aa75a"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 969,
+      "sha256": "1b58d56ffe37f88462fd39919542b4dec1605a948c71b97cc46b784dd619c549"
+    },
+    {
+      "path": "LICENSE",
+      "bytes": 30209,
+      "sha256": "e87dc2a40b553c5f52acb3909f479afbeac8c35a85328fceaa0cab15ed50b9fc"
+    },
+    {
+      "path": "README.md",
+      "bytes": 3852,
+      "sha256": "9c1949c989ef40d149b76e09d530fca1ccb2021ac3bd4cfe6d9107362f465d54"
+    },
+    {
+      "path": "docs/ARCHITECTURE.md",
+      "bytes": 1958,
+      "sha256": "9771c9cefe22386b57d2ff85ba6d122d70e9a0e5e92f23a5c0886437124b6de5"
+    },
+    {
+      "path": "docs/DATA_CONTRACTS.md",
+      "bytes": 4232,
+      "sha256": "ec4d7a624a7ec11ee1433f27969c08acdaabeea79f590987d928e6ff74e11dec"
+    },
+    {
+      "path": "docs/INSTALL.md",
+      "bytes": 3425,
+      "sha256": "eff7b1db0800dfaec1c5cc7aadd6fe68cfdf45b2062d5c9714f2827043ed2638"
+    },
+    {
+      "path": "docs/REPRODUCIBILITY.md",
+      "bytes": 1916,
+      "sha256": "bf5b54787f081a6d1c11711a7d3422e9655a56d833fa5279c693ba6e0a43aac3"
+    },
+    {
+      "path": "docs/THIRD_PARTY.md",
+      "bytes": 1741,
+      "sha256": "794ec958a81e7a34dc4ff80ef55bee91927c5aa7d925c7395e351d03e2fdbc4d"
+    },
+    {
+      "path": "docs/VALIDATION.md",
+      "bytes": 1756,
+      "sha256": "555a66836965a45687e9e2828f33c6ea77eba93a0ec57ebefb35b69b24948122"
+    },
+    {
+      "path": "examples/full-pipeline.json",
+      "bytes": 2051,
+      "sha256": "9be42411940b38857b487d4e678ca3001260d9e0a9a17afcae4450ad8741dca4"
+    },
+    {
+      "path": "examples/prompts.json",
+      "bytes": 335,
+      "sha256": "12724220c87416b8db1c619c1ee13903c424eded0920b87c52d4de7639e8212a"
+    },
+    {
+      "path": "examples/reconstruction.json",
+      "bytes": 662,
+      "sha256": "cc8444ed8230de192c1736cfc3a7669e22bb1f60356c5b5b89b8f9c1d280cbf5"
+    },
+    {
+      "path": "examples/training.json",
+      "bytes": 676,
+      "sha256": "8d6584f8a18e04c05b7e3d4ad09a899380ed7f5481c027a4ff4b635ea45dd8fa"
+    },
+    {
+      "path": "licenses/SAM-LICENSE",
+      "bytes": 8204,
+      "sha256": "b3a5a0e2d973ab80e6610ccf1cffc40756050d0ace3cd4fec879b3ec290b2e9b"
+    },
+    {
+      "path": "licenses/UPSTREAM-LICENSE",
+      "bytes": 30209,
+      "sha256": "e87dc2a40b553c5f52acb3909f479afbeac8c35a85328fceaa0cab15ed50b9fc"
+    },
+    {
+      "path": "licenses/common-LICENSE",
+      "bytes": 581,
+      "sha256": "211d98cf9501fe8cfc7125554088e558c0a7fcefbe822be7d91ec08aa91580e7"
+    },
+    {
+      "path": "licenses/mesh-LICENSE",
+      "bytes": 581,
+      "sha256": "211d98cf9501fe8cfc7125554088e558c0a7fcefbe822be7d91ec08aa91580e7"
+    },
+    {
+      "path": "licenses/moge-LICENSE",
+      "bytes": 581,
+      "sha256": "211d98cf9501fe8cfc7125554088e558c0a7fcefbe822be7d91ec08aa91580e7"
+    },
+    {
+      "path": "licenses/mv-LICENSE",
+      "bytes": 581,
+      "sha256": "211d98cf9501fe8cfc7125554088e558c0a7fcefbe822be7d91ec08aa91580e7"
+    },
+    {
+      "path": "licenses/sam2-LICENSE",
+      "bytes": 581,
+      "sha256": "211d98cf9501fe8cfc7125554088e558c0a7fcefbe822be7d91ec08aa91580e7"
+    },
+    {
+      "path": "licenses/sam3d-LICENSE",
+      "bytes": 581,
+      "sha256": "211d98cf9501fe8cfc7125554088e558c0a7fcefbe822be7d91ec08aa91580e7"
+    },
+    {
+      "path": "modules/controller-actor-training/LICENSE",
+      "bytes": 30209,
+      "sha256": "e87dc2a40b553c5f52acb3909f479afbeac8c35a85328fceaa0cab15ed50b9fc"
+    },
+    {
+      "path": "modules/controller-actor-training/README.md",
+      "bytes": 3338,
+      "sha256": "1727601795c3031589297383d642d40479bdc367193e7b2a945beaadc7784e7f"
+    },
+    {
+      "path": "modules/controller-actor-training/pyproject.toml",
+      "bytes": 685,
+      "sha256": "7743c8e81465188a093d28bb14fe799ad92f795f10cdb7ca1784d3700d671296"
+    },
+    {
+      "path": "modules/controller-actor-training/requirements-gpu.txt",
+      "bytes": 460,
+      "sha256": "175f96b2e7c8eb2968640c874f8fd6929980d743570158e50a5c167d06bf3a64"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/__init__.py",
+      "bytes": 137,
+      "sha256": "39b67a3543de12fbe919327958818a53222b223688ef8ece33a12bc1e46d1f14"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/assets/__init__.py",
+      "bytes": 296,
+      "sha256": "d49c270216b14fed88bdb81edbffeb7632abb4e72bcf22bffbcf973153c18778"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/assets/mesh.py",
+      "bytes": 4106,
+      "sha256": "9868910150c90fbebf828b1edde85ed238823a8a44dfbbfd5fd062ad5de3ab1c"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/assets/registry.py",
+      "bytes": 10356,
+      "sha256": "3629b2c0ea67c89aada91150841c11c56694eea9a79f4750b1457693147dbd50"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/__init__.py",
+      "bytes": 209,
+      "sha256": "2e56e7c66a8934ce38deb2ee93d285b04e41dea7833e696cc1c672be71a7430d"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/action/residual_hand_pose.yaml",
+      "bytes": 381,
+      "sha256": "2f7dd4129e273ef2dd01d13bb1bc63ead06c30bf1a9609e4dab642f9a59fab3a"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/action/residual_hand_pose_stiff.yaml",
+      "bytes": 84,
+      "sha256": "b43498b1f51a7bb70955c0fe64eb00a0f5348dff114b28efa1a1b9b5c86d643a"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/action/residual_joint_position.yaml",
+      "bytes": 540,
+      "sha256": "b50ca9f2e1c20271e6275016d4f243d15c3870c360e567609bf2f3908d30033f"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/action/sonic_joint_residual.yaml",
+      "bytes": 1026,
+      "sha256": "7818e2a5ada2206b94c352479ac0fb1cbe5951de04929e8da0d4107610a4b57a"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/collision/kinematic.yaml",
+      "bytes": 173,
+      "sha256": "33f60355dd83656feb0b048b2ea0b1f92c535cd7acea3b55cc26ff30e3ca9663"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/collision/manipulation.yaml",
+      "bytes": 180,
+      "sha256": "61f65c3254bd8ef93d793825e9ccf9a15ae41ed11b343f52256c9066c2aef044"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/collision/physical.yaml",
+      "bytes": 169,
+      "sha256": "0a4e450589dd1a3d2bbaffe10490f6057a8a196b9ed9a222b6f92a4a4cae9890"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/collision/training.yaml",
+      "bytes": 170,
+      "sha256": "8e48c6d557dcee21400c83eb32310f7971086d60fdebfba52ce20e7515d6a1cc"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/curriculum/bounded_acquisition.yaml",
+      "bytes": 1213,
+      "sha256": "90e7ceb781a104e20df01a776dee8604b037c6457a5386d43d860f2ecad37ca0"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/curriculum/dexmate_tracking_250m_mixed_reset.yaml",
+      "bytes": 330,
+      "sha256": "544ee9313c0db27ada7d368e7d0427c050f6600ac134f4ef580e5f6d0411aebb"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/curriculum/recon_body_flash_sac.yaml",
+      "bytes": 2008,
+      "sha256": "6b13a3c35e9ab6461f5e5baf30b41fd806aec98816894186fbd2e06a30f40106"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/curriculum/recon_body_ppo.yaml",
+      "bytes": 2104,
+      "sha256": "c14f3172c939c193080730d8f9f4c2d6f230d387bc6878ebc4c39f38a36d2d25"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/curriculum/reference.yaml",
+      "bytes": 1964,
+      "sha256": "5e68858c43ef810fe50ef191519964c9b1723c9d02d251c328dc2850bcbc2626"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/curriculum/tracking_250m_mixed_reset.yaml",
+      "bytes": 2234,
+      "sha256": "1ce7b461952adaf250aed5d2f6b387714ac7565c015d06a9d85e80b40ca854ff"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/embodiment/dexmate_sharpa.yaml",
+      "bytes": 2957,
+      "sha256": "a0ec5fd3f9a47cf0d68c5365c30eb63ba7f8aaba6a964fba3f0897f00c1b0d7c"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/embodiment/g1_dex3.yaml",
+      "bytes": 269,
+      "sha256": "fd4cbbed22ab13788f26e0e16b73fea68728d642c00ad6568af098426876b114"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/embodiment/sharpa_hands.yaml",
+      "bytes": 134,
+      "sha256": "3db21d5647f380becbed3dd21f41caac2226c222985707d4933b194531fc88d5"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/embodiment/sharpa_hands_primitive.yaml",
+      "bytes": 570,
+      "sha256": "ccea7deedf2b19ca9b5a2d34250bad28f5477f05f4f0ed1828fd003835a5994b"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/embodiment/sharpa_hands_stiff.yaml",
+      "bytes": 149,
+      "sha256": "4982c5cb18241dc638cd6f13d819eb61ba4a88b9a93044e01f24e1f259393df0"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/env/rl.yaml",
+      "bytes": 653,
+      "sha256": "1250e212cd6ab3b6ecff079facbd0d232e96c948747da2e57d2949b287a523c0"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/evaluate_policy.yaml",
+      "bytes": 372,
+      "sha256": "472bec8f091593ffb8e90262d3af71fbfa4a221fbf3ed17029cbe86b005c27ab"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/evaluation/default.yaml",
+      "bytes": 156,
+      "sha256": "5de307fcf589f36eb0c0cdfa5eb8b7e3388c137598fee3ed8bd39faca7231025"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/evaluation/flash_sac.yaml",
+      "bytes": 361,
+      "sha256": "14d3174a57f285efc6007c779f47bd7a3bc7f5bd3fc3738beabc6bd957801498"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/evaluation/view.yaml",
+      "bytes": 232,
+      "sha256": "e4915720eeb1a6b2a9d5016219ed510994bf76eb2f4a958e117d6a06ae25ef44"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/experiment/dexmate_sharpa_flash_sac.yaml",
+      "bytes": 2449,
+      "sha256": "5ea0545b345bf7626ebd09f867b2700960e544e6e528fca2337acdaa35d85d7a"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/experiment/g1_bounded_flash_sac.yaml",
+      "bytes": 660,
+      "sha256": "d2ef0a67cc792a033a849bc6dd86bd2983d77b26dfeb05c1ae284d9cdb28485a"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/experiment/g1_recon_body_flash_sac.yaml",
+      "bytes": 2306,
+      "sha256": "e2d3edcdf0dafd8dc241d4318d54d537ebb77d62cefc62203c0f35cacea075d8"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/experiment/g1_recon_body_ppo.yaml",
+      "bytes": 2292,
+      "sha256": "4945c08343014ecf07069111e6d9fb703c3e5d17360da16b4ebfea7d479c2eb1"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/experiment/sharpa_flash_sac.yaml",
+      "bytes": 1331,
+      "sha256": "119191646afec17ddfb19b41ab7cce7771e307250482fd3a2a81d7a07d35926c"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/experiment/sharpa_ppo.yaml",
+      "bytes": 678,
+      "sha256": "06f528a22283d9953c6f12f7701340dfa6c5c7773ebc2eca90e44a3e7ec0da65"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/logging/wandb.yaml",
+      "bytes": 155,
+      "sha256": "6e96d675a31d023f123a9ff4605479ce04023019f12ca4bf542ad209fd14a973"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/markers/default.yaml",
+      "bytes": 95,
+      "sha256": "8bd44f9412577c6774258b37b69ae7497ac5bc375ded8b6b2c8a147e029668f9"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/objective/recon_body.yaml",
+      "bytes": 742,
+      "sha256": "9a593935ad44bdb5aa017ee9e661036d55845e4574814124b31059ee8350ef4f"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/objective/tracking.yaml",
+      "bytes": 1711,
+      "sha256": "b25e5b13e7336db989496de6ccebfa32c27fe119f05cd3f5ddfd60826d0c4ceb"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/objective/unassisted_tracking.yaml",
+      "bytes": 1319,
+      "sha256": "b82b9d0a0c13469b5e3f0297163ea205be6336d2384f8e34405f58a5b8b90de9"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/observation/articulated_arm.yaml",
+      "bytes": 148,
+      "sha256": "1afe6be5a77e4b5d4dce53b6040835947e0d712bf39291bdaf94fac1dcb29a29"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/observation/policy.yaml",
+      "bytes": 2268,
+      "sha256": "02e67dc30505c7b0e9766e0cd1e42f95544fd7f9d74535847206d4715612c720"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/observation/recon_body.yaml",
+      "bytes": 65,
+      "sha256": "a2dcaf15978d8a8f46c91de500d0a802c4ca73907a6a85c9025c4ce8c78ef713"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/replay.yaml",
+      "bytes": 323,
+      "sha256": "13f877daee5b7df39f7b09b515454fe8cd51c43278d762775c7e6daefb6da33d"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/replay/kinematic.yaml",
+      "bytes": 282,
+      "sha256": "191c0b20014427a674a223c5d11f99b25b6854ec069eb97995c44e7a0ece6655"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/replay/physical.yaml",
+      "bytes": 276,
+      "sha256": "3e85439a1c28451dd4674c801601688fa42bcdb5e4eb794a8dd59f11e1413fdc"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/reset/recon_body.yaml",
+      "bytes": 294,
+      "sha256": "244b1756036f393f056d6f77fc6f61595b065e447fa8a4ce15055854605863b6"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/reset/reference.yaml",
+      "bytes": 240,
+      "sha256": "aa18e1fb938be00d47ac43c2d06239a0e9fa96530b08a27cbad817f0a0f9982e"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/scene/eval.yaml",
+      "bytes": 171,
+      "sha256": "d014cd51399f37f2ee3d83deed1d8e12387102834d064e3975c74a3ecedeacf6"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/scene/replay.yaml",
+      "bytes": 171,
+      "sha256": "d014cd51399f37f2ee3d83deed1d8e12387102834d064e3975c74a3ecedeacf6"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/scene/train.yaml",
+      "bytes": 174,
+      "sha256": "b6fd81bd9b931f1533e0d29dca3eb79e61a2014ec52b711ffac7edfb7541c21f"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/sim/recon_body.yaml",
+      "bytes": 354,
+      "sha256": "86d7f0890b756ad4e47518ad2ec197d8adeda121ddd2c9d73633a62dc9b7ac8c"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/sim/replay.yaml",
+      "bytes": 224,
+      "sha256": "69398a046896dc1c658a62e431dcde1ab840098eae31adbd37794679dd31fa10"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/sim/rl.yaml",
+      "bytes": 221,
+      "sha256": "695536b798ff5f7b1d391e3a6932288e23329c026f27cd364f77230d703f4b66"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/sonic_replay.yaml",
+      "bytes": 1011,
+      "sha256": "547fab73348d3b1ed82811bb19011afdd95235e387e7e081b81f47926e9b26ec"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/task/default.yaml",
+      "bytes": 237,
+      "sha256": "a5ebaa6d2a084dc53f8775b807e37e5463c14d9709859a575595a38bbdaff5a0"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/termination/recon_body.yaml",
+      "bytes": 344,
+      "sha256": "fd039fba9830d6441206888c7c16613795f90f7b8281e53192c24b84cbb6dce1"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/termination/tracking.yaml",
+      "bytes": 697,
+      "sha256": "7491bef1e160e150d8ee913b792a31f7e9321ffbb19a6410a35fdebe263b4a9d"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/train.yaml",
+      "bytes": 510,
+      "sha256": "fc00ddbabbade7c94c9b889ef78cf6eac2fab7b326b76b73c7ffe8f50363ef43"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/train_flash_sac.yaml",
+      "bytes": 849,
+      "sha256": "15f8016e9450aa233336dc8c50d06afe881ff24b2edee81196a8f0faee59608c"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/training/reference_flash_sac.yaml",
+      "bytes": 2401,
+      "sha256": "a6a2ace11861b0250cab4ede8784f1cd878121d6f5415178af77b838eecce9b3"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/training/reference_ppo.yaml",
+      "bytes": 1217,
+      "sha256": "8bddd77e0a5a86ab13b1542521b9b80f3a4cbb82fcc900c7a5766ddd11269e75"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/view_policy.yaml",
+      "bytes": 536,
+      "sha256": "75e14283ff5b020198fe6bc7f41ddd2f338a7f2a36090c34c4eaf803a08d9dcc"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configs/viewer/default.yaml",
+      "bytes": 438,
+      "sha256": "babe1ab105202d0138c20094ea4e01883fc4fb638740cec844f58cccf036626c"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/configuration.py",
+      "bytes": 3240,
+      "sha256": "c2594dacf4a4d2e3c9245fc4f0b2cc7786d0545b4b09767c5abb14312aebaf72"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/data/__init__.py",
+      "bytes": 1509,
+      "sha256": "f3ac6bd433207af1f2695b2a757c6a06fcffbaf32652ab2b43cf1c0e3973ff96"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/data/buffers.py",
+      "bytes": 1998,
+      "sha256": "75a327ffdaa15daaf4c16f1d036ab62ad335aa6cf3ecb62eb0ba70136f38b997"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/data/loader.py",
+      "bytes": 2554,
+      "sha256": "7af2e2a6791f540184040da43a6962adffe53e777aa3bd1674cf15936767b8c3"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/data/mano_sharpa.py",
+      "bytes": 17038,
+      "sha256": "d145ba8e28eda3e52bcda4f407dd6c7022472d4de29e769f027c0d917876235a"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/data/motion_v1.py",
+      "bytes": 25917,
+      "sha256": "bc3f959c8618a4a8dbe16e0553ba0fa09cce7c3ea68e2893b7423ad06fe6a9b2"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/data/parquet.py",
+      "bytes": 3302,
+      "sha256": "2db0cd19c8868a91d7c6b35ff090a1e11eedaa0d053b1601b0959fe19811b201"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/data/reference.py",
+      "bytes": 11326,
+      "sha256": "1b1acfed700ac7e393b13136ab7bcc1ae0094831d322a58f49a40db7445a8568"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/data/resampling.py",
+      "bytes": 4679,
+      "sha256": "cd1bf9e932eb74f71ebb115f73bd647e54c02e6549fa3ee3b124824ccb4eed33"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/embodiments/__init__.py",
+      "bytes": 561,
+      "sha256": "b51c29dca6ae08379b803abdeb4c09b7f3cf3b3da47a409a5015b135b5f82251"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/embodiments/base.py",
+      "bytes": 28192,
+      "sha256": "4140ea1c18c8a407233feb42c3250ab384faacba4379086032f8c7f539c8f07b"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/embodiments/binding.py",
+      "bytes": 20899,
+      "sha256": "e2e4a5c30bcf2e3f4775f3d55210d268e8e671e6f7ee0c2c4b0ae96a3c8eeafb"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/embodiments/frames.py",
+      "bytes": 6111,
+      "sha256": "1d104125595682ad5666fa6f585d3ccbb985d13c08c3c3f3667dbde10deb9b4d"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/embodiments/g1_dex3.py",
+      "bytes": 22106,
+      "sha256": "c61742fb4d9f95c53c4e87cc2c4daa97812cf01db98ba11805d2592d048bffca"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/embodiments/sharpa_collision.py",
+      "bytes": 12066,
+      "sha256": "307ed6dd45f4cff7229ad7fa2ed95c6da82a64a60a4863421ba7a651b9a82e75"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/embodiments/sharpa_hands.py",
+      "bytes": 14670,
+      "sha256": "d8c56d13b89934f3bac19aa00d41c8052ab92afa016d301205b7bc1e65e80c9e"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/embodiments/vega_sharpa.py",
+      "bytes": 27242,
+      "sha256": "8dfa6b4b6cc9aa1ac3fdc9dcf7766d5a6c9e630d7998387c636e833ddce6ced9"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/envs/__init__.py",
+      "bytes": 137,
+      "sha256": "39b67a3543de12fbe919327958818a53222b223688ef8ece33a12bc1e46d1f14"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/envs/base.py",
+      "bytes": 15228,
+      "sha256": "5011b2c672911d4d0b68fe0f832e6a333943627e5020308fd3bd241619dd3292"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/envs/observation.py",
+      "bytes": 37076,
+      "sha256": "da4f521f6fad58717687d0fafbfbffde9d9d690bd6cdf924e678bc3d58a1ce69"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/envs/recon_body.py",
+      "bytes": 17604,
+      "sha256": "ef4c5cbf415d2cb9e651d8b993bfd587c9784181497b9781c7574ee6abbf4824"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/envs/rl.py",
+      "bytes": 20686,
+      "sha256": "6fa9f755f405e416ecc481d6fc6ec82c9201e89647d2d0ffe75b611a19987756"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/evaluation/__init__.py",
+      "bytes": 863,
+      "sha256": "a5e76c78143e46c25c07f8ca9b58cded5a23dfbfe300a71b7aa86b043e57d94b"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/evaluation/harness.py",
+      "bytes": 28139,
+      "sha256": "a1ff4ac5803e159602bb07022580a35e8ea7bb6d4723c6fb0dde708cc46aaddb"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/evaluation/metrics.py",
+      "bytes": 20050,
+      "sha256": "ef641481aaefd2792cb106df43ede28b0b52223b30f610be4d28286cc4d0209e"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/evaluation/rollout.py",
+      "bytes": 20033,
+      "sha256": "7794b59dd52c43fcbffeb5c8f09a91feb35bae11082fda4cf4d237423b1fdeb4"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/evaluation/view.py",
+      "bytes": 1619,
+      "sha256": "64bb9e7845a8446fbbccb290a2c0f231e042fbc4280852dbce4a4675d9a122c4"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/lifecycle/__init__.py",
+      "bytes": 274,
+      "sha256": "2dbdf7e37ece62de7f171886ac55cf102c447c2985097e2efbbc4d5f719e1014"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/lifecycle/curriculum.py",
+      "bytes": 6327,
+      "sha256": "77e8afc0b5a93d98579751e7ac3203bc5f49bca59be685861dae882432c9318e"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/lifecycle/reset.py",
+      "bytes": 41295,
+      "sha256": "f43221defb9814970d36b72b8b524d73418deabbedd88cc95cc7166e6622a8d2"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/lifecycle/termination.py",
+      "bytes": 30821,
+      "sha256": "4936238332a8fc77f9502baab7783eff1750a920e213ad7f0b6090c55a1bc9b6"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/objectives/__init__.py",
+      "bytes": 373,
+      "sha256": "4730f9f768f0998d83ef195412ea8db4b84ad152291fc73476f5df05b7f0c5ed"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/objectives/composition.py",
+      "bytes": 6367,
+      "sha256": "e8760120758a8464d887c861a71f031c97abcc5aec9c3288ad9b5df1e036d8bc"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/objectives/config.py",
+      "bytes": 10367,
+      "sha256": "fe405baa40b728c05f483d7e1ef9dc81757f5dd4955c6e8437fae95189a559c7"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/objectives/contact.py",
+      "bytes": 10173,
+      "sha256": "5ae2514e7a27f2c856720d857ba7224906e3d75ea37bf2ba791d229a8119642b"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/objectives/joints.py",
+      "bytes": 1580,
+      "sha256": "19c5a3068e69ca0de0e14b4b932fbbb66027ae8a40c994a0599f1a2de0b41d2d"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/objectives/keypoints.py",
+      "bytes": 3366,
+      "sha256": "850a44670addd07afac60dbe584d40f82035c78a889fd6649fe98db37a524770"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/objectives/recon_body.py",
+      "bytes": 25424,
+      "sha256": "622a301d0368f1cfccff35586d76ece65a4de553e6bedb81cd9d97ef42cce94f"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/objectives/shaping.py",
+      "bytes": 1069,
+      "sha256": "e690b2689ca936ed7d58ad6b28481fe8c43f8d7ce80911f21fd4f56ddbd4773e"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/objectives/tracking.py",
+      "bytes": 31762,
+      "sha256": "c152cd0bf1e8fcbee2f1b27959b883cd9989b3176820af7793c44c92a177291c"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/objectives/wrench.py",
+      "bytes": 9741,
+      "sha256": "e59cfa1fe135fb3d30dd54d8a184a965f07580555af1215c42598edc8109862f"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/runtime/__init__.py",
+      "bytes": 451,
+      "sha256": "979af795ffc679928753425266ceecd99958e74fe14e8e517351228ba43b8c38"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/runtime/actions/__init__.py",
+      "bytes": 1036,
+      "sha256": "34b68e709ae11b96fdf0a1e4926a7c0a2e907e9333881e0ad6c096c9066458dd"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/runtime/actions/hand_closing.py",
+      "bytes": 9784,
+      "sha256": "b5c0829349717dfd93baab6d4731a0441322a2339f8ab94da9753d0a62f842c7"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/runtime/actions/hand_pose.py",
+      "bytes": 23739,
+      "sha256": "b2653ace789c5df7d0c789ff20adc277d710e5aece9722a1b87ce63ab39ca226"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/runtime/actions/joint_position.py",
+      "bytes": 18029,
+      "sha256": "629254073a59bfb8935acde62ae7d2ebd7962326eaa9eb809f82f1bafdb8b71f"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/runtime/actions/sonic.py",
+      "bytes": 40867,
+      "sha256": "9c6e66b2ac739601fc01e0fbd587f23c738ecfa48ea742431fd3b35a748f044c"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/runtime/command.py",
+      "bytes": 15951,
+      "sha256": "2d9256c4757f9528afaf5a457047358fcf42d18ad826cadd36aaa5417c72c441"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/runtime/contact.py",
+      "bytes": 21412,
+      "sha256": "fdd3925596be30306ba0da92da8fd3c909ad09df0e9ef0a5ec2e42b2ce0de53f"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/runtime/control.py",
+      "bytes": 4695,
+      "sha256": "f429a65e0dd7765b09806616356e10b3c45a080ae24647aaa97a9339a277119e"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/runtime/delay.py",
+      "bytes": 8280,
+      "sha256": "6cf57bfc943cbc6217019d5cf10638d16ca930e52a797758bea4be2411204bda"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/runtime/jax.py",
+      "bytes": 944,
+      "sha256": "e65508f960cbd9d4513b3c7673bc431b75167618702f107a5767098f5831ba36"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/runtime/joint_drive.py",
+      "bytes": 17180,
+      "sha256": "b460e08bec5bcc11d0c37478e501210dc13ffdfd8badfc2dcec4d58634cdd5ad"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/runtime/object_control.py",
+      "bytes": 7977,
+      "sha256": "dea5054abf2468efb0df3fe34ee0fe015d121cd3c2ebf59976be9773732fb147"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/runtime/replay.py",
+      "bytes": 7316,
+      "sha256": "f86bfb1d346c19c73d0c26241e4d15540bd143834a3db3858de759b82b35dbec"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/runtime/residual.py",
+      "bytes": 4007,
+      "sha256": "d52cfa3818a2ef5761aae6f40b012d3e188cb32fb43822ad6bf9146750d09f67"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/runtime/sim.py",
+      "bytes": 3349,
+      "sha256": "4ede920bd4b07a231b31ab9e122029977fe46217797944c900f0bc60582dcf6f"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/scene/__init__.py",
+      "bytes": 327,
+      "sha256": "feef22727fc4b8050d7c427220ce9f4dec9f7ab9c2997943d29fe3a22e88b956"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/scene/builder.py",
+      "bytes": 24780,
+      "sha256": "5e8e73faa0288a8a2ce64b4dfaf5a56ca87a98b5dc7eb7e2653673fa514e5bd9"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/scene/collision.py",
+      "bytes": 7416,
+      "sha256": "adf0192849d6e2df2ef6ed011dbd9614c469dbb2d792de4fd552b15ab5609c14"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/scene/objects.py",
+      "bytes": 22575,
+      "sha256": "6eda2436b0e52eac205bb859fee4e9ef8f83265c08979a6c1da188d8bd3a216a"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/scene/setup.py",
+      "bytes": 3147,
+      "sha256": "f2cc848f7a425b8b08d52cdece9623261d8c4febe97e5e9fc2cdd66bfbd21118"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/scene/support.py",
+      "bytes": 9110,
+      "sha256": "6b25be61edac4c990be601ee9e3b6198ed4b2e4bf9d12650b48e6d96a47c4869"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/training/__init__.py",
+      "bytes": 198,
+      "sha256": "be8a8aa383ee780c3910062e66ac97d85ca2ebb9b175e81802513cd4e3f2a816"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/training/checkpoint.py",
+      "bytes": 5665,
+      "sha256": "02c0ddc11655d8cd231c0b14cca4f37f635029fca53d9e2180f8de87176419d0"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/training/checkpoint_metadata.py",
+      "bytes": 19261,
+      "sha256": "e63c0f5642b95f7bb4cddbfaf61fe114bb17fcc9ad15240c73e2ab9ad7dcca73"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/training/environment.py",
+      "bytes": 11885,
+      "sha256": "912fa984b20010dd3eb0484280a0e90076891f56f6fadac0cd71cdccb2490a01"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/training/flash_sac/__init__.py",
+      "bytes": 626,
+      "sha256": "d63707e44af68702acb24b14a6fd6e2145657796d650540491cc8793964a7099"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/training/flash_sac/checkpoint.py",
+      "bytes": 8571,
+      "sha256": "6a15dd0c44f0edda685d3c9bfedc6f651f65514b2ef83fa3bc51d1cca79483cc"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/training/flash_sac/config.py",
+      "bytes": 18924,
+      "sha256": "c2e35603b2d7b03996ecb7227807a5d9d515364aedbc0123009ea5c21a17d307"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/training/flash_sac/evaluation.py",
+      "bytes": 5826,
+      "sha256": "4e9fab0a026b87f2ba8c818cd4e1a71082d958d73acc75a8c37c23ae189176d7"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/training/flash_sac/exploration.py",
+      "bytes": 5717,
+      "sha256": "3d6734fc7161f73275e9df394bf925ab85169a8812837603a5495a5d4cb04fd7"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/training/flash_sac/learner.py",
+      "bytes": 45648,
+      "sha256": "96ee84f3671726830b9bb551bc6cc77c8d58e746697a7aac6cab967ae2d02dad"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/training/flash_sac/network.py",
+      "bytes": 20944,
+      "sha256": "77f918f30ab691deff9075efab0e3708424f433ce32b2cded1b08e06d697a8ad"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/training/flash_sac/replay.py",
+      "bytes": 19992,
+      "sha256": "76a2bdc9770bb2f2cb49165faed30ff11db7657d8527b8c19162a723af75907f"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/training/flash_sac/reward_normalization.py",
+      "bytes": 5456,
+      "sha256": "0d28265f60132da0eeb2c6fba969a2094786549e606a408d99e54c443954cd01"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/training/flash_sac/runner.py",
+      "bytes": 31103,
+      "sha256": "d70a1bd1495fa0851d93fb1834a8b2719da6a07513f21247525cea5c8e1b9d9f"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/training/flash_sac/update.py",
+      "bytes": 10287,
+      "sha256": "88b8a6ce053dda20edc4397b7a2167821f46f6bc61ac762564aff6b3ee736d5f"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/training/ppo/__init__.py",
+      "bytes": 193,
+      "sha256": "86ddb7d4961db115be61f1e6a1b20f312115d81288bbf88cfcd1cc7e34f4652f"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/training/ppo/algorithm.py",
+      "bytes": 10048,
+      "sha256": "98941f3e3e1bc45e2a734356f577ed50648f697dfe54fa18b5d7c7a1f2acf1e6"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/training/ppo/config.py",
+      "bytes": 6591,
+      "sha256": "4eeaf2177d07e6e6e604735f63001cbb8480c8f0390e0b133b132a53a4d70a77"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/training/ppo/evaluation.py",
+      "bytes": 2069,
+      "sha256": "d161d6436cec69d950267e4153ab783e3f8e7aa96aeb535170d92df49e6dcd1f"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/training/ppo/learner.py",
+      "bytes": 3712,
+      "sha256": "001fea28cdf2a5fbe56891a3627d9e4fdc9a30ffc228a32be1b42eff91c2753e"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/training/ppo/network.py",
+      "bytes": 1868,
+      "sha256": "b20ca398f1eb566a055354d63e1ef44aaa19b9e3e622c0510728fcd317c57199"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/training/ppo/normalization.py",
+      "bytes": 1937,
+      "sha256": "e15f972fa51f0693ee976488eb2eab6b07ff0070647b3ecfbf21441b19ba5de4"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/training/ppo/rollout.py",
+      "bytes": 6481,
+      "sha256": "5d2de14916e58bbe45d34d0f446edbdc156f16eab0afe813ee8d893558fd1e90"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/training/ppo/runner.py",
+      "bytes": 17744,
+      "sha256": "daf180e490e5c6179727d8790d417ce0af1ef8a4a65d3da856d40ae135cce9d3"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/training/progress.py",
+      "bytes": 4634,
+      "sha256": "8a69cbfe806cfe6d6d9dad29a2d22437fd0955b3a00f9ceaf7013f0aea392fad"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/utils/__init__.py",
+      "bytes": 137,
+      "sha256": "39b67a3543de12fbe919327958818a53222b223688ef8ece33a12bc1e46d1f14"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/utils/labels.py",
+      "bytes": 1118,
+      "sha256": "5ebe607283adcf4b7d3e11fb88fba951aa51765022bb243b7dc45e45afa96e51"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/utils/quat.py",
+      "bytes": 2747,
+      "sha256": "62f04d2585a7bf70586a8b2924e20c7334753f9ad8d557da9bf7b5afb2ab3035"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/visualization/__init__.py",
+      "bytes": 303,
+      "sha256": "5608e99481d15a9994d165e3eededa2470f1fbba83042b6ecf3f81c491d74e79"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/visualization/markers.py",
+      "bytes": 11044,
+      "sha256": "4e445b3ace2501da14c3bbf780e022d16a113e2c8377fbf9152f034131f7ed20"
+    },
+    {
+      "path": "modules/controller-actor-training/src/flash_chord/visualization/viewer.py",
+      "bytes": 15214,
+      "sha256": "1c986086280b08d544e37412b11ae1838ecfe426ab7a116cece3fd8a3f3ff581"
+    },
+    {
+      "path": "modules/controller-actor-training/src/real2sim2real/controller_actor_training/__init__.py",
+      "bytes": 67,
+      "sha256": "7c9c47f5ec0e8b2174b08f4844bad6d182cf65320b4d93113721dadf14c155cd"
+    },
+    {
+      "path": "modules/controller-actor-training/src/real2sim2real/controller_actor_training/evaluate.py",
+      "bytes": 3773,
+      "sha256": "4563b036d6fa70bf0eec398ec196e7bf6577b1d5a21b7dd4c4e55b0def70d94d"
+    },
+    {
+      "path": "modules/controller-actor-training/src/real2sim2real/controller_actor_training/stage.py",
+      "bytes": 4441,
+      "sha256": "cc2336ef97f2082785346be6474eb509aa9432d0387537884e5615802f9137c5"
+    },
+    {
+      "path": "modules/controller-actor-training/src/real2sim2real/controller_actor_training/train.py",
+      "bytes": 4834,
+      "sha256": "9f40e77083f68b229bf8f4b7d48d236c06fe883d995f5f2b07c81b45948ab69f"
+    },
+    {
+      "path": "modules/controller-actor-training/tests/test_curriculum.py",
+      "bytes": 5826,
+      "sha256": "a489fb4ae346c2992016fd50264e95a92a3d03f837f5189abe55e257e4894604"
+    },
+    {
+      "path": "modules/controller-actor-training/tests/test_hand_closing.py",
+      "bytes": 5992,
+      "sha256": "07611eafcf2a3f038803ce2e0ae27b3a8b1e72074cc181a92b169b5caf770b09"
+    },
+    {
+      "path": "modules/controller-actor-training/tests/test_replay.py",
+      "bytes": 8592,
+      "sha256": "e8ef8a890aa97c0a2d73ba329b127bf12d8d336e80108314f303f19c33367a3e"
+    },
+    {
+      "path": "modules/reconstruction-repair/LICENSE",
+      "bytes": 30209,
+      "sha256": "e87dc2a40b553c5f52acb3909f479afbeac8c35a85328fceaa0cab15ed50b9fc"
+    },
+    {
+      "path": "modules/reconstruction-repair/README.md",
+      "bytes": 1900,
+      "sha256": "031e92abfd733b3c1ffc4928e52f2500bc21d9ac82c666833db8024a23ed972a"
+    },
+    {
+      "path": "modules/reconstruction-repair/licenses/SAM-LICENSE",
+      "bytes": 8204,
+      "sha256": "b3a5a0e2d973ab80e6610ccf1cffc40756050d0ace3cd4fec879b3ec290b2e9b"
+    },
+    {
+      "path": "modules/reconstruction-repair/pyproject.toml",
+      "bytes": 697,
+      "sha256": "b09a55c5c9692349043f8952ec18b453509f212ba20f8ab51407dd237699f3f9"
+    },
+    {
+      "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/__init__.py",
+      "bytes": 245,
+      "sha256": "ebca44db7bde9562741bba22bc2e0a65a11426d39397312e3cbd1a17bb66ca4d"
+    },
+    {
+      "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/bundle.py",
+      "bytes": 13574,
+      "sha256": "761daa83642f29881a22500306e923be0495e2fff0107a70a94daa05ab0e7d6a"
+    },
+    {
+      "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/cli.py",
+      "bytes": 13788,
+      "sha256": "3020bc2bfb7d43a3f65afe1f37d287ee51b40525ed8f9f29db8f870aaa90eb12"
+    },
+    {
+      "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/continuation.py",
+      "bytes": 3066,
+      "sha256": "571883ffd710ccb775521b8ef77420abd3cafc4004b7dfe83cfdcd1bfd3c91c7"
+    },
+    {
+      "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/contracts.py",
+      "bytes": 5425,
+      "sha256": "74d7df81d1ff9cb3a03ac9eae014cf3f6d3f4022c6f6b20e1a0aadfebc82b1b8"
+    },
+    {
+      "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/depth_scale.py",
+      "bytes": 2841,
+      "sha256": "dabd3c678870235b8e7155bd1f91b2d2e2682696a7e382139acd81f3d15fd995"
+    },
+    {
+      "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/gate_report.py",
+      "bytes": 13642,
+      "sha256": "7b1f5cbfe4e3fffbf5fd7422bd16fcffa72aa25e3b4e2194728616d1b99dc797"
+    },
+    {
+      "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/geometry.py",
+      "bytes": 10642,
+      "sha256": "32972d8e92f127d111f18e6b1c30477b75a9aa3211cc776c1aeac3c88bb2e856"
+    },
+    {
+      "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/human_contract.py",
+      "bytes": 2606,
+      "sha256": "100799fc8aa1bb233b50fef93b8d867eca91937cc45cf33e285595b667a0f7c3"
+    },
+    {
+      "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/human_decoder.py",
+      "bytes": 5662,
+      "sha256": "b011c1dbfb3da5d54033ecd76c2bf18faea9b86bad049e24bf4e131191d3b06e"
+    },
+    {
+      "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/human_fit.py",
+      "bytes": 8422,
+      "sha256": "89c83798f16a0ec0d6d53535ad49b50ece47d89db2f318d906903f27ba28afe7"
+    },
+    {
+      "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/human_proposals.py",
+      "bytes": 3923,
+      "sha256": "17b5fa6d67b654a0682fd5cf076a5d776b463e9302d2ee4e70929f7d2c0d3075"
+    },
+    {
+      "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/human_runner.py",
+      "bytes": 12222,
+      "sha256": "e425bab05fd8861a2f26455affcdfbff63d6c66018a3743fe92194c07e28f98e"
+    },
+    {
+      "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/human_scoring.py",
+      "bytes": 9010,
+      "sha256": "2ffc77287401c2ce2c3029df6c94beb09237c0dda9da24faaf47cdf41d103b80"
+    },
+    {
+      "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/metric_calibration.py",
+      "bytes": 10570,
+      "sha256": "1473459f472905b45160ad64feab005b8c5d077cfc5639467c56b61d61e34e89"
+    },
+    {
+      "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/metric_preflight.py",
+      "bytes": 4447,
+      "sha256": "621d4fd6c1882f6b1ff4a80c0e8c6e62b27c9fbfd1db7f71c48ed9d63d985993"
+    },
+    {
+      "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/metric_seed.py",
+      "bytes": 11841,
+      "sha256": "1d0d345d5c9aeebcc1962f1299ac5bd891232f478bd90df8eed8844994113847"
+    },
+    {
+      "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/repairs.py",
+      "bytes": 16720,
+      "sha256": "fbea1162d12a1d458994ae74cdd0c147664d5685c8a95a9c0024e2be0e32cb81"
+    },
+    {
+      "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/runner.py",
+      "bytes": 23909,
+      "sha256": "e92ea043211e92254b76f6ecc92d8865515902a5adf01ecd729085d3ded10162"
+    },
+    {
+      "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/scoring.py",
+      "bytes": 9214,
+      "sha256": "e8e2ec3a163df00bd26caadf3c91b614e4c81237a99b35c1e4ef0fd9063e4875"
+    },
+    {
+      "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/stage.py",
+      "bytes": 6024,
+      "sha256": "060a865e82a64b169874e0fc13e34c3632f557b28d8a7de7d122769f7bba2525"
+    },
+    {
+      "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/temporal_pose.py",
+      "bytes": 17908,
+      "sha256": "d9b0c768dab39ac60e4d6e70583db8383fca18140e6f14fb96bf7ccd50ac3c1e"
+    },
+    {
+      "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/validation.py",
+      "bytes": 7713,
+      "sha256": "7ed848ca953243c9cbe7db5a4600eb604b4e55d500433866bc660b60061c2bf7"
+    },
+    {
+      "path": "modules/reconstruction-repair/tests/conftest.py",
+      "bytes": 3158,
+      "sha256": "1e1528452c57d1d056eb11daaa61ea1278da99f81ae63d6eb3115c674059f855"
+    },
+    {
+      "path": "modules/reconstruction-repair/tests/test_additional_invariants.py",
+      "bytes": 1708,
+      "sha256": "6adb6f89b82733a1d0d29756cc029b00dd2be1334ce750b8baf46852cfdfdb0f"
+    },
+    {
+      "path": "modules/reconstruction-repair/tests/test_continuation.py",
+      "bytes": 1304,
+      "sha256": "6664eb540e8d9ae60982710a046b7f5d0e34218dc54961a78cb822b02c9492c2"
+    },
+    {
+      "path": "modules/reconstruction-repair/tests/test_contract.py",
+      "bytes": 4990,
+      "sha256": "06d1619af4b5b0cb741a6a222938b398c639738af71ee6d984bb47d6dcae1ce8"
+    },
+    {
+      "path": "modules/reconstruction-repair/tests/test_dense_geometry.py",
+      "bytes": 1919,
+      "sha256": "b416fd83a2d133d823ed4ed2aef707602d6a161bd17b7b60808616136731c32d"
+    },
+    {
+      "path": "modules/reconstruction-repair/tests/test_depth_scale.py",
+      "bytes": 1530,
+      "sha256": "6621caf5af570557bebad0ca132098677357f32afa14538731726ec9b95ee1ef"
+    },
+    {
+      "path": "modules/reconstruction-repair/tests/test_gate_report.py",
+      "bytes": 3694,
+      "sha256": "5b718f4b69b59a0a1790cead9f6ef7e3c7f6c9d6e1a5d102b65443e7eb19d4b6"
+    },
+    {
+      "path": "modules/reconstruction-repair/tests/test_geometry_lessons.py",
+      "bytes": 4530,
+      "sha256": "dd7b2cf49bcffdab6cd239ef01877ab197d9576d1ff604da6af928e8359da8ac"
+    },
+    {
+      "path": "modules/reconstruction-repair/tests/test_human.py",
+      "bytes": 10677,
+      "sha256": "24d1a94cb62db6baf92b2896e25d148764fd1715649dc9f8877d8e2b27c422ca"
+    },
+    {
+      "path": "modules/reconstruction-repair/tests/test_metric_calibration.py",
+      "bytes": 3519,
+      "sha256": "2e11b2b39c67b15bf451764bc0301f892b03791219604c3f7b7ad18c4dcaa695"
+    },
+    {
+      "path": "modules/reconstruction-repair/tests/test_metric_preflight.py",
+      "bytes": 7729,
+      "sha256": "4c5e029af9ded44008a64936b8baabb24d6fef3ff47b187db3cd2e0b0e57a67f"
+    },
+    {
+      "path": "modules/reconstruction-repair/tests/test_metric_seed.py",
+      "bytes": 6301,
+      "sha256": "0313da554d5e709bb102463e22423c5ce5a32a338f9ef6521ad097b4ff6ff70f"
+    },
+    {
+      "path": "modules/reconstruction-repair/tests/test_repairs.py",
+      "bytes": 9850,
+      "sha256": "5378cf1c53396474fce07d2a01a4d54b84c4cef616b73cdcf83a09dcd5df5196"
+    },
+    {
+      "path": "modules/reconstruction-repair/tests/test_runner.py",
+      "bytes": 6702,
+      "sha256": "6d3e9856af37a4234447ffe9469a792bb06c435c3673cc4dafd6de5c0f66150b"
+    },
+    {
+      "path": "modules/reconstruction-repair/tests/test_scoring.py",
+      "bytes": 2570,
+      "sha256": "24a735820201a1e1b853d9b5cb0c89f88ccee75ed2ae167e8a59fec69b9e8184"
+    },
+    {
+      "path": "modules/reconstruction-repair/tests/test_stage_adapter.py",
+      "bytes": 1982,
+      "sha256": "8c06969b026ee594457cfc6bbaeb59ea7d1b840908e85a49bb0842fc37e36e89"
+    },
+    {
+      "path": "modules/reconstruction-repair/tests/test_temporal_pose.py",
+      "bytes": 3559,
+      "sha256": "5d1afd69e1060f7f97d2952c83fe364af03ecb17a104441da2c30ce56045d5a4"
+    },
+    {
+      "path": "modules/reconstruction/LICENSE",
+      "bytes": 30209,
+      "sha256": "e87dc2a40b553c5f52acb3909f479afbeac8c35a85328fceaa0cab15ed50b9fc"
+    },
+    {
+      "path": "modules/reconstruction/README.md",
+      "bytes": 2852,
+      "sha256": "0ebdbc5c80cebb58f9f60aaeaa8bc2fcc7e9257ac2bc63034cd1727d18353e2f"
+    },
+    {
+      "path": "modules/reconstruction/docker/Dockerfile",
+      "bytes": 2778,
+      "sha256": "012979ffc5a244858d5dcd686ae967a2c510cfa82150a6755d32540da2e80458"
+    },
+    {
+      "path": "modules/reconstruction/licenses/SAM-LICENSE",
+      "bytes": 8204,
+      "sha256": "b3a5a0e2d973ab80e6610ccf1cffc40756050d0ace3cd4fec879b3ec290b2e9b"
+    },
+    {
+      "path": "modules/reconstruction/licenses/UPSTREAM-LICENSE",
+      "bytes": 30209,
+      "sha256": "e87dc2a40b553c5f52acb3909f479afbeac8c35a85328fceaa0cab15ed50b9fc"
+    },
+    {
+      "path": "modules/reconstruction/licenses/common-LICENSE",
+      "bytes": 581,
+      "sha256": "211d98cf9501fe8cfc7125554088e558c0a7fcefbe822be7d91ec08aa91580e7"
+    },
+    {
+      "path": "modules/reconstruction/licenses/mesh-LICENSE",
+      "bytes": 581,
+      "sha256": "211d98cf9501fe8cfc7125554088e558c0a7fcefbe822be7d91ec08aa91580e7"
+    },
+    {
+      "path": "modules/reconstruction/licenses/moge-LICENSE",
+      "bytes": 581,
+      "sha256": "211d98cf9501fe8cfc7125554088e558c0a7fcefbe822be7d91ec08aa91580e7"
+    },
+    {
+      "path": "modules/reconstruction/licenses/mv-LICENSE",
+      "bytes": 581,
+      "sha256": "211d98cf9501fe8cfc7125554088e558c0a7fcefbe822be7d91ec08aa91580e7"
+    },
+    {
+      "path": "modules/reconstruction/licenses/sam2-LICENSE",
+      "bytes": 581,
+      "sha256": "211d98cf9501fe8cfc7125554088e558c0a7fcefbe822be7d91ec08aa91580e7"
+    },
+    {
+      "path": "modules/reconstruction/licenses/sam3d-LICENSE",
+      "bytes": 581,
+      "sha256": "211d98cf9501fe8cfc7125554088e558c0a7fcefbe822be7d91ec08aa91580e7"
+    },
+    {
+      "path": "modules/reconstruction/pyproject.toml",
+      "bytes": 716,
+      "sha256": "f97cea7e2d03496e5d0ebd831d2b88fc9e40d6630b1257645e8f6abe96709566"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/__init__.py",
+      "bytes": 200,
+      "sha256": "29375b5ece435375292c91463f52257b75d243f84088166c54b234968e2adc30"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/Utils.py",
+      "bytes": 31459,
+      "sha256": "6d9841b281e9f32dee2cec4f82062ed78ea258358a70f9f6fdc381bee830d980"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/__init__.py",
+      "bytes": 448,
+      "sha256": "bc268f5f8908d88eb7b7203765f7ac8ff1fafbfcf92ee4818ead8ac018f17d07"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/behave_data/__init__.py",
+      "bytes": 480,
+      "sha256": "f75ed0e365b82da5042dd24bb0c0b2cc442280084a0dbb7fe5727aeb35c4e3fa"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/behave_data/const.py",
+      "bytes": 8419,
+      "sha256": "4529f900623ebcd1080d7ce7998e0e6e30983748abfd68d0a373afb9ce66f504"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/behave_data/kinect_calib.py",
+      "bytes": 7765,
+      "sha256": "37eb84f1470658bc318c56447a263429e9fe3f3d50d02838ade302e4cd31bc25"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/behave_data/utils.py",
+      "bytes": 16133,
+      "sha256": "4f6b5f6f72860b3bd9806f38616c6e91542e0ee5705929f39a55ef478d8a54ae"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/behave_data/video_reader.py",
+      "bytes": 7892,
+      "sha256": "10264680e311b5ee9e845f97f7ca5a500df2e9ce347a2bf5f3988a7f59aa8af3"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/estimater.py",
+      "bytes": 16224,
+      "sha256": "04bbd00c3282f13a00a0e5e3621a50cc5e23e7a4a131cb2153a1714e0fcc92fb"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/__init__.py",
+      "bytes": 451,
+      "sha256": "3f5df4e31442c82b43b02ecdcb5d836015feef3c1104e0b54757d5237e97584f"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/configs/mhr-daniel-commercial-moge2-behave79-val-fp16.yml",
+      "bytes": 7523,
+      "sha256": "8620bc0a63db2ff085569d9fbca3df01c7e23526de0830495ebaedffffef3091"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/datasets/__init__.py",
+      "bytes": 8489,
+      "sha256": "94b3ead650dda3772550dc6bca6fba8b06ca5c6938461f6084386b1818aca650"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/datasets/augmentations.py",
+      "bytes": 30003,
+      "sha256": "8acdad96e08d8bd46a14abae06e160dc698d94bc04294d8bf0e66c7ffbe696a4"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/datasets/mhr_augmentation.py",
+      "bytes": 1775,
+      "sha256": "4075308d1490fee1b9f7ba88e54647d35b8f290a3fab1e8b8b9aa14c9b02fdb1"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/datasets/mhr_dataset_index.py",
+      "bytes": 15213,
+      "sha256": "a7694ca30212d20281eb5466f21f875af2580103bed42252b76161afaea116c7"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/datasets/mhr_input_materialization.py",
+      "bytes": 21411,
+      "sha256": "828a036260801cb27cda55580d05c4723c64c72ecd27e03cfe44065140244f28"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/datasets/mhr_loader_config.py",
+      "bytes": 1297,
+      "sha256": "e094b3f63c83f66c9b1bc1efd02fc9c36ea86333a349f748437f4ffe5e3dbf43"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/datasets/mhr_rank_local.py",
+      "bytes": 23018,
+      "sha256": "f2d87aafbeca063965d9ef6e83775ecd3f933625407cdde96e98c6e81922f1d7"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/datasets/mhr_sample_metadata.py",
+      "bytes": 49,
+      "sha256": "fe4a51e3d5ee106f651d9fab552bcf50ce1e4791b67cf07772f554fe1de7a3d9"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/datasets/mhr_tier_sampling.py",
+      "bytes": 4713,
+      "sha256": "04eca0b95efde5fd6181bce8ec8fed1e93e4d6505dab44adbd50e7afa784e636"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/datasets/mhr_video_data.py",
+      "bytes": 88624,
+      "sha256": "04780b8ec0b1fde277b79690c6d4a0d56ef9163d7508abcc0802476c368ae761"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/datasets/mhr_window_sampling.py",
+      "bytes": 20119,
+      "sha256": "d920d018e6a99b2693d0853a48c281702cc0d4f2377fe3db0577cae422f519ae"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/datasets/video_data.py",
+      "bytes": 37530,
+      "sha256": "3cf2806700a131a5be3aa1d28a44491a6dd639a922c1f3a1cebad561f625dc88"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/foundationpose_data.py",
+      "bytes": 8433,
+      "sha256": "15eabc10294c573f1b41727c29308206f88d86405849c30e461d4e34a7408181"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/inference.py",
+      "bytes": 8479,
+      "sha256": "1d4fb02b3bf8345eee2510c96c4f2edcc7f7d17ae298fc7d23a392c56ebace9f"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/models/__init__.py",
+      "bytes": 728,
+      "sha256": "091bc4712aaf848f31cc5e18f0780f33d314da2f11905d316e35245183ed445a"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/models/feat_model.py",
+      "bytes": 1524,
+      "sha256": "d1f2bff742326bca567e52eda6e60ae7e649b4fc75c3945bdd7abecc5301fbb2"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/models/mhr_heads.py",
+      "bytes": 1302,
+      "sha256": "69824ad782ce8a0fb9299c1f6a1bfdc9e9865ae9da755a2ed03448c06ce2c177"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/models/network_modules.py",
+      "bytes": 4662,
+      "sha256": "9d2e7e1dafc1f77a8addd2c1b8615757fb32e2f249dcb8593f666d22aceab75c"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/models/prediction_head.py",
+      "bytes": 202,
+      "sha256": "008577fe3ccbdfb2071d3941fadcb6dd0dec5f5ad9d83708e8e61eac59aa8a01"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/models/refine_network.py",
+      "bytes": 3669,
+      "sha256": "ccbd71da7a20132b73b4782e4f6177798fe5c260c7642354417465f98c611e05"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/models/refine_tempnet.py",
+      "bytes": 38619,
+      "sha256": "3ce2a36b19de9f9b6d9274b33cbc323dd1c7357456742eb8013b0dd447596941"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/models/score_network.py",
+      "bytes": 2832,
+      "sha256": "6cea9a7683def72b92e8c8328884e48fb6ca057ff480efab6d1328686b3ce926"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/models/util.py",
+      "bytes": 2912,
+      "sha256": "4faf80f3227c055f80ed38789ab05837f5247e871c7be7ab4105d6ea3f2d7cdc"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/training/__init__.py",
+      "bytes": 427,
+      "sha256": "7405c896c4483d5a99877cfbbe21483eaf1c5a0ef950e20244fa32f1a9b17042"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/training/best_checkpoint.py",
+      "bytes": 4433,
+      "sha256": "5fea4881c9c242af4c01b4f38aa6ae86765767e086a7a7680603e0b9c49b61fc"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/training/checkpoint_recovery.py",
+      "bytes": 6995,
+      "sha256": "fd82b1a12d1ec1d8f99e82790ac917f5b9e2700386ca51d2626fdf6f5a5ae1af"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/training/cuda_event_timing.py",
+      "bytes": 2576,
+      "sha256": "d02a6c37fe818dd02c41366fdfb303d1b1f3833de23f1e4731c290e600348f46"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/training/distributed_checkpoint.py",
+      "bytes": 6496,
+      "sha256": "2bac37432bc30e65f7f9cb03119c6762bf78e2b7f0b21c5893f4e9bcf24aea27"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/training/inference_memory.py",
+      "bytes": 421,
+      "sha256": "3d2506107c803b9f14ff8158d4b7c32f52d7defbe96a34bbb8fccdd784a146cd"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/training/lr_scheduler.py",
+      "bytes": 2303,
+      "sha256": "22f735f6098d529abcb18ff38bead210bc0d757446f93bfac413a5a9b6853aec"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/training/mhr_input_grid.py",
+      "bytes": 23700,
+      "sha256": "a8f90c83d31e10509ccd6edd24e4e53819172db44ca49431d8cf15fa94b68ab2"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/training/mhr_losses.py",
+      "bytes": 22982,
+      "sha256": "af81329513074fac404676358775b0c1310fac9d522b23d1ce03d9f2de2f451b"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/training/mhr_object_pose_loss.py",
+      "bytes": 5770,
+      "sha256": "93ddb84552aad3d66b35d5a030cc08fc9d01736de73598802d565343b5f92ec4"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/training/mhr_opt_refineout.py",
+      "bytes": 102152,
+      "sha256": "0e9201ae44d388359a236e0935697bb3e8d3ed51b224d62a4bdbe14da97b4848"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/training/mhr_supervision.py",
+      "bytes": 20826,
+      "sha256": "e7f4c5f8991e312eec69a760204758d44edaf9f29f9456ec181d288241686635"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/training/nonfinite_loss.py",
+      "bytes": 8481,
+      "sha256": "ab5bc73e19ce54a61718927c5da7c3d78b13357aca59977b3cca300bc852e472"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/training/predict_pose_refine.py",
+      "bytes": 14331,
+      "sha256": "62ecb65fd362dce307f712a7b5a93623ce75f2820838e8e568419c2642f24c0b"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/training/predict_score.py",
+      "bytes": 9611,
+      "sha256": "24c659d31a6186cb2efad7f2414b1b0a645cd49b5563bd0b3e3788ab1710a804"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/training/rank_timing_log.py",
+      "bytes": 1623,
+      "sha256": "04d64b2c8db52c3a85025b4fd8849f25903ce622fb8a9a2653db7a9f2e350ebe"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/training/resume_state.py",
+      "bytes": 5129,
+      "sha256": "930eb359e3b9108591bed237d665a60abd8e797a3c31112193f8c04035abdef3"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/training/runtime_optimization.py",
+      "bytes": 11930,
+      "sha256": "7e4fafa015b2e3ee2789f712800107817d0a16c719c7e3555b41bdf4f0f47b02"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/training/segment_runtime.py",
+      "bytes": 6251,
+      "sha256": "f9c6251bd3e05a524ce88792c18bcd32885e3f43a1bdbb8354f0484236ee92e7"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/training/source_snapshot.py",
+      "bytes": 8039,
+      "sha256": "7e04b137f67e853f54b059e46445cbf181bde3132889e77bacc017b3d3d9143f"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/training/speed_benchmark.py",
+      "bytes": 4710,
+      "sha256": "51e4efb15c2b6fcd39f2ba2e0411d5a94318aa4f518ff5c1fd3a91adfa90567d"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/training/trainer.py",
+      "bytes": 142331,
+      "sha256": "d979d2a7260751361753dfb9e3ae0133e26d48d62fff8b3e5163ccadaedefbc9"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/training/training_config.py",
+      "bytes": 30662,
+      "sha256": "d2acefefeea13f4257f8810865fd492079abdca30e7d9198c95eb0b7037fe4cf"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/learning/training/training_utils.py",
+      "bytes": 18181,
+      "sha256": "e088b62cb3746ab74774a4f4667035868fd28e6a9d6d35f28633f459033b6009"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/lib_mhr/__init__.py",
+      "bytes": 5889,
+      "sha256": "9b58fd1617fadcfc5187f6c1cbdb1ce172bcf720bc772aa38ba95b1442b5369a"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/lib_mhr/body_pose.py",
+      "bytes": 4231,
+      "sha256": "6ee1e9ec8b692acf8857e827ed21201a4e8068e84a3cb95e986981e0a7949d23"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/lib_mhr/camera_conventions.py",
+      "bytes": 14253,
+      "sha256": "86d4ff599416bf55af8a0a2f022f610f44879374aa72bb36c91890d21372879c"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/lib_mhr/collision_proxy.py",
+      "bytes": 4898,
+      "sha256": "2f85e141c35467391d6a27270a7ec5fe8da5e246022f6bb4576e90c1e449ab51"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/lib_mhr/contact.py",
+      "bytes": 9646,
+      "sha256": "d4e8a92845d75a7bae962f312dee4d747587c39157a978908293a5645beb6d5c"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/lib_mhr/delta.py",
+      "bytes": 2869,
+      "sha256": "da495861dc55b266dabaf74a06fc683b74d2354f557827914cfc926b0daa2518"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/lib_mhr/geometry_provider.py",
+      "bytes": 10560,
+      "sha256": "f5a4a89d0c47e4d5aca92eeab6d057865e29cb283290a2d5df023bcde4e5e967"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/lib_mhr/hand_surface_contact.py",
+      "bytes": 16511,
+      "sha256": "f49b899a5262a2da16d43d7fdc93dc24e0453f7354e2e106359e86c7e61b6b06"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/lib_mhr/human_texture.py",
+      "bytes": 6776,
+      "sha256": "13712768d476608ac290c2540709c3b98276c5f3466259676b69c6eb816a9750"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/lib_mhr/io.py",
+      "bytes": 3550,
+      "sha256": "c6a22e33526343664d0f07a19525f58f83ee03b2a4035ce5a426db922fffa6b1"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/lib_mhr/metrics.py",
+      "bytes": 1918,
+      "sha256": "e91749759d3ab20059716d91a4173562f13ecab3837872e417be66b85e6cfb24"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/lib_mhr/mhr_layer.py",
+      "bytes": 20514,
+      "sha256": "a753ab8e730b6730fca275384fab629859311983292a407390d88c66ffe68c23"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/lib_mhr/object_pose_frame.py",
+      "bytes": 8249,
+      "sha256": "cc721cd15fa9969f58c4f3e9755dec2ee9f66bf32a1c4733c0b99ed121c3b1bb"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/lib_mhr/object_symmetry.py",
+      "bytes": 19759,
+      "sha256": "f3b4938ea317a4b205d61c7ae188eab939a8ff073f9ea5acc76971de7854a930"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/lib_mhr/object_texture.py",
+      "bytes": 10414,
+      "sha256": "56228b1e200495fd6f34695f2595875839031dd5c1e0c407db2cd642fa8c2e61"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/lib_mhr/postopt_crop.py",
+      "bytes": 6108,
+      "sha256": "ef425ec91e29814f565f8ebd3782aa8f80f276cfa1779f4489609c64eb1a4723"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/lib_mhr/refit.py",
+      "bytes": 35366,
+      "sha256": "4e2990618ab394d46e738affa5b1ce2b8d08695cc02eead217dd4cdf455148b5"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/lib_mhr/rotations.py",
+      "bytes": 2591,
+      "sha256": "50dc720c7ac8853fb179ffd4b064540954eadacee14f9ee71a4bc8206cc9b758"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/lib_mhr/schema.py",
+      "bytes": 3748,
+      "sha256": "773b3ce7510daf74fcd27e924fb00da33c40e633d9629a0a7e969e2ede8e6cf9"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/lib_mhr/sdf.py",
+      "bytes": 5723,
+      "sha256": "5858709fd16a3b8b0932a928f92be011f7249ecb33ecf9f9e7249e9aa8a42423"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/prep/__init__.py",
+      "bytes": 427,
+      "sha256": "7405c896c4483d5a99877cfbbe21483eaf1c5a0ef950e20244fa32f1a9b17042"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/prep/align_depth_to_mhr_wild.py",
+      "bytes": 9976,
+      "sha256": "13e39bcaefb73bd41f47729c61209bca88601f96e1cc3ed2d650f459937cac42"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/prep/align_utils.py",
+      "bytes": 1940,
+      "sha256": "1ac6ee00a5364d27b720fb9e57be571b5c740c9c95223420875dcc4a01593677"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/prep/foundationpose_pose_selection.py",
+      "bytes": 26845,
+      "sha256": "6f2a86bdd978e241b5a87bcf33cecfcf4b52bdd76e4d1d2b376fe3cb25033a32"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/prep/mhr_depth_alignment.py",
+      "bytes": 380,
+      "sha256": "f1dd82f6da4a0e87d90ac278d6428134fb8e2bb207446d7fa1d521e5d754193f"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/prep/mhr_depth_backend.py",
+      "bytes": 4877,
+      "sha256": "fb2720a23a7442af7114c5f9e6323237707ef3ba10db547f234636610315344d"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/prep/mhr_depth_filter.py",
+      "bytes": 1711,
+      "sha256": "f06c37ff2c75fa97d9b371619560963b16f6a62e379396d2a5d7f8fc215013a8"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/prep/mhr_depth_h5.py",
+      "bytes": 54037,
+      "sha256": "941331b0f2ee915a85d9b05e136d0ffdd9cec5eff5186672f98b73548aff31d2"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/prep/mhr_effective_masks.py",
+      "bytes": 17327,
+      "sha256": "81b30fdca27e2841d4bafa1781995c19971775a55b2a4a20c84fb9c951611705"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/prep/mhr_export_utils.py",
+      "bytes": 25393,
+      "sha256": "9bd0127046e0a091f4ecce797a793289ccc5ceb80e50907d9b1d7a4aeaeb9e95"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/prep/mhr_ffv1_sidecar.py",
+      "bytes": 17703,
+      "sha256": "1cbbff644d55e88ebc3544fab066b38263a23a815d568d8336365afa8c2d92d4"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/prep/mhr_foundationpose_diagnostics.py",
+      "bytes": 5598,
+      "sha256": "8b1b6f73bf357aa0c947786edb6ff75c493f2a0a34a4df533d5a0e8512f0671b"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/prep/mhr_foundationpose_training_tiers.py",
+      "bytes": 33357,
+      "sha256": "f664ea7f5eeeb0f26e2becfa39ed094b4bbead75e454db32466944e970d1f6f6"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/prep/mhr_geometry_certificate.py",
+      "bytes": 9697,
+      "sha256": "3b763b44b0af7ea7eddfdb4dc3fb12c17b39fdb939c0b0f872187f5d03349ffe"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/prep/mhr_geometry_crop.py",
+      "bytes": 12811,
+      "sha256": "c374db33e4ff0dec4948cdaf7473cde698e35d2896a893739dcf9b65125a8c56"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/prep/mhr_gt_object_visibility.py",
+      "bytes": 6440,
+      "sha256": "b5677c3ad081a22eee7adf3a69727be89beab538e3b87231d647a0f27db9189a"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/prep/mhr_mesh_visibility.py",
+      "bytes": 4264,
+      "sha256": "718fe0b46ae34c4ed7943780787248788a1064c36db78d5d37f09994d3827929"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/prep/mhr_packed_h5.py",
+      "bytes": 47754,
+      "sha256": "107bc3135819623802a8a9e82c3b3833bfbcc3addbdb0f3f47c1ec8379df004f"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/prep/mhr_preprocess_manifest.py",
+      "bytes": 12276,
+      "sha256": "899eaddc705b01258614a609f8f3b275e5f3a46779e9c82a3b8e50252ee31bf6"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/prep/mhr_refit_cache.py",
+      "bytes": 7711,
+      "sha256": "10c5f29a2d86ee658d4518a78b441148b3701a13cb162f71269ad84a441817ec"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/prep/mhr_refit_metadata.py",
+      "bytes": 4077,
+      "sha256": "1e4617a938c7b759dd66fd1bba1849e0e5aed14213e25b146faf6ed14639d596"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/prep/mhr_render_shards.py",
+      "bytes": 20717,
+      "sha256": "1020391719d13bafc909382e1efcae8df1dc7e50b57f818eb975214a5ec5a3e7"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/prep/mhr_rgb_h5.py",
+      "bytes": 10625,
+      "sha256": "f5e8c9a8660095401d8017b584f196d73a5bbe19dcda8b90cb6422ebbdeb6ae1"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/prep/mhr_sam3d_cache.py",
+      "bytes": 7531,
+      "sha256": "712b60c4c4f8a35d09aef80973ff0ee3cd011bcf476a522840f0215336513468"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/prep/mhr_sensor_depth_h5.py",
+      "bytes": 3838,
+      "sha256": "67c3fa98c5b53f685c546348b3f59e0f1c3c259fb2890bad821bdce665124279"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/prep/mhr_wild_depth.py",
+      "bytes": 18228,
+      "sha256": "c845d8a18c798c2c2d13e39d0ba56873efe2f51edf3efe893d21ffe367be38ee"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/prep/prepare_mhr_wild_export.py",
+      "bytes": 13697,
+      "sha256": "f4280fa2c6e292212b4e86ca73c9972eccf4d68dd1943b19cad1fb4bd2adb28a"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/prep/refine_observed_object_tracks.py",
+      "bytes": 10499,
+      "sha256": "816b311698bf37c2982f0e3b36cccb8191cac9a253e826944304b1f45b32efce"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/prep/run_foundationpose_mhr_export.py",
+      "bytes": 82829,
+      "sha256": "0110039918de89a8d7138773c1842330860f4f0d13618fea84f6a970268faeae"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/prep/run_sam3d_mhr_export.py",
+      "bytes": 56346,
+      "sha256": "aa0ac879eb7e9b90fb6ac8418e2739cf2d91111afa5360a199da90112cf8cb9a"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/render_h5_codec.py",
+      "bytes": 2539,
+      "sha256": "8f484f6f26364a2329aeb91281e4b57c976f2b7a8c90623e077da9b9c1647c72"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/scripts/__init__.py",
+      "bytes": 61,
+      "sha256": "4f388fe4777c8dc75f5a58415e9b7d8e2887af4e1fce392f74dfdeaa518d4b46"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/scripts/build_mhr_dataset_index.py",
+      "bytes": 5965,
+      "sha256": "234d4e42377ad02d55bb654e861a7e0921e3bfebca6dbee992b6d5a609a947a8"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/splits/behave-date03-79.json",
+      "bytes": 2591,
+      "sha256": "a671208c2410bc1927710775ac4c2296264668fa68e0ab1227f76b1fa6b4c3f1"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/splits/daniel-hoi-train-commercial-moge2-2126.json",
+      "bytes": 119550,
+      "sha256": "6b1006d17c7800237e9ddaff673d2231276937b641c5d0228eedf95b4f2b03db"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/tools/__init__.py",
+      "bytes": 448,
+      "sha256": "bc268f5f8908d88eb7b7203765f7ac8ff1fafbfcf92ee4818ead8ac018f17d07"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/tools/img_utils.py",
+      "bytes": 2531,
+      "sha256": "47b793b37e70e3b7fbf80ca8b787695b9e31adff5e6617d7897770d31747dfea"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/tools/mhr_input_renderer.py",
+      "bytes": 4135,
+      "sha256": "dbc9e4318f7afeea38d17bbee1637edada7a757a9732d552aabf2108f5b7682a"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/tools/mhr_mesh_renderer.py",
+      "bytes": 10334,
+      "sha256": "c6e1dba6d47d6cb88a245c3ad86cc0115efcaa3098454d6a37a19a875c7969ea"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/tools/pipeline_timing.py",
+      "bytes": 3047,
+      "sha256": "a931ced10016acf5611d5ac4b1db288e126b9a19c7bdc5f1c1e912a778f23282"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/tools/render_mhr_wild_inference.py",
+      "bytes": 13821,
+      "sha256": "44043fe5c86b0ef5c61e7d69682480de2661a49a54e4bbd8b0d8424620764427"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/cari4d/tools/run_mhr_wild_inference.py",
+      "bytes": 50990,
+      "sha256": "6020ecb82f292183def6342f7bc357894620180f20ab0865b2d9c51c597b5b6f"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/download_weights.py",
+      "bytes": 7389,
+      "sha256": "8e56e65cd5cd141b4898eefed95ac735688cd95b8e93c959c1567ff7b8e5432b"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/pack_masks.py",
+      "bytes": 4444,
+      "sha256": "56fbdb4e0553661e7b024a6c1339f8d8509f1de0d914fe3d6aa2043a658e3b79"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/pip-constraints.txt",
+      "bytes": 47,
+      "sha256": "9a74014a7fc1473551b64160436cb4a1d108ab9728de36a192a3cce9d47aea44"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/run_inference.py",
+      "bytes": 24582,
+      "sha256": "66cd48751a6fac7bb982686f703deef12aa26f61879dc69f903336ed5e1ad3d4"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/cari4d/lib/run_training.py",
+      "bytes": 2736,
+      "sha256": "5bb1b7cda1ca9ed04e5a1a6f0cd989782c0c7e21d89c0eab473330ed922467e7"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/common/LICENSE",
+      "bytes": 581,
+      "sha256": "211d98cf9501fe8cfc7125554088e558c0a7fcefbe822be7d91ec08aa91580e7"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/common/__init__.py",
+      "bytes": 422,
+      "sha256": "4c0d586960c5eacad233f64e03831ef2056a48f77e4a155b45ffc9263c1b380a"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/common/broadcast.py",
+      "bytes": 2465,
+      "sha256": "9169392f81ca13d618829daa11b63f8016ded241a1ac452d0222245d7ac5a538"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/common/datatypes.py",
+      "bytes": 10850,
+      "sha256": "e32a81443c3bcb119452df6e9a153144a380cb87dc358a3a8be6ac5a69f6b6fb"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/common/ffv1_sidecar.py",
+      "bytes": 21771,
+      "sha256": "10384cccad9e5318d6524f92ed686ca07589bedb644a1bf6e4fea943e0f7b276"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/common/hdf5_transcode.py",
+      "bytes": 12343,
+      "sha256": "089f453a517e1dd4bde25fc0545164e92ccc563c83caf76e06d990ece215b63b"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/common/result_bundle.py",
+      "bytes": 31477,
+      "sha256": "10e638e710e3accc962623835f752e2f70e9f484393bce2c3b429756a20a0bb0"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/common/utils.py",
+      "bytes": 2983,
+      "sha256": "addcf2a76fbdd120d9471746d32fba0148f4b25ec42c88e252c3093fbf0330ff"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/common/video.py",
+      "bytes": 32505,
+      "sha256": "ebe697b46d659d43de3320f04e088c0e13f4a473368517a500442979ac49bf95"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/LICENSE",
+      "bytes": 4352,
+      "sha256": "0de51abc6b73e24724858239efc42cfeada5d9e7c911cf7eff077bd9a23dec62"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/Utils.py",
+      "bytes": 35328,
+      "sha256": "8536ac09e876679c3e35690692142128ad9e06a48dbd2cafa904007ac99d7626"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/build_all.sh",
+      "bytes": 249,
+      "sha256": "ffcfd49f280bb15ae094b5fb6ded26d369f8f7c96713989e5a98a62ea2739c52"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/build_all_conda.sh",
+      "bytes": 331,
+      "sha256": "7ab96a69063d2e28debff83d6dab3db593bdb8acc16a6f5dad68e3ded56cf994"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/bundlesdf/config_linemod.yml",
+      "bytes": 2848,
+      "sha256": "2474a9d31111b84fdf4c40fc6dfe31a7c2850d5029b00cdf0ad67b1e31cca8ec"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/bundlesdf/config_ycbv.yml",
+      "bytes": 2849,
+      "sha256": "312b37d4fedfde999fb130894b06e5d7149fabfeb808eaf18e0e583cdce72e3b"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/bundlesdf/mycuda/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/bundlesdf/mycuda/bindings.cpp",
+      "bytes": 759,
+      "sha256": "911a33242afbbc31cd6423943e552eafc5228f22101c9dd639b7c17176b44bc9"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/bundlesdf/mycuda/common.cu",
+      "bytes": 11925,
+      "sha256": "a21fc16fd9a5d377faae72e672e382307a97c29b715291bfe465cf13101c70b7"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/bundlesdf/mycuda/common.h",
+      "bytes": 1303,
+      "sha256": "d872ffb94c58e611f83bb272c888a79a9ffa577b90d886fe580bede093e53858"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/bundlesdf/mycuda/setup.py",
+      "bytes": 1470,
+      "sha256": "90b1ebfea24c826a2820cff3b359d72a8584f37cf295fe6df34170a42f38c794"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/bundlesdf/mycuda/torch_ngp_grid_encoder/LICENSE",
+      "bytes": 1062,
+      "sha256": "2767ebd056b9458a9b1d6952f08cc4008e8565e68a88c02c8b6a994ad435f6a9"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/bundlesdf/mycuda/torch_ngp_grid_encoder/bindings.cpp",
+      "bytes": 275,
+      "sha256": "5936432e36d7a366088d1804d84062c08cb80ffe97e880441f9d1462f56a7fc6"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/bundlesdf/mycuda/torch_ngp_grid_encoder/grid.py",
+      "bytes": 6412,
+      "sha256": "0eb89d4b59d65d29b3296b0fbfc6ac179ecde7e660e38ec90c5b6afec5b13209"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/bundlesdf/mycuda/torch_ngp_grid_encoder/gridencoder.cu",
+      "bytes": 20757,
+      "sha256": "24b83e080d88970a8f241d634cf800ae9d284d25521a12c1f34a98be9c2ea214"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/bundlesdf/mycuda/torch_ngp_grid_encoder/gridencoder.h",
+      "bytes": 968,
+      "sha256": "4668e78b479d03e4a8862edadbf7005b46c4da082adc39e2685d36b97c2de0ef"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/bundlesdf/nerf_helpers.py",
+      "bytes": 17265,
+      "sha256": "7478760cd5469b3b4579f9e8cb880a66d98ee9e9a2d41873b7f8f045a8d6378c"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/bundlesdf/nerf_runner.py",
+      "bytes": 54013,
+      "sha256": "7aeafd1cd0641bb7e0949043c21248bfa84830c486b5f6c89b5674b3c6e0fc6e"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/bundlesdf/run_nerf.py",
+      "bytes": 4674,
+      "sha256": "3b3f5da38541ea2a7db5e87ed2d86122aea54671d84af84efabd55e15e052bc9"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/bundlesdf/tool.py",
+      "bytes": 4593,
+      "sha256": "a63668025a6fda90009d369b48444de1649d6cbbee66b754576ef84600f01a16"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/datareader.py",
+      "bytes": 20542,
+      "sha256": "c32f24c0f051a45a2683521f52fd848e9a0064304c7f1cf8b56104be8a0b4fd4"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/estimater.py",
+      "bytes": 10476,
+      "sha256": "606df1495942fcbd0290bfb618b84ce15acdf61180f6f1e8c0e3a9a06787900d"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/learning/datasets/h5_dataset.py",
+      "bytes": 9677,
+      "sha256": "c582f46c65f9787d7c7d4376f64900e10c87fb4d569f9eca55f05daeec395484"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/learning/datasets/pose_dataset.py",
+      "bytes": 4283,
+      "sha256": "27c5312108718611d7d82bb601e58d59b2c4f0b93b75ab02bee652e810a3e60e"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/learning/models/network_modules.py",
+      "bytes": 4548,
+      "sha256": "29a4875a35150c662a3604e88a7f102d2fa4de9d026a8ee07151e09e788a2e26"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/learning/models/refine_network.py",
+      "bytes": 2849,
+      "sha256": "c024375d544352fbcb94698d792ec6fd017008ca5d093e71e747727ea59db709"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/learning/models/score_network.py",
+      "bytes": 2832,
+      "sha256": "6cea9a7683def72b92e8c8328884e48fb6ca057ff480efab6d1328686b3ce926"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/learning/training/predict_pose_refine.py",
+      "bytes": 14337,
+      "sha256": "c425210b8514e01a41bb1c0f9187af08aa825094bcd74207e4042ed31d5ab349"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/learning/training/predict_score.py",
+      "bytes": 9657,
+      "sha256": "aca010fa30e1ba583688df992aae9ca7f752222638077ce1625d0a32dac594fb"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/learning/training/training_config.py",
+      "bytes": 2930,
+      "sha256": "da0e1265e9b4c35624b599029050631d62fb201ad6c838e3b4d26af99adc27b2"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/mycpp/CMakeLists.txt",
+      "bytes": 645,
+      "sha256": "53aee630d869187ba47addf86142e211361774096d2543e4017460937884fb8f"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/mycpp/include/Utils.h",
+      "bytes": 1090,
+      "sha256": "c80a75d34454c188fc8842efb3731177909c11b11332b7ed0c38752eba813a7f"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/mycpp/src/Utils.cpp",
+      "bytes": 744,
+      "sha256": "466878738286fd787038c28d80ea801ef4e6756d5e38e551b456b6f121a17d17"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/mycpp/src/app/pybind_api.cpp",
+      "bytes": 4449,
+      "sha256": "a629a314c5c3748cb3abc3c3b3a173cdc2a656ae721f1f0beb4836c3a759d019"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/offscreen_renderer.py",
+      "bytes": 2529,
+      "sha256": "b219ee8decaff6ce6944cefe07926bab0a51e912c10421f7db0765b866fcf647"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/requirements.txt",
+      "bytes": 1297,
+      "sha256": "e6a358ddcfda84cf756cbe709ff573995ced10f8d3ed7d99b914a2b705d5c253"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/FoundationPose/run_demo.py",
+      "bytes": 3242,
+      "sha256": "ff7fa1caee76e36ecc3a5ab6abe86f20ad96e3a98dda42be6d41666bcdc7c31b"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/__init__.py",
+      "bytes": 137,
+      "sha256": "39b67a3543de12fbe919327958818a53222b223688ef8ece33a12bc1e46d1f14"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/backends.py",
+      "bytes": 2413,
+      "sha256": "4acfa5e402365cab2d4812457b1b5b6d0996e6f2639f948ac7ad2a78dd6d1a60"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/depth_alignment.py",
+      "bytes": 7177,
+      "sha256": "3165beed2a6da2e88b95497a4845d7dcb2384cd911d542f27b2e5cc7030d608b"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/download_weights.py",
+      "bytes": 4972,
+      "sha256": "a65fcc6d9405b330954f417378e74ce56986eeada197f94bfd350bfeb9e58bac"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/foundation_pose_tracker.py",
+      "bytes": 29491,
+      "sha256": "6f1cf1be83b43a8b4431485a2e5d3b2248b5480be22a1f28602ec23328a1d955"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/fp_utils.py",
+      "bytes": 837,
+      "sha256": "6eb4a529990e3a63cad8529b8508aa734db839c0ed409a77d87c816803515bd3"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/multiview_tracker.py",
+      "bytes": 45236,
+      "sha256": "6f94bf7468b71b383dbb6bc4b6b14909d9f18fb1a127cecd49e92237c4b048ab"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/mv_videos_to_poses.py",
+      "bytes": 70136,
+      "sha256": "206b1287de2657cda7d1db7d46c2891c31a6b60801172519284956570b2aecfa"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/mv_videos_to_poses.yaml",
+      "bytes": 1727,
+      "sha256": "96ca16767557cf4d43c7c98be90a818dc94a6b9affdeafa47ff63f6d10330c1f"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/render_overlay.py",
+      "bytes": 3233,
+      "sha256": "db8f72abde7bbc9002698a85518b6724df5f1f501fd85ba900dfb7c89e6e960f"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/run_align_depth_to_object.py",
+      "bytes": 5780,
+      "sha256": "7da898f09540e14a5cb2769a7b7fe20e484738c1861e35bf89193b2b6f8ffc21"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/run_align_depth_to_reference_depth.py",
+      "bytes": 4504,
+      "sha256": "5410b2db7eb2b15ab74c628d273c1ebaecdd012f1cb83aa92becee5b6e1617be"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/run_correct_depth_scale.py",
+      "bytes": 8230,
+      "sha256": "caa04274a454309fba198c9c9f20a1e2621644491ee081205752c5604f82a2d1"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/run_ekf_smoothing.py",
+      "bytes": 13795,
+      "sha256": "264cc93be3743bf80e52f8012a241588d950a9cb00366bab1e0b84d32fe45bbe"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/run_estimate_mesh_scale.py",
+      "bytes": 6940,
+      "sha256": "cc9a3a1d17147996e49af08d4e013566f61707d20fb02bbc2de4f80f4ac119d2"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/run_render_poses.py",
+      "bytes": 5796,
+      "sha256": "46c69d18a747982221d58956d8c0093678aeaba821ca09032093eb1b4370f56e"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/run_video_to_poses.py",
+      "bytes": 10234,
+      "sha256": "416ec371be1c249070f7e59d6c752a47c70ee2d922fb9c12b72d8cc045ee5e6b"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/symmetry.py",
+      "bytes": 9975,
+      "sha256": "3ea5bfd3a510f41bcb516bf96016d3feeee2f34fccf08e7bd9d58c3329e06910"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/trt_engine.py",
+      "bytes": 9870,
+      "sha256": "2f090e2f70d9b0e047020d8c69cfe7154038789a2206cdd8d6ce7799359ff95a"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/trt_inference.py",
+      "bytes": 5134,
+      "sha256": "6af5fe6bfdb6c9464dcd1204fa9ab3a92b5c7f307e37092fce0188b721e6de78"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/foundation_pose/lib/trt_predictors.py",
+      "bytes": 7690,
+      "sha256": "d3fb1a7f9a34c67f3bf90e83f3aa23b8caa6bb2613d53e4b975bb84394b2bf07"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/mesh/lib/__init__.py",
+      "bytes": 790,
+      "sha256": "d200567f094c5a62f323b57bee4e91f261d1aa493008fdfd64236d60ecb49ef3"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/mesh/lib/mesh.py",
+      "bytes": 4768,
+      "sha256": "6c447f386ae8e392d2dbd6b17e9de162ba7e5e2fe6fbb966fcf66e13467d97ce"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/mesh/lib/mesh_align_depth.py",
+      "bytes": 1791,
+      "sha256": "129dab60b8324c4876aa6cd8fbad3e572f9edf7c6e14751d1bf05319b82ea9b5"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/mesh/lib/mesh_get_bounding_box.py",
+      "bytes": 618,
+      "sha256": "892431db0930ae41125900f686eb1de4d156e1165ce5820fc8e453143d0ded27"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/mesh/lib/mesh_render_depth.py",
+      "bytes": 2014,
+      "sha256": "d2d84516924f8c568990019af45be4a2f45676311e19a9252d062c2fe210a7b7"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/mesh/lib/mesh_render_image.py",
+      "bytes": 2488,
+      "sha256": "a763f993ec485c0364dcad53518ca51ee2ecb2b2fbb7c5318592fb6391d621f5"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/mesh/lib/mesh_render_mask.py",
+      "bytes": 871,
+      "sha256": "899d811cd19fc0bf565ba50e3cc033bcf8a632e3b76cbdad53f57fa5f6ad60fc"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/mesh/lib/mesh_simplify.py",
+      "bytes": 1810,
+      "sha256": "4bc068677f5e03535cb2c172d8bd56d5e688de3b2a8a8c93498867634abaf28b"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/mesh/lib/mesh_transform.py",
+      "bytes": 883,
+      "sha256": "0f5ac4c7ca68243ec7ace8ce7eb03ec49886cb98cac17c2809227d1f3f1ca9b6"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/mesh/lib/run_mesh_align_depth.py",
+      "bytes": 3526,
+      "sha256": "d634b563e0478786ca4fed8cfbc12d4fc8d09301a244966f16b7d9922d31e9da"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/mesh/lib/run_mesh_get_bounding_box.py",
+      "bytes": 1142,
+      "sha256": "9ae49880a2c55fba752cfa5c6eea7e83a6d938055da14a23c9a6c17dd5141929"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/mesh/lib/run_mesh_render_depth.py",
+      "bytes": 2382,
+      "sha256": "642f2c46880a7da81e42d45731f12696a5152550b244cca11504ef557e8ec2c7"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/mesh/lib/run_mesh_render_image.py",
+      "bytes": 6011,
+      "sha256": "1951d4b867e0e43470d3f5b7d6f709337fd48860666e3c54b7ead46ecebed0a0"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/mesh/lib/run_mesh_render_mask.py",
+      "bytes": 2377,
+      "sha256": "cacade9d9c5b51c9cf2a25344ceccaa81c26e7b3a65db6059af9ab7586f8a57e"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/mesh/lib/run_mesh_simplify.py",
+      "bytes": 1503,
+      "sha256": "b2c9f4b9a4722989490b9bd2af6bb377b1783d00a934c7d6948a140d8d5eee70"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/mesh/lib/run_mesh_transform.py",
+      "bytes": 1648,
+      "sha256": "199c26786d1a857ebca5b2d186d36e08b45aab106ab024a5a7d8bd1611cb9239"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/moge/lib/__init__.py",
+      "bytes": 137,
+      "sha256": "39b67a3543de12fbe919327958818a53222b223688ef8ece33a12bc1e46d1f14"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/moge/lib/download_weights.py",
+      "bytes": 879,
+      "sha256": "b76f98e08e69b743fb0e174c8b54dae3f04c0d05666b52aabdc262ad880f3eb8"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/moge/lib/image_to_depth.py",
+      "bytes": 6023,
+      "sha256": "3d917c335388c690fe901f433967f2548e82f4254fdb335547765d79512d0edf"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/moge/lib/video_to_depth.py",
+      "bytes": 7772,
+      "sha256": "007e7079493e1784d4fe93bb176ac4cc5fd68d5dc0eab170319586d67b35c580"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/mv/LICENSE",
+      "bytes": 581,
+      "sha256": "211d98cf9501fe8cfc7125554088e558c0a7fcefbe822be7d91ec08aa91580e7"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/mv/__init__.py",
+      "bytes": 137,
+      "sha256": "39b67a3543de12fbe919327958818a53222b223688ef8ece33a12bc1e46d1f14"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/mv/io/__init__.py",
+      "bytes": 137,
+      "sha256": "39b67a3543de12fbe919327958818a53222b223688ef8ece33a12bc1e46d1f14"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/mv/math/__init__.py",
+      "bytes": 137,
+      "sha256": "39b67a3543de12fbe919327958818a53222b223688ef8ece33a12bc1e46d1f14"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/mv/math/numpy_fn.py",
+      "bytes": 28644,
+      "sha256": "851e0ce39938ccac963770131e9735b46f4c7983fa7ca1d07ffcfd7bc7bbf4a7"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/mv/math/torch_fn.py",
+      "bytes": 12357,
+      "sha256": "83aa91c0a8a04b171d877720114ea56ba54d426461dd4cd6ff017a14a28bc9f8"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/mv/rig/__init__.py",
+      "bytes": 490,
+      "sha256": "75a9f968d307b93ae68c11ffe772616c22ca68cc9bcd0e05f014def1169e6eaf"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/mv/rig/edex.py",
+      "bytes": 9770,
+      "sha256": "7b7fca92adc922627f4eb8ab259adcd8a1abc902d6bfad1b6a13b5eb4c2dd1a9"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/mv/rig/params.py",
+      "bytes": 4560,
+      "sha256": "cb97d27fdf524d8cbe65dae825d2b5db43c73dc361adfb572824c6f065fecbc1"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/mv/rig/rig.py",
+      "bytes": 7158,
+      "sha256": "287f765f00a9edd08647497b176057c217142bf9517e57aa7c1b9849d2f46d08"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/mv/rig/rigs/stereo-4.yaml",
+      "bytes": 1179,
+      "sha256": "8913d93510d3dd2b24b9576abe34fd16385504405df04b9fe7b3fcfc6e20163c"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/mv/vis/__init__.py",
+      "bytes": 464,
+      "sha256": "adb1482ae49e2143c7826307d8ea7128257f9371da99464cb8e03907b3bd7b34"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/mv/vis/renderer.py",
+      "bytes": 7092,
+      "sha256": "5c7bef06b3631843c4637b6aacab35d939591ec0828d15892bbbb7cc37583467"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/mv/vis/wis3d_helper.py",
+      "bytes": 2802,
+      "sha256": "93e40a2813cff0ce2e2696f5e58595c5cf431c8fee4bd4207db18723338439a1"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam2/lib/__init__.py",
+      "bytes": 137,
+      "sha256": "39b67a3543de12fbe919327958818a53222b223688ef8ece33a12bc1e46d1f14"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam2/lib/annotate.py",
+      "bytes": 4889,
+      "sha256": "b9c87b99d99df3bbb6217c7ae4231cd714377aecaf539e5914cbb153fc5a8988"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam2/lib/datatypes.py",
+      "bytes": 245,
+      "sha256": "b393274c08f8e5403b109a57ed589231a4588c810af495292ca8459a0e4c588f"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam2/lib/download_weights.py",
+      "bytes": 635,
+      "sha256": "32bf36a509b71ea4116ba2d262d4f5cf9ff8aa203d81e000321f3ad9e494e951"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam2/lib/image_to_mask.py",
+      "bytes": 4177,
+      "sha256": "94e76830eb61c5e7c4db9bf987c04a73d385cae0b66de724b7643f500984f197"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam2/lib/mv_videos_to_masks.py",
+      "bytes": 8926,
+      "sha256": "5295fde89b4fa28d37a01d42ca81438eac4591cd0365841cb408fd18e940b9f8"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam2/lib/mv_videos_to_masks.yaml",
+      "bytes": 495,
+      "sha256": "68494b0388e1b4c9027d5c4264a8e50c71e2f26590297b729214496356a2c134"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam2/lib/sam2_utils.py",
+      "bytes": 57629,
+      "sha256": "8c10ed562a54b4c29e1c6525af9fa2563eea610ca32b81fcf1d424878b6c6a9a"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam2/lib/video_to_masks.py",
+      "bytes": 5349,
+      "sha256": "06eb630121390e4a77023b5a23b8e4555e1195dcee209dfc8869ef3e475e3d42"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d/lib/__init__.py",
+      "bytes": 137,
+      "sha256": "39b67a3543de12fbe919327958818a53222b223688ef8ece33a12bc1e46d1f14"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d/lib/autoscale_mesh.py",
+      "bytes": 4775,
+      "sha256": "6eda58ee81a9cd8d33dea8326d602bada3281185c7d78e2cbcdc9a3e684a9a1a"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d/lib/download_weights.py",
+      "bytes": 2934,
+      "sha256": "bce6636d9a79e7078a970af74b8e531fbee30ed58faa0907c8c57347a8b63150"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d/lib/glb_export.py",
+      "bytes": 6405,
+      "sha256": "e00c5cf9c38b869261467714e39b2e57dd052171615deccd2361571f0417468b"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d/lib/image_to_mesh.py",
+      "bytes": 14446,
+      "sha256": "6b6f5eaa638ced513386c8ceac3ca5f482a97a88b919b24b2e80e543164d77de"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d/lib/inference_pipeline_modified.py",
+      "bytes": 23791,
+      "sha256": "b9f1b8f80a74a590ff526e0846a232af520f9a294bbf4734dd7e071aae819a07"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d/lib/render_debug_image.py",
+      "bytes": 3272,
+      "sha256": "ee7005fb98fe1382626422bc1f522b447f81036d1463440a41d7b1cc742da461"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d/lib/render_textured_video.py",
+      "bytes": 9545,
+      "sha256": "85dd0e7bd5e033ce1923e523700ed45497b1868378af47a4c230ff4e337fbb97"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/__init__.py",
+      "bytes": 137,
+      "sha256": "39b67a3543de12fbe919327958818a53222b223688ef8ece33a12bc1e46d1f14"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/download_weights.py",
+      "bytes": 5164,
+      "sha256": "c680d5cc69a228760b8d7f05f9d78fd82c2feeb552c7e67640d91a14aa8c53bc"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/estimate_mhr_params.py",
+      "bytes": 20468,
+      "sha256": "07906ab3e6477ee0cf78199fae5ae3ef2a013480a41538a5215ca5ed24db5406"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/export_soma.py",
+      "bytes": 27732,
+      "sha256": "81c5d2cb4acdd215972e89423aaac65cae1c484eb83df20beeb885acb1ca415e"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/mv_optimize_mhr_params.py",
+      "bytes": 51684,
+      "sha256": "39f4f8f6e36eeab9b8dfbeab8900b3ccc7934626b71c3761ed88ce8d0325f31c"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/mv_optimize_mhr_params.yaml",
+      "bytes": 791,
+      "sha256": "a4d7edaf53f3263b08351071d7e586a562fe6d29602657488540a5565826fbc9"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/renderer_gpu.py",
+      "bytes": 6923,
+      "sha256": "32fa90cd701399148a2a6a702e4efb149e3b753878027ef1016bc30bed1a6324"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/LICENSE",
+      "bytes": 8204,
+      "sha256": "b3a5a0e2d973ab80e6610ccf1cffc40756050d0ace3cd4fec879b3ec290b2e9b"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/__init__.py",
+      "bytes": 305,
+      "sha256": "f69e252dc42ef8d58ae1b72e97c5d34d6ac8d2fb342ba63c5f620caaa875db3f"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/build_models.py",
+      "bytes": 1665,
+      "sha256": "445b5408109232c770b892cbced52c34c3a104a76c685885e66963dcc349a41e"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/metadata/__init__.py",
+      "bytes": 1825,
+      "sha256": "0f8dc30002c8612ef4897dea399f8b7fa45ec4e5d8d78e149f976480a3b89b53"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/metadata/mhr70.py",
+      "bytes": 26326,
+      "sha256": "695c2c7d472e32757c480114fdb054d54ee4af53f69b2a6e040b00a55b270dc9"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/models/__init__.py",
+      "bytes": 53,
+      "sha256": "abe836cd309d15d814afb3cf18e6eb7abd0726ea6ecc3091335bb82d7236c379"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/models/backbones/__init__.py",
+      "bytes": 845,
+      "sha256": "d20122a214bc25371bf679b9e7aeb9aa8e195019e277843b69662a3eccc5a8cd"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/models/backbones/dinov3.py",
+      "bytes": 2309,
+      "sha256": "53ae01ccdffa647f16b0fefe366f947162874a9e593d510864d52ffcd259e0e8"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/models/backbones/vit.py",
+      "bytes": 19385,
+      "sha256": "361308ff8fd80c6fd4a32baec1b8eee738fdf8cf638fc0c72921f3ceb408c794"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/models/decoders/__init__.py",
+      "bytes": 1198,
+      "sha256": "943c89cb865277d6bb2274a086f314143a6e115b6b5ec99ac5858f7633c0d464"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/models/decoders/keypoint_prompt_sampler.py",
+      "bytes": 6666,
+      "sha256": "8f7692c5f4a5b0b8999c46651b702f4f7c02d0297a99e008a3d7a42df72bee81"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/models/decoders/prompt_encoder.py",
+      "bytes": 9542,
+      "sha256": "a9160aa5ccdd4d5e2ae047605d86eee9e0e558344b85f716d963fd091f9a33d1"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/models/decoders/promptable_decoder.py",
+      "bytes": 7389,
+      "sha256": "73c1219c176478e52358d9448d8087017e8294202653ca9fb62e2c964f7c363a"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/models/heads/__init__.py",
+      "bytes": 1133,
+      "sha256": "e7605eced4289ad6e8d0d55d006949de6960ce1ad7483577016c6bca072cc02e"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/models/heads/camera_head.py",
+      "bytes": 3562,
+      "sha256": "84a14112e5c4b216559c1f9a39c3a33d6fa277182c2037f44a76a9cb538de55e"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/models/heads/mhr_head.py",
+      "bytes": 14148,
+      "sha256": "62af48b1f33462bc445d7f342009fcbceabd221f2a6e9bcd1d3739d582bc9fd6"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/models/meta_arch/__init__.py",
+      "bytes": 88,
+      "sha256": "68a23d54173e7a34a7224d16f015c4af18ceb143fa5cb87e1a5e9d7b7ac16b05"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/models/meta_arch/base_lightning_module.py",
+      "bytes": 2056,
+      "sha256": "c04fa1f3fcc840bf6b51ab8a90b4334fb260e851099b7a59cb9357914f1dc783"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/models/meta_arch/base_model.py",
+      "bytes": 6746,
+      "sha256": "baf4c93ab865e6e9f4f498056a673698e59bafe89b17f969833884a3b352e8bc"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/models/meta_arch/sam3d_body.py",
+      "bytes": 80820,
+      "sha256": "851b7475f18b56891aa02606e7c0ee9e03120fa208cc85df5127b792e1abfeee"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/models/modules/__init__.py",
+      "bytes": 463,
+      "sha256": "ddad96a6a9bf09d36156ba82ebaa9ee6798045fe1fc715174cec4c0b4bd2ead1"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/models/modules/camera_embed.py",
+      "bytes": 3392,
+      "sha256": "42f2483368fa3249557464aaa188c5d422f4e2faeb29ecd6facc131a97141539"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/models/modules/drop_path.py",
+      "bytes": 1444,
+      "sha256": "04c2f8bf7f13382c3d5c992fca00692a0591d187a2d271f49afaa5bce2ec9525"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/models/modules/geometry_utils.py",
+      "bytes": 9106,
+      "sha256": "2553899d9a0f781da1a1d73e8d49dcdd08376c5c0e471d6262e662229b645ef1"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/models/modules/layer_scale.py",
+      "bytes": 1520,
+      "sha256": "ef4e0f769dd072425384f354c9527e2fdd7346843379e5f3b0cb2110a72c1c81"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/models/modules/mhr_utils.py",
+      "bytes": 15157,
+      "sha256": "40d33308c83516c15e14889d148419b8c610a8c33aca57b3922354aa4987ec6e"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/models/modules/misc.py",
+      "bytes": 694,
+      "sha256": "f942d181ee8578c67a9ab4c0828d030aefdadd8891450ab1319b33a8237891eb"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/models/modules/swiglu_ffn.py",
+      "bytes": 2894,
+      "sha256": "7a25fff5fa99c910c8daea7737f3650881a92da11388ddfbfd57794dc9de5355"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/models/modules/transformer.py",
+      "bytes": 23141,
+      "sha256": "0cc343878ba8cdf28f9061de53ac0bc0fd6f829889ade96341729db5860ecbe4"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/models/optim/__init__.py",
+      "bytes": 53,
+      "sha256": "abe836cd309d15d814afb3cf18e6eb7abd0726ea6ecc3091335bb82d7236c379"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/models/optim/fp16_utils.py",
+      "bytes": 1486,
+      "sha256": "90e25559a99fa341666c9c5da5b7e91d679ffdfab635aed9e9cf21d8f43c107d"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/sam_3d_body_estimator.py",
+      "bytes": 16391,
+      "sha256": "c7c55f35e24d79335d0976b4358622b77464fc15a93094db805e64361671dd9d"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/utils/__init__.py",
+      "bytes": 85,
+      "sha256": "f7b853e9727808b777120cacc5ef9835af0ceaee101e134f7b7a8dc6cbe0a410"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/utils/checkpoint.py",
+      "bytes": 4279,
+      "sha256": "a54ec1f1c1ac899f29e1fa6bc5ab8c46834f7a803ce21dcc54ded658a883e4c0"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/utils/config.py",
+      "bytes": 2705,
+      "sha256": "9c7ce1d62d4dc5b62b027ebf63d7ac825d8fd29784db518b3aa7bf75f17fdbbc"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/utils/dist.py",
+      "bytes": 22047,
+      "sha256": "db6b4ebe17043c13eb7aa1c9b26debdb7e12a13310a349f5225f0b7105b2b87b"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/utils/logging.py",
+      "bytes": 724,
+      "sha256": "d4b62bb43b5c383a8e237e63333f4ab5e84f4601bd21c27d060166c668210c54"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/visualization/__init__.py",
+      "bytes": 53,
+      "sha256": "abe836cd309d15d814afb3cf18e6eb7abd0726ea6ecc3091335bb82d7236c379"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/visualization/renderer.py",
+      "bytes": 14224,
+      "sha256": "7c58769b2165b3b067dc514e883670c1e5a61b40bd43799bb3d010d6e9ca1460"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/visualization/skeleton_visualizer.py",
+      "bytes": 12043,
+      "sha256": "04d24ff555265aecc878c5ccd979c1456b5ddc553240df2cd3bbe7b40dcf2e74"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/sam_3d_body/visualization/utils.py",
+      "bytes": 10704,
+      "sha256": "119552d35e5374a7d9e8ac1f9e87af5a33ad6634bce4ea883531196a09bd748f"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/tools/__init__.py",
+      "bytes": 53,
+      "sha256": "abe836cd309d15d814afb3cf18e6eb7abd0726ea6ecc3091335bb82d7236c379"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/tools/build_detector.py",
+      "bytes": 4861,
+      "sha256": "04209c79a3b7013385a21cd5dd074d9629e332376efc29868db6ae7e36913f31"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/tools/build_fov_estimator.py",
+      "bytes": 2091,
+      "sha256": "8de23d52841886cdb4c45e8840d0a91a5118bd3b61061542b71104372fe1b75c"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/tools/build_sam.py",
+      "bytes": 3111,
+      "sha256": "05ce7354ecf3802c9c8f5769d4a431ea1ca640fe06a4fc801efd710de08d20fb"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/tools/cascade_mask_rcnn_vitdet_h_75ep.py",
+      "bytes": 4305,
+      "sha256": "63375483239fbc506b5bf4f2b134fdabc8829df3de85563a231b059e96e9de65"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/tools/vis_utils.py",
+      "bytes": 5082,
+      "sha256": "6d7f1e2e58b0b22fe5b5f2587628c77b692ebe76dac6003432b9046f26f46c6c"
+    },
+    {
+      "path": "modules/reconstruction/src/r2s2r_engines/sam3d_body/lib/visibility.py",
+      "bytes": 13358,
+      "sha256": "d449e828e8f5680e2964a31e99e8c45d03c1b4e3f4ae64afcc980db095521130"
+    },
+    {
+      "path": "modules/reconstruction/src/real2sim2real/reconstruction/__init__.py",
+      "bytes": 59,
+      "sha256": "5a9c2803cb7f9b8154c016be1ba875b42792630193bd046acdcfbee9b1215223"
+    },
+    {
+      "path": "modules/reconstruction/src/real2sim2real/reconstruction/metric.py",
+      "bytes": 1685,
+      "sha256": "6dcb12c74db2595a86a324593359bd47759278fd21787eaa96f1c1d3a700c95a"
+    },
+    {
+      "path": "modules/reconstruction/src/real2sim2real/reconstruction/stage.py",
+      "bytes": 12140,
+      "sha256": "56197350102d40f99d55a2cf774088fb3407e3bd4b066840bb1f94c500804b14"
+    },
+    {
+      "path": "modules/retargeting/LICENSE",
+      "bytes": 30209,
+      "sha256": "e87dc2a40b553c5f52acb3909f479afbeac8c35a85328fceaa0cab15ed50b9fc"
+    },
+    {
+      "path": "modules/retargeting/README.md",
+      "bytes": 1366,
+      "sha256": "ff110796a20492cfe392e679a5b77d48040a5030ee33135b962b641cfeef2e47"
+    },
+    {
+      "path": "modules/retargeting/licenses/SAM-LICENSE",
+      "bytes": 8204,
+      "sha256": "b3a5a0e2d973ab80e6610ccf1cffc40756050d0ace3cd4fec879b3ec290b2e9b"
+    },
+    {
+      "path": "modules/retargeting/pyproject.toml",
+      "bytes": 675,
+      "sha256": "378ea5c90b060f3e4a1b197359ce2d3e7d57448c07381988a02c5dd659ce153a"
+    },
+    {
+      "path": "modules/retargeting/requirements-runtime.txt",
+      "bytes": 107,
+      "sha256": "7b6f386a328c1d5c3b4894901552c73d40f04cdd884b358a7a7022e82333a288"
+    },
+    {
+      "path": "modules/retargeting/src/real2sim2real/retargeting/__init__.py",
+      "bytes": 358,
+      "sha256": "90ebfbff663576ad73765810097f0f3a20aa0845ee43b579ee11a4d89df1599f"
+    },
+    {
+      "path": "modules/retargeting/src/real2sim2real/retargeting/configs/g1/frame_alignment.json",
+      "bytes": 6056,
+      "sha256": "42baca3eeb227263024f619050792b1d6acff52dac971cebb20a571a8e99b366"
+    },
+    {
+      "path": "modules/retargeting/src/real2sim2real/retargeting/configs/g1/retargeter.json",
+      "bytes": 2197,
+      "sha256": "ed83069251930ef8bf88c4e4938b4869f545d406ebe7500c8d03719bd8b4900e"
+    },
+    {
+      "path": "modules/retargeting/src/real2sim2real/retargeting/ground_alignment.py",
+      "bytes": 42846,
+      "sha256": "0afbc63b79b5a4207401b255d37dd9a04594c302d867e91085f1ca23be655367"
+    },
+    {
+      "path": "modules/retargeting/src/real2sim2real/retargeting/mhr.py",
+      "bytes": 75,
+      "sha256": "3e29e2951c0aa61bbda225e9d129ce36f4a555ae254c7d593103b867995abfbd"
+    },
+    {
+      "path": "modules/retargeting/src/real2sim2real/retargeting/motion_schema/__init__.py",
+      "bytes": 1845,
+      "sha256": "31dcede5ba52152921e25e66b588771f0a47d8caaa6c7adad6978dd9c2d1f443"
+    },
+    {
+      "path": "modules/retargeting/src/real2sim2real/retargeting/motion_schema/reader.py",
+      "bytes": 17727,
+      "sha256": "b38223094a3f8f1d74c07a5a4e9915b81f2977f4f546f61d3b065e87ba25f12b"
+    },
+    {
+      "path": "modules/retargeting/src/real2sim2real/retargeting/motion_schema/schema.py",
+      "bytes": 30868,
+      "sha256": "6d143591e32e92f7c6592cb8ad4071445951f67c33e842c35b4a753fe0dc9a91"
+    },
+    {
+      "path": "modules/retargeting/src/real2sim2real/retargeting/motion_schema/timing.py",
+      "bytes": 1469,
+      "sha256": "5eb0ae2b68ebae4e50f926c8ebcccaeb48711495c16cdaa48112fc17b3e2176d"
+    },
+    {
+      "path": "modules/retargeting/src/real2sim2real/retargeting/motion_schema/writer.py",
+      "bytes": 12130,
+      "sha256": "45066bc564130f78f7ccb27fbce06cc03612b6b5917f7443226cf392e7785367"
+    },
+    {
+      "path": "modules/retargeting/src/real2sim2real/retargeting/params.py",
+      "bytes": 7046,
+      "sha256": "2f2e36e493deb6aa8684e39befdf6b0bbd58f329668eb3abac2d00fe6c4b4c65"
+    },
+    {
+      "path": "modules/retargeting/src/real2sim2real/retargeting/pinocchio_viser_visualizer.py",
+      "bytes": 12260,
+      "sha256": "2f95c15804b1ed9a77f860bc098657df101940d9abc86176095a36e932983dc6"
+    },
+    {
+      "path": "modules/retargeting/src/real2sim2real/retargeting/read_soma.py",
+      "bytes": 31965,
+      "sha256": "adf0e68a88193f5be7956e374732da2d440214ed30751c53a38aa88fbc988c03"
+    },
+    {
+      "path": "modules/retargeting/src/real2sim2real/retargeting/robot_config.py",
+      "bytes": 21152,
+      "sha256": "a8c128124a91e18685ad414dcfd8a9fbedc3caffdfc8956eebaf312997f19729"
+    },
+    {
+      "path": "modules/retargeting/src/real2sim2real/retargeting/soma_to_robot.py",
+      "bytes": 45633,
+      "sha256": "13160f476db2cdd9a9f5ada76990ceeae15b4ce1d98669edb1d905325b6a7e59"
+    },
+    {
+      "path": "modules/retargeting/src/real2sim2real/retargeting/stage.py",
+      "bytes": 5256,
+      "sha256": "df7ea797ecf248ac6243c5d775e6ac462d482442d19b2b008bfa289303b3ca9a"
+    },
+    {
+      "path": "modules/retargeting/src/real2sim2real/retargeting/viser_playback.py",
+      "bytes": 32604,
+      "sha256": "24c44ec1ba1e7dc3a92bf94c5ef99d4b30b6b68cc32869fdf46f2c15b8935468"
+    },
+    {
+      "path": "modules/retargeting/src/real2sim2real/retargeting/whole_body_kinematics.py",
+      "bytes": 26397,
+      "sha256": "6bce6b25cd7eec7ff3e617ab839a4bad25fb526b161973ae91371145e0d7d3bd"
+    },
+    {
+      "path": "provenance/extraction.json",
+      "bytes": 162800,
+      "sha256": "0e5f26141a080b8c902f35eaadae56ce54d272f465cd4c11eaf69f2d1dd74b15"
+    },
+    {
+      "path": "pyproject.toml",
+      "bytes": 730,
+      "sha256": "f02ad5b300af966b9955093579297231083de13953cfbeb987d469bfee3759f8"
+    },
+    {
+      "path": "scripts/check_source.py",
+      "bytes": 864,
+      "sha256": "1391a495d596a1d74190adddb8ddfcc486b41c6b023ce6710c59fb37fc5a63be"
+    },
+    {
+      "path": "src/real2sim2real/__init__.py",
+      "bytes": 161,
+      "sha256": "12bc8469ef7efa1f946296a812c20153c47e8d20e7713797052d7afff4a33c23"
+    },
+    {
+      "path": "src/real2sim2real/__main__.py",
+      "bytes": 48,
+      "sha256": "935a1c1166b0c1ea35a82256345000bf2c73ded718d77773bc27a71ecce28f7d"
+    },
+    {
+      "path": "src/real2sim2real/artifacts.py",
+      "bytes": 2779,
+      "sha256": "7c5f9bc0e1423e9a1b573373ebb25c5fa8a9146157efc6ecfa39d3eb99942a55"
+    },
+    {
+      "path": "src/real2sim2real/cli.py",
+      "bytes": 1625,
+      "sha256": "4e75f1a2fc40ed2c4c4c931705751fc7c9e6cd9c843abd806602ec65c94f7cd6"
+    },
+    {
+      "path": "src/real2sim2real/human.py",
+      "bytes": 14857,
+      "sha256": "e9208f74f553bb5ef547f24fe4acda42010a8ac418bf7e9308a3667790347dcc"
+    },
+    {
+      "path": "src/real2sim2real/human_decode.py",
+      "bytes": 4304,
+      "sha256": "922ac530dcc8a6623c9c2170281d8fcf409ddb9ed643cb5153b9aaa61f87c6e0"
+    },
+    {
+      "path": "src/real2sim2real/pipeline.py",
+      "bytes": 6459,
+      "sha256": "df0ba105c06e0d891c738eb052dd317336e04fe4897fd252dc66831fda84e364"
+    },
+    {
+      "path": "src/real2sim2real/stage.py",
+      "bytes": 668,
+      "sha256": "833a67c7ae86c0d78d941708d32b5740786cc11f95ec121bfe046210f7587e9e"
+    },
+    {
+      "path": "src/real2sim2real/supervisor.py",
+      "bytes": 2370,
+      "sha256": "1f43f99b85cd318b8a9a9b8dbb3e4de162b9ff16b782f7c05830b4bbb8fd831c"
+    },
+    {
+      "path": "tests/test_module_contracts.py",
+      "bytes": 3034,
+      "sha256": "3712f01bf49b88e2dd5fc7804b6596ed03dd6024f021594d2bf7558c945ebe88"
+    },
+    {
+      "path": "tests/test_motion_interop.py",
+      "bytes": 2020,
+      "sha256": "04f86f532062a0fafdb9da17a0360d8b94aa0e81122bc218222ed9968bfbc4a4"
+    },
+    {
+      "path": "tests/test_pipeline.py",
+      "bytes": 4671,
+      "sha256": "13f95e90bef9bb80cc45d95bc579fd443ba5697ce5a178b6480ded4f3d72ec51"
+    }
+  ]
+}

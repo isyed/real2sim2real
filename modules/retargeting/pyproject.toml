@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "real2sim2real-retargeting"
+version = "0.1.0"
+description = "Configurable SOMA and Pink inverse-kinematics retargeting"
+requires-python = ">=3.11,<3.13"
+dependencies = ["real2sim2real==0.1.0", "numpy>=1.26,<3", "scipy>=1.11,<2", "trimesh>=4", "pyarrow>=16"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+namespaces = true
+
+[tool.setuptools.package-data]
+"*" = ["*.json", "*.yaml", "*.yml", "*.txt", "*.cpp", "*.h", "*.hpp", "*.cmake", "*.cu", "*.cuh", "*.sh", "LICENSE", "NOTICE", "CMakeLists.txt"]
+
+[tool.setuptools]
+license-files = ["LICENSE", "licenses/*"]

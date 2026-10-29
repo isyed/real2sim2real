@@ -1,0 +1,27 @@
+{
+  "schema": "real2sim2real.pipeline/1",
+  "input": "../data/input.mp4",
+  "input_kind": "video",
+  "output": "../runs/reconstruction",
+  "stages": [
+    "reconstruction"
+  ],
+  "modules": {
+    "reconstruction": {
+      "execution": {
+        "python": "../.venv-reconstruction/bin/python",
+        "timeout_seconds": 7200,
+        "thermal": {
+          "pause_c": 82,
+          "resume_c": 74,
+          "stop_c": 83
+        }
+      },
+      "prompts": "prompts.json",
+      "weights": "../model-store/reconstruction",
+      "sam2_weights": "../model-store/sam2",
+      "sam3d_weights": "../model-store/sam3d",
+      "sequence_id": "my-sequence"
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "schema": "real2sim2real.pipeline/1",
+  "input": "../runs/my-robot-reference",
+  "input_kind": "robot-reference",
+  "output": "../runs/training",
+  "stages": [
+    "controller-actor-training"
+  ],
+  "modules": {
+    "controller-actor-training": {
+      "execution": {
+        "python": "../.venv-training/bin/python",
+        "timeout_seconds": 10800,
+        "thermal": {
+          "pause_c": 82,
+          "resume_c": 74,
+          "stop_c": 83
+        }
+      },
+      "assets": "../robot-assets",
+      "environment_steps": 10000000,
+      "checkpoint_every": 5000000,
+      "worlds": 256,
+      "experiment": "g1_bounded_flash_sac",
+      "overrides": []
+    }
+  }
+}

@@ -130,3 +130,8 @@ The reusable CPU comparison renderer passed a three-frame synthetic execution:
 complete MP4 decoding, frame count, cache reuse, and rejection after surface bytes
 changed. It records source video, geometry and human surface hashes. Full new
 repair comparison videos remain downstream jobs, separate from this smoke test.
+
+Explicit tracking-runtime and dispatcher checks pass 16 tests. The object-motion
+backend now verifies both score/refiner model files even for its offline CLI
+preflight. A separate offline CPU check loaded both real configurations and
+checkpoints (116 and 134 tensors); this does not validate GPU kernels or tracking.

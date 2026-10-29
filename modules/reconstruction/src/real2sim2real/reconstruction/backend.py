@@ -84,6 +84,9 @@ def run(request, phase, *, check_backend=False):
         R2S2R_FP_REFINE_BATCH="32",
         PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True",
     )
+    if phase == "object_motion":
+        from .tracking_runtime import tracking_environment
+        env.update(tracking_environment(weights / "foundationpose/nvlabs_pytorch"))
     os.environ.update(env)
     if check_backend:
         # Import the actual model CLI, not only this lightweight wrapper. A

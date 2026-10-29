@@ -87,6 +87,12 @@ def test_full_backend_check_hides_cuda_and_only_requests_help(tmp_path, monkeypa
         p = weights / name
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_bytes(b"not loaded")
+    from real2sim2real.reconstruction.tracking_runtime import MODEL_RUNS
+    for model in MODEL_RUNS:
+        for filename in ("config.yml", "model_best.pth"):
+            p = weights / "foundationpose/nvlabs_pytorch" / model / filename
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_bytes(b"not loaded")
     prompts = tmp_path / "prompts.json"
     prompts.write_text("{}")
     r["options"].update(

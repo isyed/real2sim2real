@@ -46,8 +46,8 @@
     },
     {
       "path": "docs/LEARNINGS.md",
-      "bytes": 8861,
-      "sha256": "5f30d4c8e527c06d6953b443a8fbf6d228ced8f7d82484723b496ef6f3e2cffe"
+      "bytes": 9500,
+      "sha256": "d53557961b2fc49300a5ef47570d4bf678f206628fa3c673e67346f6f6af9564"
     },
     {
       "path": "docs/REPRODUCIBILITY.md",
@@ -61,8 +61,8 @@
     },
     {
       "path": "docs/VALIDATION.md",
-      "bytes": 7896,
-      "sha256": "6b7456ff022d78bf4284b3b6bff180852526e9baf8da4a0866a2e9b6f305f712"
+      "bytes": 8214,
+      "sha256": "a98f9adb366a2de17f9a4c6c179cc2e948e906b6037e7aa1346564927e72e8cc"
     },
     {
       "path": "examples/full-pipeline.json",
@@ -1206,8 +1206,8 @@
     },
     {
       "path": "modules/reconstruction/README.md",
-      "bytes": 7517,
-      "sha256": "4606d371a7661b848e5621631e85f6f683cc4fbb5ae1de5eb18e093dd0ac5eff"
+      "bytes": 7970,
+      "sha256": "adb7fb5b2862224f3c144384d52a6df96d880f1c5a0a40413515a45bbe22e9ed"
     },
     {
       "path": "modules/reconstruction/docker/Dockerfile",
@@ -2786,8 +2786,8 @@
     },
     {
       "path": "modules/reconstruction/src/real2sim2real/reconstruction/backend.py",
-      "bytes": 16454,
-      "sha256": "bfd5fc9482208c504559c12934a21a86b682286ad4ec3b826f3d4f371c5e9858"
+      "bytes": 16630,
+      "sha256": "056167ff34554cc178401f584c1ac08600640604bbfc94119106740153660828"
     },
     {
       "path": "modules/reconstruction/src/real2sim2real/reconstruction/metric.py",
@@ -2803,6 +2803,11 @@
       "path": "modules/reconstruction/src/real2sim2real/reconstruction/stage.py",
       "bytes": 3708,
       "sha256": "def9fa50f7b28ab2257e7df158a8e559bc46d7a68757ccfc421004895cc5ef56"
+    },
+    {
+      "path": "modules/reconstruction/src/real2sim2real/reconstruction/tracking_runtime.py",
+      "bytes": 1167,
+      "sha256": "33bf0d88ed050b0e9d72494f192e0f1a8be43fc029b8e2e6139d4c9b9e3a454a"
     },
     {
       "path": "modules/retargeting/LICENSE",
@@ -3016,13 +3021,18 @@
     },
     {
       "path": "tests/test_reconstruction_dispatch.py",
-      "bytes": 4668,
-      "sha256": "2dd07155dcb859544097a651f192f98437a94565d157cc5421eb70904c0c015d"
+      "bytes": 5002,
+      "sha256": "7af1a7499753e7217bb9a338e6d2e30e737f10fbe5ebad0e7483b47761d0e5a7"
     },
     {
       "path": "tests/test_reconstruction_quality.py",
       "bytes": 1890,
       "sha256": "d31095b95892b2008f5bde1db2518df4013d79d9f9c8cb6d2b2b2566c4d285bb"
+    },
+    {
+      "path": "tests/test_tracking_runtime.py",
+      "bytes": 686,
+      "sha256": "afb7bdba64f00ed0a83e26cd9a9f482ee729443f2d7069d1b6bae2c292f0648d"
     }
   ]
 }

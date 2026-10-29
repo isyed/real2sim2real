@@ -63,3 +63,14 @@ already records `approved_for_use=false`, requires fresh tracking after a resize
 and documents foreshortening and surface/center-depth limitations. Acceptance
 review now exercises those distinctions on full new reconstructions. No new
 automatic resize or smoothing default has been introduced from this observation.
+
+
+**R-009 — visualization must not hide retained human geometry:** a keypoint-only
+comparison can make a complete parametric human reconstruction appear incomplete.
+The new `human_surface.decode_surface` helper decodes the retained MHR parameters
+on CPU into full-resolution, full-timeline surface vertices and model faces. It
+records native-to-OpenCV unit/axis conversion and content hashes, and uses bounded
+batches with a memory-mapped array. Coordinate/transform rejection tests pass;
+a real two-frame model decode produced finite forward-facing surfaces with
+18,439 vertices and 36,874 faces per frame. Full campaign video review is pending.
+The display does not repair pose or establish grasp/contact readiness.

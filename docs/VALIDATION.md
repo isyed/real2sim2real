@@ -89,3 +89,11 @@ complete human preprocessing source packaging, per-model cache routing, and a
 full-backend offline dependency-check mode without inference side effects.
 No evidence-dependent resize, smoothing or human-position correction has been
 silently promoted into reconstruction defaults.
+
+
+The optional full-human-surface decoder passes axis/unit/world-transform and
+invalid-input tests. A real licensed MHR model was decoded on CPU for two retained
+frames, producing finite 18,439-vertex surfaces and 36,874-triangle topology. This
+is mesh decoding, not a new prediction or retargeting test. The focused core,
+module-contract, pipeline, dispatcher and surface suite passes 35 tests. Complete
+new comparison videos using this surface path remain under downstream review.

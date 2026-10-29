@@ -118,3 +118,15 @@ replaced trajectory. All three fresh outputs have worse sampled silhouette
 agreement than the corresponding retained parents; successful execution is
 therefore not a claim of improved reconstruction. No additional physical
 execution or actor training is established by these runs.
+
+The optional resting-support seed search passes three synthetic tests: bounded
+parent-preserving adjustment, rejection when the required movement exceeds the
+budget, and refusal without reviewed resting-phase evidence. The existing
+adapter/metric-preflight/seed suite also passes 17 tests. A real predicted-data
+seed improved its declared initial resting clearance while retaining parent
+image/depth gates; fresh tracking is pending and no physical result is claimed.
+
+The reusable CPU comparison renderer passed a three-frame synthetic execution:
+complete MP4 decoding, frame count, cache reuse, and rejection after surface bytes
+changed. It records source video, geometry and human surface hashes. Full new
+repair comparison videos remain downstream jobs, separate from this smoke test.

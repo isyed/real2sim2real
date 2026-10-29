@@ -46,8 +46,8 @@
     },
     {
       "path": "docs/LEARNINGS.md",
-      "bytes": 8075,
-      "sha256": "30d38e613a3adacb827e2bfed61aa23ed0ab7b9ca430b017d684367e69480be3"
+      "bytes": 8861,
+      "sha256": "5f30d4c8e527c06d6953b443a8fbf6d228ced8f7d82484723b496ef6f3e2cffe"
     },
     {
       "path": "docs/REPRODUCIBILITY.md",
@@ -61,8 +61,8 @@
     },
     {
       "path": "docs/VALIDATION.md",
-      "bytes": 7106,
-      "sha256": "4a9a55b5a090fc5828e7173608f99950fba670ac47a1537f52b63dbfae4ae6ba"
+      "bytes": 7896,
+      "sha256": "6b7456ff022d78bf4284b3b6bff180852526e9baf8da4a0866a2e9b6f305f712"
     },
     {
       "path": "examples/full-pipeline.json",
@@ -976,8 +976,8 @@
     },
     {
       "path": "modules/reconstruction-repair/README.md",
-      "bytes": 1900,
-      "sha256": "031e92abfd733b3c1ffc4928e52f2500bc21d9ac82c666833db8024a23ed972a"
+      "bytes": 2984,
+      "sha256": "fef01994746e0fb53ee2c060ecaa401f41c50476e3fc08a4bd61c2c1f7b18f30"
     },
     {
       "path": "modules/reconstruction-repair/licenses/SAM-LICENSE",
@@ -1095,6 +1095,11 @@
       "sha256": "060a865e82a64b169874e0fc13e34c3632f557b28d8a7de7d122769f7bba2525"
     },
     {
+      "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/support_seed.py",
+      "bytes": 2551,
+      "sha256": "20fa6fc601fdd929cd10f276417b4963988625d2df9aff76ee8a435e03942487"
+    },
+    {
       "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/temporal_pose.py",
       "bytes": 17908,
       "sha256": "d9b0c768dab39ac60e4d6e70583db8383fca18140e6f14fb96bf7ccd50ac3c1e"
@@ -1183,6 +1188,11 @@
       "path": "modules/reconstruction-repair/tests/test_stage_adapter.py",
       "bytes": 1982,
       "sha256": "8c06969b026ee594457cfc6bbaeb59ea7d1b840908e85a49bb0842fc37e36e89"
+    },
+    {
+      "path": "modules/reconstruction-repair/tests/test_support_seed.py",
+      "bytes": 1404,
+      "sha256": "c762c4bf092c1adc9be512c1cebca4f8c870bb18a0fd285c26ab5d6a75745982"
     },
     {
       "path": "modules/reconstruction-repair/tests/test_temporal_pose.py",
@@ -2945,6 +2955,11 @@
       "sha256": "4e75f1a2fc40ed2c4c4c931705751fc7c9e6cd9c843abd806602ec65c94f7cd6"
     },
     {
+      "path": "src/real2sim2real/comparison_video.py",
+      "bytes": 6412,
+      "sha256": "ef8a9a0e2bd16ccb01959f3bb3a8cb3b2cdaa198c9537090e9b988ad57ebc300"
+    },
+    {
       "path": "src/real2sim2real/human.py",
       "bytes": 14857,
       "sha256": "e9208f74f553bb5ef547f24fe4acda42010a8ac418bf7e9308a3667790347dcc"
@@ -2973,6 +2988,11 @@
       "path": "src/real2sim2real/supervisor.py",
       "bytes": 2370,
       "sha256": "1f43f99b85cd318b8a9a9b8dbb3e4de162b9ff16b782f7c05830b4bbb8fd831c"
+    },
+    {
+      "path": "tests/test_comparison_video.py",
+      "bytes": 1408,
+      "sha256": "da77e6b2c77820a11121faded3069b77b2675acd1fd5bc4716b9c6d5c080afd6"
     },
     {
       "path": "tests/test_human_surface.py",

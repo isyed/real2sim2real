@@ -69,3 +69,6 @@ not certify a grasp or a policy. See [validation](docs/VALIDATION.md).
 
 The repository contains research simulation tools. It does not yet contain
 a hardware deployment module or a robot-specific real-world safety layer.
+
+Reusable findings and their validation status are tracked in
+[the module learning register](docs/LEARNINGS.md).

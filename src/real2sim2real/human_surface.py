@@ -22,8 +22,6 @@ def native_to_world(vertices_cm, transform):
 
 def decode_surface(human_file, model_file, output, *, batch_size=8, world_transform=None):
     """CPU-only, bounded-memory surface decoding; refuse partial-output reuse."""
-    import torch
-
     human_file, model_file, output = map(Path, (human_file, model_file, output))
     if not isinstance(batch_size, int) or not 1 <= batch_size <= 64:
         raise ValueError("Surface decoding batch size must be 1..64")
@@ -45,6 +43,8 @@ def decode_surface(human_file, model_file, output, *, batch_size=8, world_transf
         count = len(params)
         shape = _frames(packed["shape_params"], count, 45, "shape").astype(np.float32)
         face = _frames(packed.get("face_params", np.zeros(72)), count, 72, "face").astype(np.float32)
+    import torch
+
     model = torch.jit.load(str(model_file), map_location="cpu").eval()
     faces = model.character_torch.mesh.faces.detach().cpu().numpy().astype(np.int64)
     if faces.ndim != 2 or faces.shape[1] != 3 or not len(faces) or faces.min() < 0:

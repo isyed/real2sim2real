@@ -46,8 +46,8 @@
     },
     {
       "path": "docs/LEARNINGS.md",
-      "bytes": 6362,
-      "sha256": "e6cc7786c62ec5b8d8e5f3560b69fde653310f980228baa2bc91f8214db8973a"
+      "bytes": 6671,
+      "sha256": "f11c5b4be89dc79778b2f2801d8300bb59096c607ac00d4dc9cf0e5c5ad302b2"
     },
     {
       "path": "docs/REPRODUCIBILITY.md",
@@ -2952,7 +2952,7 @@
     {
       "path": "src/real2sim2real/human_surface.py",
       "bytes": 4132,
-      "sha256": "e1c847ef0c96c807bff087361eaf0864c383196c5743de571bb8616e292c8cac"
+      "sha256": "667850aacf6d220715111d28379f86ffa3224ae0e1af0e1eea2b26a19e61a63b"
     },
     {
       "path": "src/real2sim2real/pipeline.py",
@@ -2971,8 +2971,8 @@
     },
     {
       "path": "tests/test_human_surface.py",
-      "bytes": 828,
-      "sha256": "c5537d5d10e6cd195053c3b22b979751701d43aca9889aeb20ffd1eb893fb27f"
+      "bytes": 2127,
+      "sha256": "1336fef581b7a5e62d9b0dbbc11c5dcc238f8a16aafb783a09a92006a9031843"
     },
     {
       "path": "tests/test_module_contracts.py",

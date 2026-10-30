@@ -1020,6 +1020,11 @@
       "sha256": "f540c81cb2dfcda1b9edad249c305ad664b8cd9a1c767279b1b1a51bc3a63a9c"
     },
     {
+      "path": "modules/reconstruction-repair/FOREGROUND_VISIBILITY.md",
+      "bytes": 3687,
+      "sha256": "9833c99e27c77976b14dde855c387a2eb339cf39c2ba57d225885f35e416499d"
+    },
+    {
       "path": "modules/reconstruction-repair/LICENSE",
       "bytes": 30209,
       "sha256": "e87dc2a40b553c5f52acb3909f479afbeac8c35a85328fceaa0cab15ed50b9fc"
@@ -1088,6 +1093,11 @@
       "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/depth_scale.py",
       "bytes": 2841,
       "sha256": "dabd3c678870235b8e7155bd1f91b2d2e2682696a7e382139acd81f3d15fd995"
+    },
+    {
+      "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/foreground_visibility.py",
+      "bytes": 8847,
+      "sha256": "9305967de3f0aff0a9a3488d17ec2e8b508de19489edd6ee058b6aeb3c294866"
     },
     {
       "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/gate_report.py",
@@ -1238,6 +1248,11 @@
       "path": "modules/reconstruction-repair/tests/test_depth_scale.py",
       "bytes": 1530,
       "sha256": "6621caf5af570557bebad0ca132098677357f32afa14538731726ec9b95ee1ef"
+    },
+    {
+      "path": "modules/reconstruction-repair/tests/test_foreground_visibility.py",
+      "bytes": 2281,
+      "sha256": "7c6d5bacf747eddf7781b2d5265dd8d6c62e687d19ff8e4feadde96bbb9a4e0c"
     },
     {
       "path": "modules/reconstruction-repair/tests/test_gate_report.py",

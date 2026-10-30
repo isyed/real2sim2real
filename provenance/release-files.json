@@ -1016,8 +1016,8 @@
     },
     {
       "path": "modules/reconstruction-repair/README.md",
-      "bytes": 4825,
-      "sha256": "a58124392611dd7eda61479cae3713ad1e55e1e1c31a7b2a7f0dc18d9f6bde0a"
+      "bytes": 5628,
+      "sha256": "cc135b9d0bc3141bb6fe5f7d493451d7fab33ce46f996b692278ae2e312b356c"
     },
     {
       "path": "modules/reconstruction-repair/licenses/SAM-LICENSE",
@@ -1033,6 +1033,11 @@
       "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/__init__.py",
       "bytes": 245,
       "sha256": "ebca44db7bde9562741bba22bc2e0a65a11426d39397312e3cbd1a17bb66ca4d"
+    },
+    {
+      "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/artifact_metric.py",
+      "bytes": 4663,
+      "sha256": "4a9acecd596d5657907604fa6d719246e87aa79c35abf560b76f2785a6953216"
     },
     {
       "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/bundle.py",
@@ -1115,6 +1120,11 @@
       "sha256": "7f38f7e8d176e91feb064fb02f41d991eb213efb61a1532375384c374f725eb6"
     },
     {
+      "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/metric_floor.py",
+      "bytes": 6710,
+      "sha256": "680ba27fedee1dd0aed00b8d1088aa32e59e605419a2f4c1404488198627d3e0"
+    },
+    {
       "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/metric_preflight.py",
       "bytes": 4447,
       "sha256": "621d4fd6c1882f6b1ff4a80c0e8c6e62b27c9fbfd1db7f71c48ed9d63d985993"
@@ -1153,6 +1163,11 @@
       "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/temporal_pose.py",
       "bytes": 17908,
       "sha256": "d9b0c768dab39ac60e4d6e70583db8383fca18140e6f14fb96bf7ccd50ac3c1e"
+    },
+    {
+      "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/tracking_plan.py",
+      "bytes": 3397,
+      "sha256": "bb79e86e3033227f43f3a97eb9ba6e5e17a6c6d88b85df4b263490de49f97921"
     },
     {
       "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/validation.py",
@@ -1220,6 +1235,11 @@
       "sha256": "5be433688c90f03a961e2db8b58176662f390923780192947c58025d82980991"
     },
     {
+      "path": "modules/reconstruction-repair/tests/test_metric_floor.py",
+      "bytes": 1171,
+      "sha256": "559578848c3768a84e8be2baf8af7491301e28d392407cc23833e2ccd15a8741"
+    },
+    {
       "path": "modules/reconstruction-repair/tests/test_metric_preflight.py",
       "bytes": 8398,
       "sha256": "291bab9b4ec2db14629591d3b7dcee9d6e51c3a13fe9598ab4f0a3d769033522"
@@ -1258,6 +1278,11 @@
       "path": "modules/reconstruction-repair/tests/test_temporal_pose.py",
       "bytes": 3559,
       "sha256": "5d1afd69e1060f7f97d2952c83fe364af03ecb17a104441da2c30ce56045d5a4"
+    },
+    {
+      "path": "modules/reconstruction-repair/tests/test_tracking_plan.py",
+      "bytes": 1962,
+      "sha256": "7fc85e2da8dce07de0f2230ca5e1dadc2334585962c5a5884fd3415d4f08ba68"
     },
     {
       "path": "modules/reconstruction/LICENSE",
@@ -2850,6 +2875,11 @@
       "sha256": "e36937c027acab1ce9d6d55967341322013392970e869f5a90487400035b51ef"
     },
     {
+      "path": "modules/reconstruction/src/real2sim2real/reconstruction/initial_registration.py",
+      "bytes": 6079,
+      "sha256": "e925f29ceeae04b92d20b80de8e31c7cbe1df8d1ed70631bcc06882d20db0cef"
+    },
+    {
       "path": "modules/reconstruction/src/real2sim2real/reconstruction/mask_review.py",
       "bytes": 6017,
       "sha256": "408f378b90bb7816812b3b10a9f03feb239125a163d43cf87c3478eeaf94b05e"
@@ -2878,6 +2908,11 @@
       "path": "modules/reconstruction/src/real2sim2real/reconstruction/stage.py",
       "bytes": 3708,
       "sha256": "def9fa50f7b28ab2257e7df158a8e559bc46d7a68757ccfc421004895cc5ef56"
+    },
+    {
+      "path": "modules/reconstruction/src/real2sim2real/reconstruction/tracking_inputs.py",
+      "bytes": 5340,
+      "sha256": "a2f2ac249d1fe0d0d5b61b9bb29a5b1420367cfe5dfe2b23da55599b501c6625"
     },
     {
       "path": "modules/reconstruction/src/real2sim2real/reconstruction/tracking_recovery.py",
@@ -3103,6 +3138,11 @@
       "path": "tests/test_human_surface.py",
       "bytes": 2358,
       "sha256": "eaca3bc39baae2127cd91c90f32216eed87925e132736064dbf4a5cc9acb0f7c"
+    },
+    {
+      "path": "tests/test_initial_registration.py",
+      "bytes": 2110,
+      "sha256": "bdce0094601c0ad0591a68aeaf101598c754c33f642c66025fc942e6224ac3ba"
     },
     {
       "path": "tests/test_mask_review.py",

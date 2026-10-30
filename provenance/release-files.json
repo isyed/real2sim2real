@@ -50,6 +50,11 @@
       "sha256": "edbbc9cfe162e3e5d4a09d5a61b2ea2342f0b2f0c50df09fa029fdb2a5569271"
     },
     {
+      "path": "docs/LOCAL_TRANSLATION_VALIDATION.md",
+      "bytes": 2295,
+      "sha256": "f58219ef8647f91f452e4744c7f0e54ab1cdf32c210f9c751b96c08ad6448c75"
+    },
+    {
       "path": "docs/REPRODUCIBILITY.md",
       "bytes": 1916,
       "sha256": "bf5b54787f081a6d1c11711a7d3422e9655a56d833fa5279c693ba6e0a43aac3"
@@ -1015,6 +1020,11 @@
       "sha256": "74d7df81d1ff9cb3a03ac9eae014cf3f6d3f4022c6f6b20e1a0aadfebc82b1b8"
     },
     {
+      "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/decision.py",
+      "bytes": 1594,
+      "sha256": "410a9d9aa7075b1ad189b40643507da9d2115eb73bad8b91a1bd9ead550b7eac"
+    },
+    {
       "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/depth_evidence.py",
       "bytes": 4072,
       "sha256": "333759385dcaf0d31497120b06589895c5653a270fa32c8e202f49483704842a"
@@ -1133,6 +1143,11 @@
       "path": "modules/reconstruction-repair/tests/test_contract.py",
       "bytes": 4990,
       "sha256": "06d1619af4b5b0cb741a6a222938b398c639738af71ee6d984bb47d6dcae1ce8"
+    },
+    {
+      "path": "modules/reconstruction-repair/tests/test_decision.py",
+      "bytes": 1512,
+      "sha256": "394f5e1d70f6c3bac25586c0a6a0bfb2d03668b6e8e328b33c280afb563cdeee"
     },
     {
       "path": "modules/reconstruction-repair/tests/test_dense_geometry.py",

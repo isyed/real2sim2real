@@ -201,3 +201,13 @@ records both actual selected states and rejected attempts. The ordinary backend
 and its historical source snapshots remain unchanged. Floor support is not
 silently treated as tabletop support. Full GPU acceptance is a separate,
 thermally supervised downstream trial.
+
+**R-019 — bind the actual exporter before a guarded run:** a container working
+directory can outrank a supplied PYTHONPATH and expose an older module with a
+compatible import name but an incompatible callable. `tracking_recovery.load_exporter`
+prepends the selected packaged engine paths, verifies the exporter's exact source
+file, and binds the full observed-seed call signature before model execution.
+Preflight now calls that loader rather than merely importing a same-named module.
+An initial downstream startup stopped before tracking on this mismatch; its
+immutable attempt and source snapshot remain retained. The corrected trial uses
+a separately pinned source snapshot and the existing bounded clock lease.

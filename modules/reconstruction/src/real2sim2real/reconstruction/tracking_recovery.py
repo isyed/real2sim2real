@@ -9,6 +9,23 @@ import argparse,hashlib,json
 import numpy as np
 from .recovery_quality import Limits,consistency,local_proposals,protocol,rejection_reasons,rigid,sample_vertices
 
+
+def load_exporter():
+    """Select packaged engine source before an image's working-directory copy."""
+    import importlib,inspect,sys
+    from .backend import engine_paths
+    source,body,fp=engine_paths()
+    for path in [fp,body,source]:sys.path.insert(0,str(path))
+    upstream=importlib.import_module('prep.run_foundationpose_mhr_export')
+    expected=(source/'prep/run_foundationpose_mhr_export.py').resolve()
+    if Path(upstream.__file__).resolve()!=expected:
+        raise ValueError('Loaded exporter is outside the selected engine source: '+str(upstream.__file__))
+    inspect.signature(upstream.run_foundationpose_mhr_export).bind(
+        'export','depth','output',camera_id=0,start=0,iteration=5,max_attempts=1,
+        first_usable_frame_gt_rotation_oracle=False,sequence_mode='register-first-then-track',
+        observed_initial_pose='seed.json',viz_file=None)
+    return upstream
+
 def install_recovery(upstream, support, output):
     import torch
     from scipy.spatial.transform import Rotation
@@ -211,7 +228,7 @@ def main():
     support=json.loads(Path(args.support).read_text())
     if support.get('ground_truth_used') is not False or support.get('coordinate_frame')!='camera' or not support.get('evidence'):
         raise ValueError('Require explicit predicted camera-frame support evidence')
-    import prep.run_foundationpose_mhr_export as upstream
+    upstream=load_exporter()
     install_rgb_mode(upstream)
     install_recovery(upstream,support,args.output)
     install_state_recording(upstream,args.output)

@@ -6,6 +6,11 @@ source timeline. `reconstruction_repair.observation_plan.plan(audit)` routes thi
 evidence toward mask review, depth/visibility review or further gap inspection.
 It changes no geometry and grants no reference approval.
 
+Artifact audits include this advisory plan automatically in `repair_plan`.
+Pass a review to `artifact_audit(..., semantic_review=review)` or use its CLI
+`--semantic-review /data/review.json` option to include the source-bound veto in
+the saved audit. Downstream runners must honor that veto before pose fitting.
+
 Small nonempty masks can still select background. Inspect native RGB overlays
 at the beginning, during manipulation and after the object moves. Distinguish
 real occlusion from a segmentation track that stays behind on a table or floor.

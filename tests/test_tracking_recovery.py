@@ -10,6 +10,22 @@ from real2sim2real.reconstruction.recovery_quality import (Limits, consistency, 
     rejection_reasons, rigid, sample_vertices)
 
 
+def test_long_clip_recovery_allowance_does_not_change_quality_or_motion_gates():
+    from dataclasses import asdict
+    from real2sim2real.reconstruction.recovery_quality import configured_limits,protocol
+    before=asdict(Limits());after=asdict(configured_limits(858,source_frames=859))
+    assert after.pop('max_recovery_frames')==858
+    before.pop('max_recovery_frames');assert after==before
+    assert protocol()['limits']['max_recovery_frames']==180
+    assert protocol(recovery_frame_budget=858)['limits']['max_recovery_frames']==858
+
+
+@pytest.mark.parametrize('budget',[True,0,-1,1.5,859])
+def test_invalid_recovery_allowances_are_rejected(budget):
+    from real2sim2real.reconstruction.recovery_quality import configured_limits
+    with pytest.raises(ValueError):configured_limits(budget,source_frames=859)
+
+
 def good_geometry():
     return dict(depth_points=200, depth_error_m=.03, behind_camera=False,
                 support_penetration_m=0., depth_shift_m=0., centroid_shift_px=[0., 0.])

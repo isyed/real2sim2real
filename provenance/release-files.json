@@ -70,6 +70,11 @@
       "sha256": "794ec958a81e7a34dc4ff80ef55bee91927c5aa7d925c7395e351d03e2fdbc4d"
     },
     {
+      "path": "docs/TRACKING_RECOVERY_BUDGETS.md",
+      "bytes": 1403,
+      "sha256": "d9d46413f57619a373adbc77f260680949d5902a573d31bbc4115aff887a18ec"
+    },
+    {
       "path": "docs/VALIDATION.md",
       "bytes": 12571,
       "sha256": "55443381b99469e174083562d7b84ac7eed3cfc542d026d3f6fa1258518e61bc"
@@ -2961,8 +2966,8 @@
     },
     {
       "path": "modules/reconstruction/src/real2sim2real/reconstruction/recovery_quality.py",
-      "bytes": 7736,
-      "sha256": "9fb7b0f97914bd9ab7847289fe75c0f67197caa596a4ca3b1a3753d6359b2355"
+      "bytes": 8432,
+      "sha256": "79826c364fe0c3010512cfe677ade06f238b29a9752b982b33f57e551b0ecb35"
     },
     {
       "path": "modules/reconstruction/src/real2sim2real/reconstruction/stage.py",
@@ -2976,8 +2981,8 @@
     },
     {
       "path": "modules/reconstruction/src/real2sim2real/reconstruction/tracking_recovery.py",
-      "bytes": 16772,
-      "sha256": "0dce219cbe1f31a96b2c8d8dff1815d8a9b99d0c1f3734cc2041f31e5f7bd35b"
+      "bytes": 17383,
+      "sha256": "c8252148686eac6cfa13dbf69e724456ce268771680bc7d89713d63cf8a80c08"
     },
     {
       "path": "modules/reconstruction/src/real2sim2real/reconstruction/tracking_runtime.py",
@@ -3256,8 +3261,8 @@
     },
     {
       "path": "tests/test_tracking_recovery.py",
-      "bytes": 10711,
-      "sha256": "384b089d9ae7c4b1963f18650667779e18d9c33d9d380bcea0d7c44e1a3e9bab"
+      "bytes": 11529,
+      "sha256": "4db4ba62b767398f3a4f5eb83d50c7bfe88ce66b783b32f12019b0b759a0be4e"
     },
     {
       "path": "tests/test_tracking_runtime.py",

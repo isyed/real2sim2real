@@ -40,6 +40,11 @@
       "sha256": "ec4d7a624a7ec11ee1433f27969c08acdaabeea79f590987d928e6ff74e11dec"
     },
     {
+      "path": "docs/FOREGROUND_DEPTH_ORIGIN.md",
+      "bytes": 1527,
+      "sha256": "338fb0d022bb63e129f5b4f8341cf071e27636f5aaa39f9f5f83e24561d87978"
+    },
+    {
       "path": "docs/FROZEN_CONTROLLERS.md",
       "bytes": 7207,
       "sha256": "b0321d7be0de82fc58422d195c7c24aacff5f4ca7497cc64a67a4d97276033d1"
@@ -1111,8 +1116,8 @@
     },
     {
       "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/foreground_visibility.py",
-      "bytes": 8847,
-      "sha256": "9305967de3f0aff0a9a3488d17ec2e8b508de19489edd6ee058b6aeb3c294866"
+      "bytes": 11869,
+      "sha256": "c9a85548aeb77809d83c8c0f873409c0dfbad81f80591d845ecaa600dec44c06"
     },
     {
       "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/gate_report.py",
@@ -1271,8 +1276,8 @@
     },
     {
       "path": "modules/reconstruction-repair/tests/test_foreground_visibility.py",
-      "bytes": 2281,
-      "sha256": "7c6d5bacf747eddf7781b2d5265dd8d6c62e687d19ff8e4feadde96bbb9a4e0c"
+      "bytes": 3309,
+      "sha256": "9c40bd2755ed75c7bfb9be7305ff0a039ce98c580bee0938eecb7a3d94f5164a"
     },
     {
       "path": "modules/reconstruction-repair/tests/test_gate_report.py",

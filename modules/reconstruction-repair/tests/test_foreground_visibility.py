@@ -44,3 +44,21 @@ def test_invalid_grid_or_timeline_is_rejected():
     rows=[measure(z,m,h,frame_id=i) for i in range(2)]
     with pytest.raises(ValueError):audit(rows,[0,0])
     with pytest.raises(ValueError):ForegroundConfig(min_depth_pixels=True).validate()
+
+
+def test_depth_origin_separates_raw_prediction_spikes_from_alignment_warnings():
+    from real2sim2real.reconstruction_repair.foreground_visibility import depth_origin
+    raw=[measure(*frame(z),frame_id=i) for i,z in enumerate([2.,2.,4.,2.])]
+    aligned=[measure(*frame(z),frame_id=i) for i,z in enumerate([2.,3.,6.,3.])]
+    result=depth_origin(raw,aligned,np.arange(4)/30,alignment_scales=[1.,1.5,1.5,1.5])
+    assert result['warnings_already_in_raw']==[2,3]
+    assert result['warnings_only_after_alignment']==[1]
+    assert not result['depth_modified'] and not result['true_depth_established']
+    assert 'temporal_depth_warning' not in raw[0]
+
+
+@pytest.mark.parametrize('scales',[[1.],[1.,0.],[1.,float('nan')]])
+def test_depth_origin_rejects_invalid_alignment_provenance(scales):
+    from real2sim2real.reconstruction_repair.foreground_visibility import depth_origin
+    rows=[measure(*frame(),frame_id=i) for i in range(2)]
+    with pytest.raises(ValueError):depth_origin(rows,rows,[0.,1/30],alignment_scales=scales)

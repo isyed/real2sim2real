@@ -211,3 +211,14 @@ Preflight now calls that loader rather than merely importing a same-named module
 An initial downstream startup stopped before tracking on this mismatch; its
 immutable attempt and source snapshot remain retained. The corrected trial uses
 a separately pinned source snapshot and the existing bounded clock lease.
+
+**R-020 — quantized proposals must fit inside their own motion bound:**
+recording exact rejected poses exposed local recovery hypotheses whose intended
+8 cm displacement became slightly larger after float32 quantization (for example
+0.08000009 m). These candidates correctly failed the unchanged 0.08 m acceptance
+check. Local proposal generation now reserves a coordinate-dependent float32
+rounding margin before capping its correction. It does not relax the checker,
+clamp arbitrary tracker outputs into acceptance, or bypass image/depth/support
+checks. Five hundred sampled camera-frame configurations exercise the actual
+float32 boundary; full tracking remains independently gated. Recovery logs now
+include exact proposed/local poses and per-candidate rejection measurements.

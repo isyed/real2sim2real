@@ -125,11 +125,18 @@ def local_proposals(previous, current, K, geometry):
     delta_pixel = geometry.get('centroid_shift_px')
     if delta_depth is None or delta_pixel is None or not np.isfinite([delta_depth, *delta_pixel]).all():
         return np.stack([previous, current])
-    correction = current[:3, 3]/current[2, 3] * np.clip(delta_depth, -.08, .08)
+    # Proposals cross a float32 tensor boundary before the unchanged quality
+    # check. Leave room for coordinate-dependent quantization rather than
+    # generating an exactly-on-limit displacement that can round outside it.
+    coordinate_scale = max(1., float(np.max(np.abs(previous[:3, 3]))),
+                           float(np.max(np.abs(current[:3, 3]))))
+    bound = max(0., Limits().step_translation_m -
+                8*np.finfo(np.float32).eps*coordinate_scale)
+    correction = current[:3, 3].astype(float)/float(current[2, 3]) * np.clip(delta_depth, -.08, .08)
     correction[:2] += np.clip(delta_pixel, -16, 16)*current[2, 3]/K.diagonal()[:2]
     norm = np.linalg.norm(correction)
-    if norm > .08:
-        correction *= .08/norm
+    if norm > bound:
+        correction *= bound/norm
     proposals = [previous.copy(), current.copy()]
     for base in (previous, current):
         for fraction in (.5, 1.):

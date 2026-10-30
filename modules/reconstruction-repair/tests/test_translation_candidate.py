@@ -36,3 +36,13 @@ def test_forbids_mesh_timeline_or_rotation_edits(tmp_path,field):
 def test_rejects_missing_diagnostic_scope(tmp_path):
     source,candidate,evidence,g=inputs(tmp_path);evidence['diagnostic_only']=False
     with pytest.raises(ValueError,match='diagnostic'):prepare(source,candidate,tmp_path/'output',evidence=evidence)
+
+
+def test_does_not_fill_missing_source_poses(tmp_path):
+    source,candidate,evidence,g=inputs(tmp_path)
+    broken=tmp_path/'broken_parent';broken.mkdir()
+    g['object_translation'][1,0]=np.nan;np.savez(broken/'geometry.npz',**g)
+    publish(broken,'reconstruction',dict(geometry=broken/'geometry.npz'))
+    evidence['parent_artifact_sha256']=digest(broken/'artifact.json')
+    with pytest.raises(ValueError,match='values'):
+        prepare(broken,candidate,tmp_path/'output',evidence=evidence)

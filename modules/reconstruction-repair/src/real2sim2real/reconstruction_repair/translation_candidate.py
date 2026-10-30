@@ -22,7 +22,7 @@ def prepare(source, geometry, output, *, evidence, hardlink=False):
     with np.load(geometry) as z:after=dict(z)
     if set(before)!=set(after):raise ValueError('Candidate geometry fields differ')
     for name,value in before.items():
-        if value.shape!=after[name].shape or not np.isfinite(after[name]).all():
+        if value.shape!=after[name].shape or not np.isfinite(value).all() or not np.isfinite(after[name]).all():
             raise ValueError('Invalid complete candidate shape or values: '+name)
         if name!='object_translation' and not np.array_equal(value,after[name]):
             raise ValueError('Translation candidate changed immutable field: '+name)

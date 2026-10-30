@@ -124,7 +124,7 @@ def overlay(rgb,object_mask,row):
     return out
 
 
-def artifact_audit(source,output,*,camera='front_stereo_camera_left',config=ForegroundConfig(),include_raw_depth=False):
+def artifact_audit(source,output,*,camera='front_stereo_camera_left',config=ForegroundConfig(),include_raw_depth=False,semantic_review=None):
     """Stream a portable artifact's complete native timeline on CPU.
 
     Produces an audit receipt, never a reconstruction replacement. Heavy file
@@ -172,6 +172,8 @@ def artifact_audit(source,output,*,camera='front_stereo_camera_left',config=Fore
         video_sha256=artifact['metadata'].get('source_video_sha256'),
         files={role:artifact['files'][role]['sha256'] for role in required},
         own_predicted_inputs_only=True,camera=camera)
+    from .observation_plan import plan
+    result['repair_plan']=plan(result,semantic_review=semantic_review)
     output.mkdir(parents=True);write_json(output/'report.json',result)
     return result
 
@@ -181,7 +183,11 @@ if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--input',required=True);p.add_argument('--output',required=True)
     p.add_argument('--camera',default='front_stereo_camera_left')
     p.add_argument('--include-raw-depth',action='store_true',help='Compare temporal foreground warnings before and after human-depth alignment; no depth is changed')
+    p.add_argument('--semantic-review',help='Optional source-bound RGB review JSON; a rejected target blocks downstream pose optimization')
     a=p.parse_args()
-    result=artifact_audit(a.input,a.output,camera=a.camera,include_raw_depth=a.include_raw_depth)
+    import json
+    from pathlib import Path
+    review=None if a.semantic_review is None else json.loads(Path(a.semantic_review).read_text())
+    result=artifact_audit(a.input,a.output,camera=a.camera,include_raw_depth=a.include_raw_depth,semantic_review=review)
     print(dict(source_frames=result['source_frames'],full_observation_workflow_ready=result['full_observation_workflow_ready'],
                unavailable_spans=len(result['unavailable_observation_spans']),temporal_warnings=len(result['temporal_depth_warning_frames'])))

@@ -43,6 +43,18 @@ def test_holdout_can_veto_but_not_fit_scale(make_bundle):
     assert rejected['scale_multiplier']==first['scale_multiplier']
     assert 'heldout_extent_disagreement' in rejected['reasons']
     assert not rejected['candidate_ready']
+    assert rejected['inconsistent_extent_frame_ids']==e['frame_ids'][~e['fit']].tolist()
+    assert all(row['scale_consistency_passed']==(row['split']=='fit') for row in rejected['measurements'])
+
+
+def test_rejected_calibration_preserves_mesh_and_reports_conflicting_frames(make_bundle,tmp_path):
+    b=make_bundle();e,p=evidence_for(b);e['depth_m'][~e['fit']]*=2
+    ep=tmp_path/'evidence.npz';arrays_atomic(ep,e);p['evidence_sha256']=file_sha256(ep)
+    pp=tmp_path/'proof.json';pp.write_text(json.dumps(p))
+    out=tmp_path/'calibration';report=calibrate_object(b.root,ep,pp,out)
+    assert not report['candidate_ready'] and not (out/'calibrated_mesh.npz').exists()
+    text=(out/'REVIEW.md').read_text()
+    assert 'Calibration rejected' in text and 'does not justify resizing' in text
 
 
 @pytest.mark.parametrize('failure',['missing_split','bad_hash','clean','nan','no_depth'])

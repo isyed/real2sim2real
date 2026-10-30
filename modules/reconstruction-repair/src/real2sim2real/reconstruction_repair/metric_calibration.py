@@ -109,6 +109,10 @@ def diagnose(bundle, evidence, provenance, config=CalibrationConfig()):
     if not 1/config.max_scale_ratio<=scale<=config.max_scale_ratio:reasons.append('scale_outside_declared_bound')
     fit_disagreement=float(np.max(np.abs(factors[fit]/scale-1)))
     held_disagreement=float(np.max(np.abs(factors[~fit]/scale-1)))
+    disagreement=np.abs(factors/scale-1)
+    for row,value in zip(rows,disagreement):
+        row['relative_scale_disagreement']=float(value)
+        row['scale_consistency_passed']=bool(value<=config.max_relative_scale_disagreement)
     if fit_disagreement>config.max_relative_scale_disagreement:reasons.append('fit_extent_disagreement')
     if held_disagreement>config.max_relative_scale_disagreement:reasons.append('heldout_extent_disagreement')
     floor_height=float(np.median(planes[fit,3]));floor_drift=float(np.max(np.abs(planes[:,3]/floor_height-1)))
@@ -122,6 +126,7 @@ def diagnose(bundle, evidence, provenance, config=CalibrationConfig()):
         candidate_mesh_diameter_m=original_diameter*scale,fit_relative_disagreement=fit_disagreement,
         heldout_relative_disagreement=held_disagreement,floor_relative_height_drift=floor_drift,
         floor_max_normal_angle_deg=angle,reasons=sorted(set(reasons)),measurements=rows,config=asdict(config),
+        inconsistent_extent_frame_ids=ids[disagreement>config.max_relative_scale_disagreement].tolist(),
         old_poses_valid_for_resized_mesh=False,requires_retracking=True,approved_for_use=False,
         human_changed=False,limitations=[
             'Predicted human-aligned depth is not ground truth; stable floor does not establish absolute metric scale.',
@@ -158,6 +163,8 @@ def calibrate_object(source: Path, evidence_path: Path, provenance_path: Path, o
     json_atomic(output/'calibration.json',report)
     (output/'REVIEW.md').write_text('# Metric calibration\n\n'+report['status']+'\n\n'
         +f"Scale hypothesis: {report['scale_multiplier']:.4f}×. Human unchanged.\n\n"
-        +'**Do not reuse old poses with this mesh.** Retrack and validate before selecting a repaired reference.\n\n'
+        +('**Resize hypothesis only:** fresh tracking and validation are required before selecting it.\n\n'
+          if report['candidate_ready'] else
+          '**Calibration rejected:** retain the input mesh. Resolve the conflicting image/depth evidence; this result does not justify resizing.\n\n')
         +'\n'.join('- '+s for s in report['limitations'])+'\n')
     return report

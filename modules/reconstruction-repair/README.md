@@ -50,3 +50,11 @@ beside complete before/after object and human surfaces. Decode saved humans with
 frames, checks matching timelines, verifies the encoded video by decoding it,
 and caches only matching video/geometry/surface identities. Its transparent
 silhouettes do not establish occlusion, grasp or physical correctness.
+
+A **rejected calibration** is distinct from a validated resize hypothesis. Its
+report records `inconsistent_extent_frame_ids` and per-frame relative scale
+disagreement. Keep the input mesh and inspect those native RGB/depth/mask views;
+do not apply the displayed scale multiplier merely because it was calculated.
+Normal fine repair remains blocked until current-size evidence is consistent.
+The runner recommends resize/retracking only when an independently retained
+calibration hypothesis passes its evidence checks and requires a different size.

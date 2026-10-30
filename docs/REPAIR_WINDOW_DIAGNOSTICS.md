@@ -15,6 +15,7 @@ explanation = explain(window_report, locked_frame_ids=[first_frame, last_frame])
 
 Pass the report returned by `temporal_pose.run_window` or `refine_window`. The
 helper uses that report's original thresholds and measured before/after frames.
+`temporal_pose.run_window` also saves this explanation automatically in its report.
 It reports:
 
 - **Inherited failures:** present in both the original and candidate.

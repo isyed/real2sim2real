@@ -40,3 +40,20 @@ def test_rejects_different_timelines_and_unmeasured_anchors():
     with pytest.raises(ValueError):explain(report,locked_frame_ids=[11])
     report['after'][0]['frame']=11
     with pytest.raises(ValueError):explain(report)
+
+
+def test_saved_window_result_includes_immutable_support_blockers(tmp_path):
+    import json,numpy as np
+    from test_temporal_pose import fixture,CFG
+    from real2sim2real.reconstruction_repair.bundle import file_sha256
+    from real2sim2real.reconstruction_repair.temporal_pose import run_window
+    data=fixture();data['support_plane_camera'][:,3]=-.5
+    path=tmp_path/'input.npz';np.savez_compressed(path,**data)
+    provenance=tmp_path/'provenance.json'
+    provenance.write_text(json.dumps(dict(schema='r2s2r_engines.temporal-object-window/1',
+        source='Synthetic fixed-anchor support regression',clean_trajectory_used=False,input_sha256=file_sha256(path))))
+    result=run_window(path,provenance,tmp_path/'result',CFG,diagnostic_only=True)
+    assert not result['decision']['accepted']
+    assert result['failure_explanation']['strict_pass_requires_anchor_or_input_revision']
+    saved=json.loads((tmp_path/'result/report.json').read_text())
+    assert saved['failure_explanation']==result['failure_explanation']

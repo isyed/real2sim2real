@@ -2,13 +2,16 @@
 
 A consistent metric hypothesis may resize a *new* tracking input. Old poses are
 never rescaled into accepted motion. Rejected calibration retains the original
-mesh and permits only a bounded registration diagnosis; normal fine repair and
+mesh and defaults to bounded registration diagnosis. An explicit unchanged-mesh
+diagnostic tracking opt-in may collect more evidence, but normal fine repair and
 reference selection remain blocked until metric evidence is resolved.
 """
 import numpy as np
 
 
-def plan(calibration, *, retained_size_ratio=1.10):
+def plan(calibration, *, retained_size_ratio=1.10, allow_unchanged_mesh_diagnostic_tracking=False):
+    if type(allow_unchanged_mesh_diagnostic_tracking) is not bool:
+        raise ValueError('Diagnostic tracking must be an explicit boolean')
     if retained_size_ratio<=1:raise ValueError('Retained-size ratio must exceed one')
     consistent=calibration.get('candidate_ready') is True
     available=calibration.get('scale_multiplier') is not None
@@ -16,13 +19,15 @@ def plan(calibration, *, retained_size_ratio=1.10):
     factor=float(calibration['scale_multiplier']) if available else 1.
     if not np.isfinite(factor) or factor<=0:raise ValueError('Positive finite calibration scale required')
     resize=consistent and not 1/retained_size_ratio<=factor<=retained_size_ratio
+    diagnostic=not consistent and allow_unchanged_mesh_diagnostic_tracking
     return dict(schema='real2sim2real.tracking-repair-plan/1',
         calibration_consistent=consistent,calibration_scale_available=available,metric_reasons=calibration.get('reasons',[]),
         mesh_scale_multiplier=factor if resize else 1.,resize_hypothesis_retained=resize,
         old_pose_sequence_reusable=False,fresh_registration_required=True,
-        full_tracking_permitted=consistent,fine_repair_permitted=consistent and not resize,
+        full_tracking_permitted=consistent or diagnostic,fine_repair_permitted=consistent and not resize,
+        unchanged_mesh_diagnostic_opt_in=diagnostic,reference_promotion_permitted=consistent,
         tracking_only_diagnostic=not consistent,
-        next_action='resize_and_register_then_retrack' if resize else 'register_then_retrack' if consistent else 'bounded_registration_diagnosis_then_resolve_metric_evidence',
+        next_action='resize_and_register_then_retrack' if resize else 'register_then_retrack' if consistent else 'diagnostic_unchanged_mesh_retrack_no_promotion' if diagnostic else 'bounded_registration_diagnosis_then_resolve_metric_evidence',
         selected_reference_changed=False,actor_training_approved=False)
 
 

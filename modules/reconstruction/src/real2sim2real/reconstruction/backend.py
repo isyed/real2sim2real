@@ -132,6 +132,12 @@ def run(request, phase, *, check_backend=False):
             output / "timeline.json", dict(frames=count, timestamps_s=times.tolist())
         )
         first.save(output / "first_rgb.png")
+        from .prompt_review import review_first_frame
+
+        review_first_frame(
+            output / "first_rgb.png", prompts, output / "prompt_review",
+            frame_count=count, source_video_sha256=request["input_sha256"],
+        )
         return
 
     if phase == "segment":

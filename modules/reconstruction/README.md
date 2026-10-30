@@ -147,3 +147,15 @@ both model configurations/checkpoints and returns the weights/cache-independent
 runtime settings. Do not rely on the vendor CLI's source-relative weights
 fallback. CLI-help checks verify imports; loading the actual checkpoints on CPU
 is a separate preflight and neither certifies GPU execution.
+
+### Inspect segmentation prompts before inference
+
+The CPU video phase saves `prompt_review/first_frame_prompts.png` beside
+`prompt_review/prompt_review.json`. The receipt pins the actual RGB, source video
+and prompt hashes and validates native-pixel coordinates and timeline bounds.
+Inspect this preview during CPU preflight before running segmentation. An old
+prompt can be inside image bounds yet identify a neighboring person or background;
+`semantics_verified=false` makes that limitation explicit. Later-frame and mask
+prompts need their own image inspection. Correct misplaced prompts and regenerate
+the dependent masks/human/depth/mesh stages while retaining the rejected attempt;
+do not weaken downstream geometry checks to accept the wrong segmentation.

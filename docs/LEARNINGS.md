@@ -138,3 +138,15 @@ seed and explicit runtime. It improved average image fit, while local regression
 and discontinuities remained. This validates the launch path, not reference or
 actor readiness. No new automatic smoothing, resizing or gate relaxation follows
 from that result.
+
+**R-014 — validate prompts against the actual RGB before model execution:** saved
+segmentation boxes can be numerically valid yet point at the wrong subject. A
+wrong person mask can later fail human-anchored depth correspondence, which is a
+symptom rather than permission to lower the correspondence threshold. The video
+phase now creates a native-resolution first-frame box/point preview and a hashed
+prompt-review receipt before segmentation. The reusable helper rejects invalid
+coordinates and out-of-timeline prompts; it explicitly leaves semantics unverified
+and identifies later-frame prompts that need their own review. CPU preflight
+callers should inspect this preview before launching model phases. A downstream
+RGB-only prompt correction is retained separately from its failed attempt; the
+active frozen inference snapshot remains unchanged.

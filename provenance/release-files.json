@@ -46,8 +46,8 @@
     },
     {
       "path": "docs/LEARNINGS.md",
-      "bytes": 10586,
-      "sha256": "12c183369250eccb71b7837eb87af72fb17415a6e9f17a5598d47c5750ef9622"
+      "bytes": 11441,
+      "sha256": "be5d62cec95d18648f5f05935debd7000eb43371fcaa4f970589f78d36b7202e"
     },
     {
       "path": "docs/REPRODUCIBILITY.md",
@@ -61,8 +61,8 @@
     },
     {
       "path": "docs/VALIDATION.md",
-      "bytes": 8606,
-      "sha256": "c740de3c747870a0c0aaf0a0e00a7a7679972609461f9d8c1fd859b9646b2050"
+      "bytes": 9055,
+      "sha256": "4c1d03104fbd56d576c07a6248c8f5fab48f805626b40e35ddda57ad37448fbe"
     },
     {
       "path": "examples/full-pipeline.json",
@@ -1206,8 +1206,8 @@
     },
     {
       "path": "modules/reconstruction/README.md",
-      "bytes": 7970,
-      "sha256": "adb7fb5b2862224f3c144384d52a6df96d880f1c5a0a40413515a45bbe22e9ed"
+      "bytes": 8735,
+      "sha256": "a8ae2d1aa4b2668343c2f3debb77fb2ee2cf7e98f7741a6ae6d8b357386e366f"
     },
     {
       "path": "modules/reconstruction/docker/Dockerfile",
@@ -2786,13 +2786,18 @@
     },
     {
       "path": "modules/reconstruction/src/real2sim2real/reconstruction/backend.py",
-      "bytes": 16630,
-      "sha256": "056167ff34554cc178401f584c1ac08600640604bbfc94119106740153660828"
+      "bytes": 16872,
+      "sha256": "f439dd0885de959b69b3bd33d130cbad2870ab6caed0788da33c2cfb9347339f"
     },
     {
       "path": "modules/reconstruction/src/real2sim2real/reconstruction/metric.py",
       "bytes": 1685,
       "sha256": "6dcb12c74db2595a86a324593359bd47759278fd21787eaa96f1c1d3a700c95a"
+    },
+    {
+      "path": "modules/reconstruction/src/real2sim2real/reconstruction/prompt_review.py",
+      "bytes": 4481,
+      "sha256": "7192f7f17f31842a259139ae1238c359d451c5f2a5ce833b42d7634dcbba9f5e"
     },
     {
       "path": "modules/reconstruction/src/real2sim2real/reconstruction/quality.py",
@@ -3018,6 +3023,11 @@
       "path": "tests/test_pipeline.py",
       "bytes": 4671,
       "sha256": "13f95e90bef9bb80cc45d95bc579fd443ba5697ce5a178b6480ded4f3d72ec51"
+    },
+    {
+      "path": "tests/test_prompt_review.py",
+      "bytes": 1785,
+      "sha256": "72893dc1c86d931a10a12ec7dbe301374cf452132bb650362e0837d23ab10c9c"
     },
     {
       "path": "tests/test_reconstruction_dispatch.py",

@@ -46,11 +46,11 @@ artifact mutation or network access.
 ## A bounded smaller-correction retry
 
 When a translation proposal smooths motion but slightly worsens a formerly good
-image/depth fit, the existing `localized_pose.backtrack_translation` function can
+image/depth fit, the `translation_backtracking.backtrack_translation` function can
 test smaller fractions of that proposal under the **same** acceptance rules:
 
 ```python
-from real2sim2real.reconstruction_repair.localized_pose import backtrack_translation
+from real2sim2real.reconstruction_repair.translation_backtracking import backtrack_translation
 
 candidate, report = backtrack_translation(
     window_inputs, proposed_camera_poses, original_config,

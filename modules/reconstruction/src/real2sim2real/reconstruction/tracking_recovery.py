@@ -26,7 +26,10 @@ def load_exporter():
         observed_initial_pose='seed.json',viz_file=None)
     return upstream
 
-def install_recovery(upstream, support, output):
+def install_recovery(upstream, support, output, *, continuous_recovery=None, max_continuous_calls=4):
+    if (isinstance(max_continuous_calls,bool) or not isinstance(max_continuous_calls,int)
+            or max_continuous_calls<1 or (continuous_recovery is not None and not callable(continuous_recovery))):
+        raise ValueError('Explicit callable and positive integer continuous-recovery budget required')
     import torch
     from scipy.spatial.transform import Rotation
     limits = Limits()
@@ -49,6 +52,7 @@ def install_recovery(upstream, support, output):
             self.recovery_points = sample_vertices(self.mesh_ori.vertices)
             self.global_calls = 0
             self.recovery_frames = 0
+            self.continuous_calls = 0
 
         def assess(self, poses, previous, *, recovery):
             poses = np.asarray(poses, np.float32).reshape(-1, 4, 4)
@@ -99,6 +103,26 @@ def install_recovery(upstream, support, output):
                 event['local_reports'] = local_reports
                 event['local_poses_camera'] = np.asarray(proposals,dtype=np.float32).tolist()
                 event['method'] = 'local_rgb_depth_recovery'
+                if selected is None and continuous_recovery is not None and self.continuous_calls<max_continuous_calls:
+                    # A continuous proposal gets the SAME float32 GPU raster,
+                    # depth/support and temporal tests as every other candidate.
+                    # Its own CPU acceptance flag is never trusted here.
+                    bounded=[i for i,r in enumerate(local_reports)
+                             if not set(r['rejected_for']) & {'nonrigid','translation_step','rotation_step','camera_plane'}]
+                    if bounded:
+                        seed_index=max(bounded,key=lambda i:local_reports[i]['metrics']['iou'])
+                        self.continuous_calls+=1
+                        try:
+                            fitted=continuous_recovery(self.mesh_ori.vertices,self.mesh_ori.faces,previous,proposals[seed_index],
+                                K,context['object'],context['human'],context['depth'],support)
+                            candidate=np.asarray(fitted['pose_camera'],float)
+                            selected,report,checked=self.choose(candidate[None],previous)
+                            event['continuous_cpu_recovery']=dict(call=self.continuous_calls,
+                                maximum_calls=max_continuous_calls,seed_index=seed_index,fit=fitted,gpu_revalidation=checked)
+                            if selected is not None:event['method']='continuous_cpu_proposal_gpu_verified'
+                        except (ValueError,KeyError) as error:
+                            event['continuous_cpu_recovery']=dict(call=self.continuous_calls,
+                                maximum_calls=max_continuous_calls,error=str(error),accepted=False)
                 for rgb_only in (False, True):
                     if selected is not None:
                         break
@@ -149,6 +173,9 @@ def install_recovery(upstream, support, output):
                 recovery_protocol=protocol(),
                 recovery_frame_count=sum(e['recovery'] for e in events),
                 recovery_registration_count=events[-1]['global_calls_after'] if events else 0,
+                continuous_cpu_recovery_enabled=continuous_recovery is not None,
+                continuous_cpu_recovery_max_calls=max_continuous_calls if continuous_recovery is not None else 0,
+                continuous_cpu_recovery_count=sum('continuous_cpu_recovery' in e for e in events),
                 recovery_adapter_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
                 recovery_quality_sha256=hashlib.sha256(Path(__file__).with_name('recovery_quality.py').read_bytes()).hexdigest())
             upstream.validate_foundationpose_selection_metadata(value['metadata'], 'recovery output')
@@ -226,6 +253,8 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     for key in ['export','depth','seed','support','output']:
         parser.add_argument('--'+key,required=True)
+    parser.add_argument('--continuous-cpu-recovery',action='store_true',
+        help='Opt in to at most four bounded CPU pose fits; every result is revalidated on GPU before use')
     args=parser.parse_args()
     if (Path(args.export)/'poses.npy').exists() or Path(args.output).exists():
         raise ValueError('Require isolated prediction-only inputs and a fresh output')
@@ -234,7 +263,13 @@ def main():
         raise ValueError('Require explicit predicted camera-frame support evidence')
     upstream=load_exporter()
     install_rgb_mode(upstream)
-    install_recovery(upstream,support,args.output)
+    continuous=None
+    if args.continuous_cpu_recovery:
+        # Optional module dependency is loaded only for this explicitly composed
+        # reconstruction + repair recovery mode, never for ordinary tracking.
+        from real2sim2real.reconstruction_repair.local_registration import propose
+        continuous=propose
+    install_recovery(upstream,support,args.output,continuous_recovery=continuous)
     install_state_recording(upstream,args.output)
     try:
         upstream.run_foundationpose_mhr_export(args.export,args.depth,args.output,

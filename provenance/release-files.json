@@ -1015,6 +1015,11 @@
       "sha256": "d879a71df4b0016bf44b95965c3d6b0dc252fa0b9c6c11c5534294a56cedd5fd"
     },
     {
+      "path": "modules/reconstruction-repair/CONTINUOUS_RECOVERY.md",
+      "bytes": 2891,
+      "sha256": "20ebc4e6960a138976ce16ff7677f13420a0d647e5a8f69a6d7d25f58caab0d8"
+    },
+    {
       "path": "modules/reconstruction-repair/LICENSE",
       "bytes": 30209,
       "sha256": "e87dc2a40b553c5f52acb3909f479afbeac8c35a85328fceaa0cab15ed50b9fc"
@@ -1123,6 +1128,11 @@
       "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/human_scoring.py",
       "bytes": 9010,
       "sha256": "2ffc77287401c2ce2c3029df6c94beb09237c0dda9da24faaf47cdf41d103b80"
+    },
+    {
+      "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/local_registration.py",
+      "bytes": 6525,
+      "sha256": "f2a2e99af4d5df4ea5f6d7b57bb4d575e70a2b9211ee63ed99d3f249d98da0ac"
     },
     {
       "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/metric_calibration.py",
@@ -1243,6 +1253,11 @@
       "path": "modules/reconstruction-repair/tests/test_human.py",
       "bytes": 10677,
       "sha256": "24d1a94cb62db6baf92b2896e25d148764fd1715649dc9f8877d8e2b27c422ca"
+    },
+    {
+      "path": "modules/reconstruction-repair/tests/test_local_registration.py",
+      "bytes": 2719,
+      "sha256": "ad448ad4268b191ad5360429e359e51a95beccce2fb41dbb8c7fe53ef7c1149a"
     },
     {
       "path": "modules/reconstruction-repair/tests/test_metric_calibration.py",
@@ -2931,8 +2946,8 @@
     },
     {
       "path": "modules/reconstruction/src/real2sim2real/reconstruction/tracking_recovery.py",
-      "bytes": 13814,
-      "sha256": "972e8646723b14ddf82380df6eb984e919274a9e139bcca999ddb0a6e09589ee"
+      "bytes": 16772,
+      "sha256": "0dce219cbe1f31a96b2c8d8dff1815d8a9b99d0c1f3734cc2041f31e5f7bd35b"
     },
     {
       "path": "modules/reconstruction/src/real2sim2real/reconstruction/tracking_runtime.py",
@@ -3211,8 +3226,8 @@
     },
     {
       "path": "tests/test_tracking_recovery.py",
-      "bytes": 7838,
-      "sha256": "2570bc1d814859a4f74e52030eb522f91beb3064cd7bcfb0309786ce3e5e70f2"
+      "bytes": 10711,
+      "sha256": "384b089d9ae7c4b1963f18650667779e18d9c33d9d380bcea0d7c44e1a3e9bab"
     },
     {
       "path": "tests/test_tracking_runtime.py",

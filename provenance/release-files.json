@@ -46,8 +46,8 @@
     },
     {
       "path": "docs/LEARNINGS.md",
-      "bytes": 14173,
-      "sha256": "10f6ce7ca58007c1860cb91f93be1b35dbc5ccc8f2fb601fb2303bd412b1025e"
+      "bytes": 15001,
+      "sha256": "b41448636fb6984e74a42981dfcefb30680d64edc7165dc775a3c72b1cf69dcd"
     },
     {
       "path": "docs/REPRODUCIBILITY.md",
@@ -61,8 +61,8 @@
     },
     {
       "path": "docs/VALIDATION.md",
-      "bytes": 10827,
-      "sha256": "239c392a265eb68fef5cc410dd12c4151bec069c19cc2f5c9d43f22c85756995"
+      "bytes": 11387,
+      "sha256": "c12e0b9a5670dfc88fb2d1bd72943b75048384ffacbaf2c5761226b60041277b"
     },
     {
       "path": "examples/full-pipeline.json",
@@ -1216,8 +1216,8 @@
     },
     {
       "path": "modules/reconstruction/README.md",
-      "bytes": 10093,
-      "sha256": "3a0cf79106ae4228af2a29371a4ee5985d30d0dbc27f73a06a15e5b4daa72ce8"
+      "bytes": 11754,
+      "sha256": "ceab976dda047c1f1d7b9c82fc980825184969d05fdce961add6afa7c1a5d046"
     },
     {
       "path": "modules/reconstruction/docker/Dockerfile",
@@ -2820,9 +2820,19 @@
       "sha256": "86e0d118bd440f216fe3b6611c5d79cbd72c485619844295eeb154d179350a1e"
     },
     {
+      "path": "modules/reconstruction/src/real2sim2real/reconstruction/recovery_quality.py",
+      "bytes": 7235,
+      "sha256": "b43e2023d853f8a76da0638085e7258bd9889c2f04a5dc7de921162e864def19"
+    },
+    {
       "path": "modules/reconstruction/src/real2sim2real/reconstruction/stage.py",
       "bytes": 3708,
       "sha256": "def9fa50f7b28ab2257e7df158a8e559bc46d7a68757ccfc421004895cc5ef56"
+    },
+    {
+      "path": "modules/reconstruction/src/real2sim2real/reconstruction/tracking_recovery.py",
+      "bytes": 12585,
+      "sha256": "44d0dfe75214a7b371c053250a19c39d9721ed7d805bf30cb0574e180efc2b7f"
     },
     {
       "path": "modules/reconstruction/src/real2sim2real/reconstruction/tracking_runtime.py",
@@ -3058,6 +3068,16 @@
       "path": "tests/test_reconstruction_quality.py",
       "bytes": 1890,
       "sha256": "d31095b95892b2008f5bde1db2518df4013d79d9f9c8cb6d2b2b2566c4d285bb"
+    },
+    {
+      "path": "tests/test_rgb_tracking_mode.py",
+      "bytes": 2383,
+      "sha256": "1e0796030e77aa61396d2918b2561eef6c96a523291e8cee25fe8fe4932da7e4"
+    },
+    {
+      "path": "tests/test_tracking_recovery.py",
+      "bytes": 6845,
+      "sha256": "8a23b2b595fc8e4d5c36ee222429d918a004cd17099f1bfe6920e67406d8f243"
     },
     {
       "path": "tests/test_tracking_runtime.py",

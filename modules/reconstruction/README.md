@@ -178,3 +178,29 @@ before depth and human inference. The retained JSON lists the offending source
 frames and preserves preview evidence. This moves an existing model-input
 failure earlier; it does not relax that minimum or claim semantic correctness.
 Empty object masks are recorded separately because object visibility can vary.
+
+### Experimental bounded RGB tracking recovery
+
+`python -m real2sim2real.reconstruction.tracking_recovery --help` exposes an
+opt-in entry point inside the provisioned reconstruction backend environment
+(engine import paths and explicit tracking weights/runtime must be configured,
+as for the ordinary object-motion worker). It requires an isolated export,
+predicted depth, an independently checked observed frame-zero seed, an explicit
+camera-frame support JSON, and a fresh output. The normal backend remains unchanged.
+
+Normal proposals use the existing RGB refiner. Every update is checked against
+image overlap/precision/recall, corresponding surface depth, support penetration,
+and translation/rotation step limits. On failure, bounded local hypotheses and
+fresh depth/RGB registrations compete under the same recovery gates. Budgets are
+12 global registrations and 180 recovery frames; failure stops without publishing
+an accepted trajectory. Accepted states and failed attempts are retained in JSONL
+traces. A caller still owns GPU thermal/deadline supervision and full-clip/native
+validation after execution.
+
+`recovery_quality` contains the lightweight numerical gates. Their initial
+per-frame recipe uses 0.55 tracking IoU, stricter 0.60 recovery IoU, 0.60
+precision/recall, 0.10 m median depth error with 100 correspondences, 0.02 m
+support penetration, 0.08 m translation and 30° rotation per step. Interpret step
+bounds with the source sampling rate. Passing these proposal checks is not
+reference, tabletop-contact, physics or actor-training approval. A floor-only
+support record must remain explicitly floor-only; it cannot certify a tabletop.

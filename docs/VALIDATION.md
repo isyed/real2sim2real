@@ -174,3 +174,11 @@ payload, and unaffected calibration arrays remained identical. It retained the
 same twelve calibration samples/split while qualifying contradictory pixels in
 26 frames. Native seed validation subsequently prevented reference promotion;
 no new full tracking, physics or actor-training result is claimed.
+
+The extracted numerical recovery/RGB adapter passes 13 CPU checks, including
+geometric vetoes despite good silhouettes, the stricter recovery image threshold,
+no support snapping, actual rollback after a bad update, use of the RGB refiner
+flag, and unaccepted failure-state records. A separate offline container check
+imports the real exporter/new adapter and loads both actual tracker configurations
+and checkpoints (116/134 finite tensors). This does not validate GPU tracking;
+the new full-clip recovery acceptance trial remains pending its guarded lease.

@@ -204,3 +204,9 @@ support penetration, 0.08 m translation and 30° rotation per step. Interpret st
 bounds with the source sampling rate. Passing these proposal checks is not
 reference, tabletop-contact, physics or actor-training approval. A floor-only
 support record must remain explicitly floor-only; it cannot certify a tabletop.
+
+The recovery entry point explicitly binds its exporter to the selected packaged
+engine source and checks the observed-seed API. Offline preflight callers should
+invoke `tracking_recovery.load_exporter()` too: a successful import alone can
+resolve an older container copy and miss an API mismatch. Foreign cached exporters
+are rejected instead of silently reused.

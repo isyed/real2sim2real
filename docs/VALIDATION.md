@@ -182,3 +182,10 @@ flag, and unaccepted failure-state records. A separate offline container check
 imports the real exporter/new adapter and loads both actual tracker configurations
 and checkpoints (116/134 finite tensors). This does not validate GPU tracking;
 the new full-clip recovery acceptance trial remains pending its guarded lease.
+
+Recovery-source binding adds three CPU regression checks: the selected engine
+outranks the container working directory, an already-cached foreign exporter is
+rejected, and an incompatible observed-seed API is rejected before tracking. The
+combined recovery/RGB/binding suite passes 16 tests. Corrected offline preflight
+prints the actual frozen exporter source and loads both real checkpoints; this
+still does not replace the guarded GPU acceptance run.

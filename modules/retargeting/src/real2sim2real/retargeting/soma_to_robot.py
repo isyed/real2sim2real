@@ -70,33 +70,9 @@ def _convert_glb_to_obj(glb_path: Path, dst_dir: Path) -> Path:
 
 
 def _build_object_urdf(mesh_path: str, urdf_path: Path) -> str:
-    """Write a simple rigid-object URDF that references ``mesh_path``."""
-    urdf_path.parent.mkdir(parents=True, exist_ok=True)
-    urdf_text = f"""<?xml version="1.0"?>
-<robot name="retarget_object">
-  <link name="object">
-    <inertial>
-      <origin xyz="0 0 0" rpy="0 0 0"/>
-      <mass value="1.0"/>
-      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
-    </inertial>
-    <visual>
-      <origin xyz="0 0 0" rpy="0 0 0"/>
-      <geometry>
-        <mesh filename="{mesh_path}"/>
-      </geometry>
-    </visual>
-    <collision>
-      <origin xyz="0 0 0" rpy="0 0 0"/>
-      <geometry>
-        <mesh filename="{mesh_path}"/>
-      </geometry>
-    </collision>
-  </link>
-</robot>
-"""
-    urdf_path.write_text(urdf_text, encoding="utf-8")
-    return str(urdf_path.resolve())
+    """Preserve the link/mesh frame and derive inertials at nominal 1 kg mass."""
+    from .object_inertia import write_urdf
+    return write_urdf(mesh_path, urdf_path, mass_kg=1.)
 
 
 def _compute_mesh_radius(mesh_path: str) -> float:

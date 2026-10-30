@@ -143,6 +143,8 @@ class SonicJointResidualActionConfig:
     body_delay: TargetDelayConfig = field(default_factory=lambda: TargetDelayConfig(min_steps=0, max_steps=2))
     enable_cuda_graph: bool = True
     hand_closing: HandClosingConfig | None = None
+    reference_pull_gain: float = 0.0
+    reference_pull_max_rad: float = 0.15
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "policy_dir", Path(self.policy_dir))
@@ -159,6 +161,12 @@ class SonicJointResidualActionConfig:
                 raise ValueError(f"{name} must be positive and finite, got {value}")
         if self.input_mode != "raw" or self.normalized_mapping != "linear":
             raise ValueError("SONIC residuals require raw identity input with linear metadata")
+        if (isinstance(self.reference_pull_gain, bool) or not np.isfinite(self.reference_pull_gain)
+                or not 0 <= self.reference_pull_gain <= 1):
+            raise ValueError("reference pull gain must be finite and in [0, 1]")
+        if (isinstance(self.reference_pull_max_rad, bool) or not np.isfinite(self.reference_pull_max_rad)
+                or not 0 < self.reference_pull_max_rad <= .3):
+            raise ValueError("reference pull bound must be finite and in (0, 0.3] radians")
 
     def build(self, scene: Scene, device=None) -> SonicJointResidualAction:
         return SonicJointResidualAction.build(scene, config=self, device=device)
@@ -268,6 +276,35 @@ def gather_sonic_encoder_input(
         joint = (column - 4) % SONIC_JOINT_DIM
         value += reference_joint_q_offset[world * q_per_world + sonic_q_ids[joint]]
     encoder_input[world, column] = value
+
+
+@wp.kernel
+def pull_reference_body_targets(
+    timestep: wp.array(dtype=wp.int32),
+    reference: wp.array(dtype=wp.float32, ndim=2),
+    offset: wp.array(dtype=wp.float32),
+    q_ids: wp.array(dtype=wp.int32),
+    dof_ids: wp.array(dtype=wp.int32),
+    scalar_slots: wp.array(dtype=wp.int32),
+    frames: int, q_per_world: int, dof_per_world: int, processed_dim: int,
+    gain: float, max_rad: float,
+    joint_target: wp.array(dtype=wp.float32),
+    processed: wp.array(dtype=wp.float32),
+    history: wp.array(dtype=wp.float32),
+):
+    """Opt-in bounded joint-reference correction; no root force or teleport."""
+    world, joint = wp.tid()
+    frame = wp.clamp(timestep[world], 0, frames - 1)
+    dof = world * dof_per_world + dof_ids[joint]
+    current = joint_target[dof]
+    wanted = reference[frame, dof_ids[joint]] + offset[world * q_per_world + q_ids[joint]]
+    correction = wp.clamp(gain * (wanted - current), -max_rad, max_rad)
+    target = current + correction
+    slot = world * processed_dim + scalar_slots[joint]
+    joint_target[dof] = target
+    processed[slot] = target
+    history[world * RECON_BODY_ACTION_HISTORY_LENGTH * processed_dim +
+        (RECON_BODY_ACTION_HISTORY_LENGTH - 1) * processed_dim + scalar_slots[joint]] = target
 
 
 @wp.kernel
@@ -613,6 +650,8 @@ class SonicJointResidualAction:
     residual_scale: float
     finger_residual_scale: float
     use_tanh: bool
+    reference_pull_gain: float
+    reference_pull_max_rad: float
     encoder_reference: wp.array
     reference_joint_target: wp.array
     reference_joint_q_offset: wp.array
@@ -761,6 +800,8 @@ class SonicJointResidualAction:
             residual_scale=config.residual_scale,
             finger_residual_scale=config.finger_residual_scale,
             use_tanh=config.use_tanh,
+            reference_pull_gain=config.reference_pull_gain,
+            reference_pull_max_rad=config.reference_pull_max_rad,
             encoder_reference=wp.array(build_sonic_encoder_reference(scene), dtype=wp.float32, device=device),
             reference_joint_target=wp.array(scene.robot_reference.joint_target, dtype=wp.float32, device=device),
             reference_joint_q_offset=wp.zeros(
@@ -929,6 +970,14 @@ class SonicJointResidualAction:
                 self.actor_action_history,
             ],
         )
+
+        if self.reference_pull_gain > 0:
+            wp.launch(pull_reference_body_targets, dim=(self.world_count, SONIC_JOINT_DIM),
+                inputs=[timestep, self.reference_joint_target, self.reference_joint_q_offset,
+                    self.sonic_q_ids, self.sonic_dof_ids, self.sonic_scalar_slots,
+                    self.reference_num_frames, self.q_per_world, self.dof_per_world, self.processed_dim,
+                    self.reference_pull_gain, self.reference_pull_max_rad],
+                outputs=[self.joint_target, self.processed_target, self.actor_action_history])
 
         if self.hand_controller is not None:
             self.hand_controller.process(action, timestep, state, self)

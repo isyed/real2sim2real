@@ -41,8 +41,8 @@
     },
     {
       "path": "docs/FOREGROUND_DEPTH_ORIGIN.md",
-      "bytes": 1527,
-      "sha256": "338fb0d022bb63e129f5b4f8341cf071e27636f5aaa39f9f5f83e24561d87978"
+      "bytes": 2684,
+      "sha256": "fa15af3594d98b6a402b2d137827ae371dedd96eb4e8aa76073665603a7946ce"
     },
     {
       "path": "docs/FROZEN_CONTROLLERS.md",
@@ -1110,6 +1110,11 @@
       "sha256": "333759385dcaf0d31497120b06589895c5653a270fa32c8e202f49483704842a"
     },
     {
+      "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/depth_preview.py",
+      "bytes": 5344,
+      "sha256": "53ff48f8baf82d4330551144e9cc4d0df0925b161067e8f2192d4d8b2d65429b"
+    },
+    {
       "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/depth_scale.py",
       "bytes": 2841,
       "sha256": "dabd3c678870235b8e7155bd1f91b2d2e2682696a7e382139acd81f3d15fd995"
@@ -1268,6 +1273,11 @@
       "path": "modules/reconstruction-repair/tests/test_depth_evidence.py",
       "bytes": 1873,
       "sha256": "cb93f1a9d0949025e944f4efb0b92e9f1a0fe03fc885face4cb02d8deed53d68"
+    },
+    {
+      "path": "modules/reconstruction-repair/tests/test_depth_preview.py",
+      "bytes": 940,
+      "sha256": "977c6d28f7002a6bbb4a71a98c25689bae6d57f482aa857fdae8a5ef65babdf5"
     },
     {
       "path": "modules/reconstruction-repair/tests/test_depth_scale.py",

@@ -171,3 +171,10 @@ keep `semantics_verified=false`; they do not lower alignment gates or approve a
 reference for training. Corrections invalidate masks, human inference, human-depth
 alignment and dependent object geometry/tracking. RGB-only raw depth can be reused
 only with verified source/model identity and an explicit derived-file receipt.
+
+Mask review also audits foreground counts over **every** source frame. Human
+masks below SAM 3D Body's existing 20-pixel input minimum stop at mask packing,
+before depth and human inference. The retained JSON lists the offending source
+frames and preserves preview evidence. This moves an existing model-input
+failure earlier; it does not relax that minimum or claim semantic correctness.
+Empty object masks are recorded separately because object visibility can vary.

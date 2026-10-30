@@ -91,6 +91,53 @@ def test_sampler_preserves_mesh_bounds():
     np.testing.assert_array_equal(sampled.max(0), vertices.max(0))
 
 
+@pytest.mark.parametrize('gpu_accepts',[True,False])
+def test_continuous_cpu_hypothesis_requires_independent_gpu_revalidation(monkeypatch,tmp_path,gpu_accepts):
+    class Tensor(np.ndarray):
+        def numpy(self):return np.asarray(self)
+        def cpu(self):return self
+    torch=SimpleNamespace(as_tensor=lambda x,**kw:np.asarray(x,dtype=kw.get('dtype')).view(Tensor),
+        eye=lambda n:np.eye(n,dtype=np.float32).view(Tensor),float32=np.float32,no_grad=lambda:lambda f:f)
+    monkeypatch.setitem(__import__('sys').modules,'torch',torch)
+    from real2sim2real.reconstruction import tracking_recovery as adapter
+    vertices,initial,K,depth,observed,table=scene();registered=[];calls=[]
+    class FakePose:
+        def __init__(self):
+            self.mesh_ori=SimpleNamespace(vertices=vertices,faces=np.array([[0,1,2]]))
+            self.pose_last=torch.as_tensor(initial,dtype=np.float32)
+        def get_tf_to_centered_mesh(self):return torch.eye(4)
+        def track_one(self,*a,**kw):
+            p=initial.copy();p[0,3]=.15;return p
+        def register(self,**kw):
+            registered.append(True)
+            raise RuntimeError('Expected global fallback after GPU rejection')
+    def iterator(*a,**kw):
+        for frame in range(2):yield str(frame),np.zeros((64,64,3)),depth,np.zeros_like(observed),observed,K
+    def render(model,candidates,K,shape):
+        return np.array([.9 if gpu_accepts and abs(p[0,3]-.025)<1e-6 else .4 for p in candidates])
+    def continuous(*args):
+        calls.append(True);p=initial.copy();p[0,3]=.025
+        return dict(pose_camera=p.tolist(),proposal_valid_for_tracking=True)
+    upstream=SimpleNamespace(FoundationPose=FakePose,_foundationpose_frame_iterator=iterator,
+        _atomic_pickle_dump=lambda *a:None,_tensor_to_numpy=lambda value:value.numpy(),
+        _render_candidate_masks=render,measure_visible_silhouettes=lambda a,*rest:a,
+        _selected_metric_values=lambda measured,i:dict(iou=float(measured[i]),precision=.9,recall=.9))
+    adapter.install_recovery(upstream,table,tmp_path/'poses.pkl',continuous_recovery=continuous)
+    model=upstream.FoundationPose();frames=upstream._foundationpose_frame_iterator();next(frames);frame=next(frames)
+    if gpu_accepts:
+        result=model.track_one(frame[1],frame[2],frame[-1],5)
+        assert result[0,3]==pytest.approx(.025)
+        event=json.loads((tmp_path/'poses.recovery.jsonl').read_text())
+        assert event['method']=='continuous_cpu_proposal_gpu_verified'
+        assert not event['continuous_cpu_recovery']['gpu_revalidation'][0]['rejected_for']
+        assert not registered
+    else:
+        with pytest.raises(RuntimeError,match='global fallback'):model.track_one(frame[1],frame[2],frame[-1],5)
+        assert registered
+        np.testing.assert_allclose(model.pose_last,initial)
+    assert len(calls)==1 and model.continuous_calls==1
+
+
 def test_adapter_rolls_back_bad_update_and_records_actual_recovery(monkeypatch, tmp_path):
     import real2sim2real.reconstruction.recovery_quality as quality
     # CPU stand-in for the tensor operations at the adapter boundary; actual

@@ -129,7 +129,10 @@ def repair_run(source: Path, output: Path, config: RepairConfig | None = None, *
                 metric = inspect_metric_calibration(bundle, metric_calibration)
                 json_atomic(output / 'metric_size_preflight.json', metric)
                 if not metric['passed']:
-                    raise ValueError('Fine repair blocked: ' + metric['status'] + '; retain the size hypothesis, resize/retrack and calibrate the new bundle before fine repair')
+                    advice=('retain the size hypothesis, resize/retrack and calibrate the new bundle before fine repair'
+                            if metric['requires_resize_and_fresh_tracking'] else
+                            'retain the input mesh and resolve rejected calibration evidence; resizing is not justified')
+                    raise ValueError('Fine repair blocked: ' + metric['status'] + '; ' + advice)
             except (ValueError, KeyError, OSError, TypeError) as exc:
                 json_atomic(output / 'metric_size_preflight.json', dict(metric, error=str(exc)))
                 json_atomic(output / 'status.json', dict(status='blocked_metric_size_preflight', error=str(exc), fine_repair_started=False))

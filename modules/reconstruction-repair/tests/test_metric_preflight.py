@@ -61,6 +61,19 @@ def test_large_scale_hypothesis_is_retained_when_fine_repair_is_blocked(make_bun
     assert not (out / 'checkpoints').exists() and not (out / 'bundle').exists()
 
 
+def test_rejected_holdout_does_not_recommend_resizing(make_bundle, tmp_path):
+    b=make_bundle();e,p=evidence(b,tmp_path/'e')
+    with np.load(e) as packed:arrays=dict(packed)
+    arrays['depth_m'][~arrays['fit']]*=2
+    arrays_atomic(e,arrays)
+    proof=json.loads(p.read_text());proof['evidence_sha256']=file_sha256(e);json_atomic(p,proof)
+    out=tmp_path/'blocked'
+    with pytest.raises(ValueError,match='resizing is not justified'):
+        repair_run(b.root,out,metric_evidence=e,metric_provenance=p)
+    assert not (out/'metric_calibration/calibrated_mesh.npz').exists()
+    assert json.loads((out/'status.json').read_text())['fine_repair_started'] is False
+
+
 def test_calibration_cannot_certify_another_bundle_or_tampered_report(make_bundle, tmp_path):
     b = make_bundle(); checked = calibration(b, tmp_path / 'e')
     other = make_bundle(); other.manifest['sequence_id'] = 'other'

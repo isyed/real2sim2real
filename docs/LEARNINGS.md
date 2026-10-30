@@ -161,3 +161,14 @@ Visible-depth calibration can also become unassessed when occlusion leaves too
 little reliable evidence. Preserve that result rather than inferring a resize
 from the remaining frames or allowing continuity to override missing evidence.
 The existing quality flags expose these cases; no acceptance threshold changed.
+
+**R-016 — rejected calibration is not a resize instruction:** inconsistent held-out
+extent/depth evidence can reject a size hypothesis even when its fitting views
+look plausible. Calibration now records the exact conflicting frame IDs and
+per-frame relative disagreement. Rejection keeps the mesh; the runner and review
+text distinguish resolving bad evidence from the separate accepted-hypothesis
+resize/retrack path. The numeric limits and the mandatory preflight are unchanged.
+Thin, nearly edge-on objects require particular care: a foreground mask can
+contain mostly background-like depth while the inferred floor remains stable.
+Inspect the native RGB/mask/depth together rather than deleting the held-out
+failure or treating its proposed scale as an approved correction.

@@ -157,3 +157,10 @@ previously failed human-depth alignment to complete all 546 frames, with at leas
 12180 corresponding pixels per frame under the unchanged 100-pixel minimum.
 Completed execution still exposed substantial tracking/registration issues; none
 of these results establishes retargeting, physical task success or actor readiness.
+
+Metric-calibration/preflight checks pass 25 tests after adding conflicting-frame
+reporting and correcting rejected-calibration guidance. Held-out evidence still
+cannot fit the scale; rejection still produces no calibrated mesh. The new test
+checks exact conflicting frames, unchanged fit-versus-held-out acceptance, and
+review text that preserves the input mesh on rejection. No metric threshold or
+normal fine-repair requirement changed.

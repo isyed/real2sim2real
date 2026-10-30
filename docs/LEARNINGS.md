@@ -189,3 +189,15 @@ seed-view gates after bounded registration refinement. Keep depth qualification,
 size evidence and pose acceptance as separate outcomes; the depth result alone
 is not a validated reference. No default filter, resize, gate threshold or actor
 approval follows from this experimental helper.
+
+**R-018 — RGB proposals need independent geometry checks and state rollback:**
+qualified depth does not automatically recover object orientation through an
+edge-on view. The reusable experimental `tracking_recovery` process-local adapter
+uses the existing RGB refiner, checks each proposal independently against native
+image, depth, declared support and motion limits, and tries bounded local/global
+recovery before stopping. It restores the selected state before the next frame;
+a failed tracker update cannot become the next accepted prior. JSONL evidence
+records both actual selected states and rejected attempts. The ordinary backend
+and its historical source snapshots remain unchanged. Floor support is not
+silently treated as tabletop support. Full GPU acceptance is a separate,
+thermally supervised downstream trial.

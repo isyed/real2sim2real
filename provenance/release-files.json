@@ -41,8 +41,8 @@
     },
     {
       "path": "docs/FROZEN_CONTROLLERS.md",
-      "bytes": 4301,
-      "sha256": "ab03cf841ff91e0139d4100c59e7d44eb9977399b67d17fd287aa868e568107d"
+      "bytes": 7207,
+      "sha256": "b0321d7be0de82fc58422d195c7c24aacff5f4ca7497cc64a67a4d97276033d1"
     },
     {
       "path": "docs/INSTALL.md",
@@ -956,18 +956,28 @@
     },
     {
       "path": "modules/controller-actor-training/src/real2sim2real/controller_actor_training/evaluate_frozen.py",
-      "bytes": 5456,
-      "sha256": "78ab41294b38c94e2004f3a09fbe1259efe2b0dd9c053d6d7aa8dcbce2c49e43"
+      "bytes": 5802,
+      "sha256": "c6b386d4047d1d64879ac4da8c482f08602ff82f4397112618d03ceb4803637e"
     },
     {
       "path": "modules/controller-actor-training/src/real2sim2real/controller_actor_training/frozen.py",
-      "bytes": 6916,
-      "sha256": "d66ebb68c35675c0721f6d34e2910e18baabeeff9270f3f522844e606967c460"
+      "bytes": 8194,
+      "sha256": "ad4c04a71383b7b0e8ba019a2001595561168eb2d1ebd083f477acb409e473f9"
+    },
+    {
+      "path": "modules/controller-actor-training/src/real2sim2real/controller_actor_training/reference_timing.py",
+      "bytes": 6704,
+      "sha256": "9058e7139f8afc48183f60708292aa068256db81ab190ecb3ada4ec988df0efd"
     },
     {
       "path": "modules/controller-actor-training/src/real2sim2real/controller_actor_training/render_frozen.py",
-      "bytes": 7710,
-      "sha256": "c5790742094e9fafce057654633751b479ac0039d47b9cd74e8f0f8c48380546"
+      "bytes": 7801,
+      "sha256": "fc70975ba0e0c348bd60d97bbdbfc7761978f2467486281d98b7ab87231d11e1"
+    },
+    {
+      "path": "modules/controller-actor-training/src/real2sim2real/controller_actor_training/source_clock.py",
+      "bytes": 4256,
+      "sha256": "12ee27ccbcf370fb83f48cbad254ee3aee20a37221a96b1ecbc1298358695cc4"
     },
     {
       "path": "modules/controller-actor-training/src/real2sim2real/controller_actor_training/stage.py",
@@ -981,8 +991,8 @@
     },
     {
       "path": "modules/controller-actor-training/src/real2sim2real/controller_actor_training/verify_frozen.py",
-      "bytes": 2895,
-      "sha256": "8f37072bfa64f1a020dea71abef0b64df551425ee4b6aa354c67eab644d7f5f7"
+      "bytes": 3180,
+      "sha256": "f7b0cd14bb9cf3a9e897fe4301e5d5e0602b2d0a62daeda82c25de31d7de85d4"
     },
     {
       "path": "modules/controller-actor-training/tests/test_curriculum.py",
@@ -3083,6 +3093,11 @@
       "path": "tests/test_frozen_render_meshes.py",
       "bytes": 1047,
       "sha256": "a50986d2c55933863fd0260babffd9efc6b8990585780d3b123d92500373dd6f"
+    },
+    {
+      "path": "tests/test_frozen_source_clock.py",
+      "bytes": 3844,
+      "sha256": "e0f93b37d09eb9d00b236a6d421dac9bfa1af1f20567b975dee1db37d79037fa"
     },
     {
       "path": "tests/test_human_surface.py",

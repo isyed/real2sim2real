@@ -50,14 +50,14 @@ def render(policy,rollout,output):
     if output.exists():raise FileExistsError('Preserve completed videos')
     manifest,config=materialize(policy);os.environ['R2S2R_ASSETS']=str(policy/'assets')
     from flash_chord.data import load_reference
-    reference=load_reference(config['task']['parquet'],control_fps=50.,motion_speed=1.,source_frame_playback=True)
+    reference=load_reference(config['task']['parquet'],control_fps=50.,motion_speed=1.,source_frame_playback=config['task']['source_frame_playback'])
     if config['scene']['support']:
         raise ValueError('This renderer currently supports ground-only scenes; add support rendering explicitly')
     audit=json.loads((rollout/'audit.json').read_text());labels=audit['body_labels']
     records=[]
     for name,label in [('kinematic','Retargeted reference (no physics)'),('physical','Frozen SONIC + fixed hands (physics)')]:
         with np.load(rollout/(name+'_states.npz')) as z:poses=z['body_q'].copy()
-        if poses.shape!=(audit['source_frames'],len(labels),7) or not np.isfinite(poses).all():
+        if poses.shape!=(audit.get('control_frames',audit['source_frames']),len(labels),7) or not np.isfinite(poses).all():
             raise ValueError('Incomplete or incompatible recorded states')
         records.append(dict(label=label,poses=poses))
     pieces=visual_meshes(policy/'assets/urdfs/g1/main_with_hand.urdf',labels,'g1/')
@@ -72,7 +72,7 @@ def render(policy,rollout,output):
     def world(record,frame):
         pose=record['poses'][frame];rot=Rotation.from_quat(pose[:,3:]).as_matrix()
         return np.einsum('fij,fvj->fvi',rot[ids],local)+pose[ids,None,:3]
-    count=audit['source_frames'];fps=audit['control_fps']
+    count=audit.get('control_frames',audit['source_frames']);fps=audit['control_fps']
     sample=np.concatenate([world(r,int(i)).reshape(-1,3) for r in records for i in np.linspace(0,count-1,20)])@camera.T
     lo,hi=sample[:,:2].min(0),sample[:,:2].max(0);center=(lo+hi)*.5
     scale=min(580/max(hi[0]-lo[0],1.),470/max(hi[1]-lo[1],1.))*.94

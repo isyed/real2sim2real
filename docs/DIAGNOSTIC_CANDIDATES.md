@@ -41,5 +41,6 @@ executable baseline while manipulation and reconstruction accuracy remain poor.
 Short tracking prefixes are not supported by this handoff: do not fill missing
 poses to manufacture a complete candidate.
 
-Six CPU checks cover immutable source preservation, parent-score scope, mesh,
-timeline/rotation protection and mandatory diagnostic evidence.
+Seven CPU checks cover immutable source preservation, parent-score scope, mesh,
+timeline/rotation protection, mandatory diagnostic evidence and rejection of
+missing/nonfinite original poses rather than silently filling them.

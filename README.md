@@ -66,6 +66,7 @@ not certify a grasp or a policy. See [validation](docs/VALIDATION.md).
 - [Architecture and future modules](docs/ARCHITECTURE.md)
 - [Reproducibility and migration](docs/REPRODUCIBILITY.md)
 - [Partial repair and locked-anchor diagnostics](docs/REPAIR_WINDOW_DIAGNOSTICS.md)
+- [Complete diagnostic translation candidates](docs/DIAGNOSTIC_CANDIDATES.md)
 - [Upstream provenance and licenses](docs/THIRD_PARTY.md)
 
 The repository contains research simulation tools. It does not yet contain

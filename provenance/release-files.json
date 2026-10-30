@@ -1010,6 +1010,11 @@
       "sha256": "e8ef8a890aa97c0a2d73ba329b127bf12d8d336e80108314f303f19c33367a3e"
     },
     {
+      "path": "modules/reconstruction-repair/ATTACHMENT_MOTION.md",
+      "bytes": 4179,
+      "sha256": "ec476735c1a0317f1b2bc244f026e0fd1f5faccca3b2f8747f04a1dae2a885e2"
+    },
+    {
       "path": "modules/reconstruction-repair/CALIBRATION_SAMPLING.md",
       "bytes": 2745,
       "sha256": "d879a71df4b0016bf44b95965c3d6b0dc252fa0b9c6c11c5534294a56cedd5fd"
@@ -1053,6 +1058,11 @@
       "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/artifact_metric.py",
       "bytes": 6290,
       "sha256": "6f29314fbfb574dd114d312a8a3094c346126b20b05b5a448587c2bf2b686fcd"
+    },
+    {
+      "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/attachment_motion.py",
+      "bytes": 10788,
+      "sha256": "dbcda51924652dc7b2ab8ff0b1ad8dfa49baf1446c1d1b7fa9a2d128d1c67ef7"
     },
     {
       "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/bundle.py",
@@ -1213,6 +1223,11 @@
       "path": "modules/reconstruction-repair/tests/test_additional_invariants.py",
       "bytes": 1708,
       "sha256": "6adb6f89b82733a1d0d29756cc029b00dd2be1334ce750b8baf46852cfdfdb0f"
+    },
+    {
+      "path": "modules/reconstruction-repair/tests/test_attachment_motion.py",
+      "bytes": 4745,
+      "sha256": "8ef6e9452936632da12cecc0b5f854d1d3e03120132b18bfd5f666358fef7aa4"
     },
     {
       "path": "modules/reconstruction-repair/tests/test_calibration_sampling.py",

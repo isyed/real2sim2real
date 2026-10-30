@@ -41,6 +41,12 @@ executable baseline while manipulation and reconstruction accuracy remain poor.
 Short tracking prefixes are not supported by this handoff: do not fill missing
 poses to manufacture a complete candidate.
 
+Before a residual-actor pilot, inspect actual reach/contact and initial
+robot/object placement as well as loadability. Reference proximity labels can be
+positive while the physical hands never touch the object. Contact accumulated
+after a loss of balance can also be misleading. Compare independent repeats and
+retain a predeclared primary instead of selecting the most favorable trajectory.
+
 Seven CPU checks cover immutable source preservation, parent-score scope, mesh,
 timeline/rotation protection, mandatory diagnostic evidence and rejection of
 missing/nonfinite original poses rather than silently filling them.

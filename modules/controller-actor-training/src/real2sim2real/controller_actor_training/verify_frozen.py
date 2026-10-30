@@ -18,8 +18,10 @@ def verify(policy, *, expected_frames):
     manifest,cfg=materialize(policy)
     os.environ['R2S2R_ASSETS']=str(policy/'assets')
     from flash_chord.data import load_reference
-    ref=load_reference(cfg['task']['parquet'],control_fps=50.,motion_speed=1.,source_frame_playback=True)
-    if ref.num_frames!=expected_frames or ref.robot_joint_pos().shape!=(expected_frames,43):raise ValueError('Wrong reference coverage')
+    native=load_reference(policy/manifest.get('native_reference',manifest['reference']))
+    mode=cfg['task']['source_frame_playback'];control_fps=cfg['env']['sim']['fps']
+    ref=load_reference(cfg['task']['parquet'],control_fps=control_fps,motion_speed=1.,source_frame_playback=mode)
+    if native.num_frames!=expected_frames or ref.robot_joint_pos().shape!=(ref.num_frames,43):raise ValueError('Wrong reference coverage')
     names=ref.robot_joint_names();finger=[i for i,n in enumerate(names) if '_hand_' in n]
     if len(finger)!=14 or np.any(ref.robot_joint_pos()[:,finger]!=0):raise ValueError('Unexpected finger reference')
     for asset in ref.object_assets():
@@ -40,7 +42,8 @@ def verify(policy, *, expected_frames):
         output=model.run(None,feed)
         if not all(np.isfinite(v).all() for v in output):raise ValueError('Nonfinite SONIC CPU forward')
         models.append(dict(model=name,sha256=digest(path),output_shapes=[list(v.shape) for v in output]))
-    return dict(passed=True,cpu_only=True,frames=ref.num_frames,source_fps=ref.fps,
-        control_fps=50.,source_frame_playback=True,models=models,policy_sha256=digest(policy/'manifest.json'),
+    return dict(passed=True,cpu_only=True,frames=ref.num_frames,source_frames=native.num_frames,control_frames=ref.num_frames,source_fps=native.fps,
+        playback_fps=ref.fps,
+        control_fps=control_fps,source_frame_playback=mode,models=models,policy_sha256=digest(policy/'manifest.json'),
         reference_sha256=digest(Path(cfg['task']['parquet'])),actor_present=False,
         geometric_contact_frames={side:int(np.count_nonzero(ref.contact_active(side))) for side in ref.sides})

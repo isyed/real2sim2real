@@ -33,6 +33,8 @@ def evaluate(policy,output,*,record_reference=True):
     import jax
     import numpy as np
     from flash_chord.evaluation import harness
+    from flash_chord.data import load_reference
+    native=load_reference(policy/manifest.get('native_reference',manifest['reference']))
     output.mkdir(parents=True)
     def metadata(path):
         if Path(path)!=policy/'manifest.json':
@@ -42,7 +44,8 @@ def evaluate(policy,output,*,record_reference=True):
         value=harness.evaluation_provenance(**kwargs)
         import hashlib
         value['eval_code_sha256']=hashlib.sha256((value['eval_code_sha256']+
-            digest(Path(__file__))+digest(Path(__file__).with_name('frozen.py'))).encode()).hexdigest()
+            digest(Path(__file__))+digest(Path(__file__).with_name('frozen.py'))+
+            digest(Path(__file__).with_name('source_clock.py'))).encode()).hexdigest()
         return value
     def record(env,jax_env,policy_action,actor_state,key,observation,**kwargs):
         bodies,joints,velocities,actions,contacts=[],[],[],[],[]
@@ -74,7 +77,7 @@ def evaluate(policy,output,*,record_reference=True):
             body_labels=list(env.scene.model.body_label),
             pelvis_body_id=int(env.observation_strategy.pelvis_body_id),
             object_body_id=int(env.observation_strategy.object_body_id),
-            source_frames=kwargs['step_count'],control_fps=float(env.config.sim.fps),
+            source_frames=native.num_frames,control_frames=kwargs['step_count'],control_fps=float(env.config.sim.fps),
             source_fps=float(manifest.get('source_fps',0.)),policy_sha256=digest(policy/'manifest.json'),
             reference_sha256=digest(config['task']['parquet']),reset_mode='explicit',start_frame=0)
         if not audit['hand_closing_enabled']:
@@ -93,6 +96,8 @@ def evaluate(policy,output,*,record_reference=True):
         rollout_recorder=record,parquet_resolver=lambda c,r:config['task']['parquet'],
         provenance_builder=provenance,object_trajectories_output=output/'trajectory.parquet',
         eval_script=Path(__file__))
+    from .source_clock import export_source_clock
+    export_source_clock(output/'trajectory.parquet', native)
     harness.write_evaluation_report(output/'metrics.json',outcome)
     print(json.dumps(harness.evaluation_scalars(outcome),indent=2),flush=True)
 

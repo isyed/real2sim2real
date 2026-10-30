@@ -22,7 +22,7 @@ def validate_config(config):
     if (env['voc_scale']!=0 or config['voc_scale_override']!=0 or
             any(env['voc'][name]!=0 for name in ['max_force','max_torque'])):
         raise ValueError('Frozen baseline must disable object assistance')
-    if (scene['world_count']!=1 or task.get('source_frame_playback') is not True
+    if (scene['world_count']!=1 or not isinstance(task.get('source_frame_playback'),bool)
             or task.get('motion_start_frame')!=0 or task.get('motion_speed')!=1.):
         raise ValueError('Require one-world, frame-zero, unchanged-speed evaluation')
     if (config['training'].get('resume') or config['training'].get('checkpoint_path')
@@ -79,6 +79,12 @@ def package(reference,assets,output,*,hardlink=False):
             raise FileNotFoundError(assets/name)
     config=configuration()
     config['scene']['support']='support' in record['files']
+    # Preserve source duration when camera and controller clocks differ.
+    source_fps=record['metadata'].get('fps')
+    if source_fps is not None:
+        import math
+        if not math.isfinite(source_fps) or source_fps<=0:raise ValueError('Invalid source FPS')
+        config['task']['source_frame_playback']=math.isclose(source_fps,config['env']['sim']['fps'],rel_tol=1e-8)
     output.mkdir(parents=True)
     copy_tree(reference,output/'reference',hardlink=hardlink)
     for name in ['policies/sonic','urdfs/g1','meshes/g1']:
@@ -90,8 +96,17 @@ def package(reference,assets,output,*,hardlink=False):
             path=(urdf.parent/mesh.attrib['filename']).resolve()
             if not path.is_relative_to(output) or not path.is_file():
                 raise ValueError('URDF mesh is missing or outside the portable bundle: '+str(path))
+    native_reference='reference/'+record['files']['reference']['path']
+    playback_reference=native_reference
+    if not config['task']['source_frame_playback']:
+        os.environ['R2S2R_ASSETS']=str(output/'assets')
+        from .reference_timing import prepare
+        playback_reference='reference/control_reference.parquet'
+        prepare(output/native_reference,output/playback_reference,control_fps=config['env']['sim']['fps'])
+        config['task']['source_frame_playback']=True
     manifest=dict(schema='real2sim2real.frozen-controller/1',controller='frozen_sonic_fixed_hands',
-        config=config,reference='reference/'+record['files']['reference']['path'],
+        config=config,reference=playback_reference,native_reference=native_reference,
+        playback_fps=config['env']['sim']['fps'],
         reference_artifact_sha256=digest(reference/'artifact.json'),
         source_fps=record['metadata'].get('fps'),
         actor_present=False,training_steps=0,correction='deterministic_zeros',
@@ -115,6 +130,10 @@ def materialize(policy):
             or manifest.get('correction')!='deterministic_zeros'):
         raise ValueError('Not a frozen zero-correction controller')
     config=deepcopy(manifest['config']);validate_config(config)
+    if manifest.get('source_fps') is not None and config['task']['source_frame_playback']:
+        import math
+        if not math.isclose(manifest.get('playback_fps',manifest['source_fps']),config['env']['sim']['fps'],rel_tol=1e-8):
+            raise ValueError('Source-frame playback would change motion speed; repackage with time resampling')
     reference=(policy/manifest['reference']).resolve()
     if not reference.is_relative_to(policy):
         raise ValueError('Reference escaped its policy bundle')

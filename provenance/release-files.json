@@ -1010,6 +1010,11 @@
       "sha256": "e8ef8a890aa97c0a2d73ba329b127bf12d8d336e80108314f303f19c33367a3e"
     },
     {
+      "path": "modules/reconstruction-repair/CALIBRATION_SAMPLING.md",
+      "bytes": 2745,
+      "sha256": "d879a71df4b0016bf44b95965c3d6b0dc252fa0b9c6c11c5534294a56cedd5fd"
+    },
+    {
       "path": "modules/reconstruction-repair/LICENSE",
       "bytes": 30209,
       "sha256": "e87dc2a40b553c5f52acb3909f479afbeac8c35a85328fceaa0cab15ed50b9fc"
@@ -1036,13 +1041,18 @@
     },
     {
       "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/artifact_metric.py",
-      "bytes": 4663,
-      "sha256": "4a9acecd596d5657907604fa6d719246e87aa79c35abf560b76f2785a6953216"
+      "bytes": 6290,
+      "sha256": "6f29314fbfb574dd114d312a8a3094c346126b20b05b5a448587c2bf2b686fcd"
     },
     {
       "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/bundle.py",
       "bytes": 13574,
       "sha256": "761daa83642f29881a22500306e923be0495e2fff0107a70a94daa05ab0e7d6a"
+    },
+    {
+      "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/calibration_sampling.py",
+      "bytes": 4534,
+      "sha256": "8d027487e15063fa39f904e3c6cbf71579452eb434b7c4aacd470c2e25a2cff2"
     },
     {
       "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/cli.py",
@@ -1166,8 +1176,8 @@
     },
     {
       "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/tracking_plan.py",
-      "bytes": 3397,
-      "sha256": "bb79e86e3033227f43f3a97eb9ba6e5e17a6c6d88b85df4b263490de49f97921"
+      "bytes": 3921,
+      "sha256": "8b4e0dc63ac04d12648780695b8927ea2d9191e119f8aef8ba5df61754aa6a73"
     },
     {
       "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/validation.py",
@@ -1183,6 +1193,11 @@
       "path": "modules/reconstruction-repair/tests/test_additional_invariants.py",
       "bytes": 1708,
       "sha256": "6adb6f89b82733a1d0d29756cc029b00dd2be1334ce750b8baf46852cfdfdb0f"
+    },
+    {
+      "path": "modules/reconstruction-repair/tests/test_calibration_sampling.py",
+      "bytes": 2024,
+      "sha256": "677e6787dcb71ce7491ff3569cb8b31559691608ef27d50846f7a9624efc35d8"
     },
     {
       "path": "modules/reconstruction-repair/tests/test_continuation.py",
@@ -1281,8 +1296,8 @@
     },
     {
       "path": "modules/reconstruction-repair/tests/test_tracking_plan.py",
-      "bytes": 1962,
-      "sha256": "7fc85e2da8dce07de0f2230ca5e1dadc2334585962c5a5884fd3415d4f08ba68"
+      "bytes": 2458,
+      "sha256": "ed34f01f48faf0f216a78d5c41fd0a82489b5bb69aac7a41c39e882584828c71"
     },
     {
       "path": "modules/reconstruction/LICENSE",

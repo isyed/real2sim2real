@@ -36,3 +36,11 @@ def test_missing_calibration_depth_records_no_scale_and_only_allows_diagnosis():
     p=plan(dict(scale_multiplier=None,candidate_ready=False,reasons=['Insufficient reliable depth']))
     assert not p['calibration_scale_available']
     assert p['mesh_scale_multiplier']==1 and not p['full_tracking_permitted']
+
+
+def test_explicit_diagnostic_tracking_cannot_resize_or_promote_a_failed_calibration():
+    p=plan(dict(scale_multiplier=2.5,candidate_ready=False,reasons=['heldout_extent_disagreement']),
+           allow_unchanged_mesh_diagnostic_tracking=True)
+    assert p['full_tracking_permitted'] and p['unchanged_mesh_diagnostic_opt_in']
+    assert p['mesh_scale_multiplier']==1 and not p['resize_hypothesis_retained']
+    assert not p['reference_promotion_permitted'] and not p['fine_repair_permitted']

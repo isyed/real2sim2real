@@ -177,16 +177,17 @@ def points_mesh_distance(points: np.ndarray, vertices: np.ndarray, faces: np.nda
     ab, ac = b - a, c - a
     normal = np.cross(ab, ac)
     norm2 = np.einsum("ij,ij->i", normal, normal)
-    valid = norm2 > 1e-24
-    # Exact broad phase for dense meshes. The existing inside test permits
-    # barycentric coordinates down to -1e-14 / ||normal||^2. Bound that SAME
-    # expanded triangle (rather than silently tightening its tolerance).
+    valid = norm2 > 0
+    # The edge test has length^4 units. Scale its tolerance by norm2 so tiny
+    # or skinny faces cannot become large artificial plane patches. The same
+    # dimensionless barycentric tolerance bounds the dense broad phase.
+    barycentric_tolerance = 1e-12
     # A vertex is an upper bound on surface distance. Faces whose expanded
     # box is farther cannot improve that bound; their edge/plane work is skipped.
     dense = len(tri) > 2048
     if dense:
         low, high = tri.min(axis=1), tri.max(axis=1)
-        epsilon = np.where(valid, 1e-14 / np.maximum(norm2, 1e-30), 0.)
+        epsilon = np.where(valid, barycentric_tolerance, 0.)
         summed = tri.sum(axis=1)
         box_low = low - epsilon[:, None] * (summed - 3*low)
         box_high = high + epsilon[:, None] * (3*high - summed)
@@ -203,17 +204,19 @@ def points_mesh_distance(points: np.ndarray, vertices: np.ndarray, faces: np.nda
             aa, bb, cc, nn, n2, vv = a, b, c, normal, norm2, valid
         ap = p - aa
         signed = np.einsum("ij,ij->i", ap, nn)
-        projection = p - nn * (signed / np.maximum(n2, 1e-30))[:, None]
+        safe_n2 = np.where(vv, n2, 1.)
+        projection = p - nn * (signed / safe_n2)[:, None]
         inside = vv.copy()
         candidates = []
         for u, v in ((aa, bb), (bb, cc), (cc, aa)):
             edge = v - u
-            inside &= np.einsum("ij,ij->i", np.cross(edge, projection - u), nn) >= -1e-14
+            inside &= np.einsum("ij,ij->i", np.cross(edge, projection - u), nn) >= -barycentric_tolerance*n2
+            edge2 = np.einsum("ij,ij->i", edge, edge)
             t = np.clip(np.einsum("ij,ij->i", p - u, edge) /
-                        np.maximum(np.einsum("ij,ij->i", edge, edge), 1e-30), 0, 1)
+                        np.where(edge2 > 0, edge2, 1.), 0, 1)
             candidates.append(np.linalg.norm(p - (u + t[:, None] * edge), axis=1))
         distances.append(min(float(np.min(np.stack(candidates))),
-                             float(np.min(np.where(inside, np.abs(signed) / np.sqrt(np.maximum(n2, 1e-30)), np.inf)))))
+                             float(np.min(np.where(inside, np.abs(signed) / np.sqrt(safe_n2), np.inf)))))
     return np.asarray(distances)
 
 

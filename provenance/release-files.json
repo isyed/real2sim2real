@@ -36,8 +36,8 @@
     },
     {
       "path": "docs/CPU_REPAIR_EVIDENCE.md",
-      "bytes": 1181,
-      "sha256": "87428f97a2986ed8d4ae35c802c10749e911a082194279cce86f9cc649224095"
+      "bytes": 2123,
+      "sha256": "8e453b4dad9e9985b95580f392c3e2e95d7cb626f49271a0a4566137a8134027"
     },
     {
       "path": "docs/DATA_CONTRACTS.md",
@@ -1141,8 +1141,8 @@
     },
     {
       "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/geometry.py",
-      "bytes": 11776,
-      "sha256": "c5769cb16723344ec37a507cc1e0a3db4885c5f795a58cfeef0e6034e6c841e5"
+      "bytes": 11858,
+      "sha256": "b5a937e96c0a58bd1289b6d979fa2c30913feebdb1bf539bf75e37b0fbe31968"
     },
     {
       "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/human_contract.py",
@@ -1298,6 +1298,11 @@
       "path": "modules/reconstruction-repair/tests/test_depth_scale.py",
       "bytes": 1530,
       "sha256": "6621caf5af570557bebad0ca132098677357f32afa14538731726ec9b95ee1ef"
+    },
+    {
+      "path": "modules/reconstruction-repair/tests/test_distance_units.py",
+      "bytes": 1346,
+      "sha256": "5104d9666887e5022b2131a9db1910c3b6e2ff1e4015d51a7cf6b11e34e72172"
     },
     {
       "path": "modules/reconstruction-repair/tests/test_foreground_visibility.py",

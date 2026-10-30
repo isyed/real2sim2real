@@ -16,3 +16,19 @@ scores. A per-frame CSV records the measured image/depth/hand-gap changes.
 Rejected and interrupted proposals remain inspectable without replacing the
 selected checkpoint or reference. A partial benefit can therefore be retained
 without disguising failed or unmeasured gates as acceptance.
+
+## Unit-invariant hand-distance measurement
+
+The point-to-triangle inside test uses a dimensionless barycentric tolerance.
+Its orientation numerator has length-to-the-fourth units, so the numeric
+comparison scales with the squared face normal. A fixed absolute tolerance
+incorrectly treated some small or skinny triangles as much larger plane patches;
+the same geometry could report different distances in metres and centimetres.
+Degenerate faces still contribute their finite segments/endpoints. The dense
+broad-phase bounds use the same dimensionless tolerance as the exact face test.
+
+This changes a measurement, not an acceptance threshold. Historical hand-gap
+results must be remeasured before their rejection or acceptance is interpreted.
+A corrected hand-distance check alone does not approve an otherwise unvalidated
+trajectory. Tests cover analytic tiny triangles, dense/sparse parity, coordinate
+unit changes and rigid transforms.

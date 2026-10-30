@@ -46,8 +46,8 @@
     },
     {
       "path": "docs/LEARNINGS.md",
-      "bytes": 11441,
-      "sha256": "be5d62cec95d18648f5f05935debd7000eb43371fcaa4f970589f78d36b7202e"
+      "bytes": 12227,
+      "sha256": "a8c26b036b4c0383cd3e8a0663f4ab9f1a4a37b1cbcf8fc05e18dfb53e407616"
     },
     {
       "path": "docs/REPRODUCIBILITY.md",
@@ -61,8 +61,8 @@
     },
     {
       "path": "docs/VALIDATION.md",
-      "bytes": 9055,
-      "sha256": "4c1d03104fbd56d576c07a6248c8f5fab48f805626b40e35ddda57ad37448fbe"
+      "bytes": 9692,
+      "sha256": "504f71d5461f877f52b920c3e3b65fad05d8764406687a6f1c08f5c18aa25cb5"
     },
     {
       "path": "examples/full-pipeline.json",
@@ -1206,8 +1206,8 @@
     },
     {
       "path": "modules/reconstruction/README.md",
-      "bytes": 8735,
-      "sha256": "a8ae2d1aa4b2668343c2f3debb77fb2ee2cf7e98f7741a6ae6d8b357386e366f"
+      "bytes": 9624,
+      "sha256": "d4ddebf3e9a3c4beedf281115203fbdd7bb8833643791d4af7b844341d2db739"
     },
     {
       "path": "modules/reconstruction/docker/Dockerfile",
@@ -2786,8 +2786,13 @@
     },
     {
       "path": "modules/reconstruction/src/real2sim2real/reconstruction/backend.py",
-      "bytes": 16872,
-      "sha256": "f439dd0885de959b69b3bd33d130cbad2870ab6caed0788da33c2cfb9347339f"
+      "bytes": 17197,
+      "sha256": "e36937c027acab1ce9d6d55967341322013392970e869f5a90487400035b51ef"
+    },
+    {
+      "path": "modules/reconstruction/src/real2sim2real/reconstruction/mask_review.py",
+      "bytes": 4597,
+      "sha256": "b499621428e6440641ac3a46b2d9f4e6ff0e34326383a4d5700e7931d87ce866"
     },
     {
       "path": "modules/reconstruction/src/real2sim2real/reconstruction/metric.py",
@@ -3008,6 +3013,11 @@
       "path": "tests/test_human_surface.py",
       "bytes": 2358,
       "sha256": "eaca3bc39baae2127cd91c90f32216eed87925e132736064dbf4a5cc9acb0f7c"
+    },
+    {
+      "path": "tests/test_mask_review.py",
+      "bytes": 958,
+      "sha256": "551aca16113059c8e7f32081e5e9273fbaf69442ac1ff7d7cc2ce8cd334a5c58"
     },
     {
       "path": "tests/test_module_contracts.py",

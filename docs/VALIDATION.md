@@ -194,3 +194,9 @@ The recovery suite passes 17 tests after adding exact proposal diagnostics and a
 500-configuration float32 motion-bound regression test. The generator leaves a
 small representational margin inside the existing 0.08 m limit. This fixes a
 numerical proposal defect; it does not establish full-clip reconstruction quality.
+
+The guarded downstream integration trial completed 285 accepted updates before
+rejecting the next frame of a 546-frame clip. Image/depth and temporal constraints
+had no jointly acceptable candidate. The numerical fix is CPU-validated, but this
+full-clip RGB recovery trial failed: no complete repaired reference, robot physics
+or actor-training readiness is established. The original artifact was retained.

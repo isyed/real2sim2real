@@ -87,6 +87,33 @@ def audit(measurements,timestamps_s,*,config=ForegroundConfig()):
                     'This audit does not reconstruct hidden motion or approve a replacement reference.'])
 
 
+
+def depth_origin(raw_measurements,aligned_measurements,timestamps_s,*,alignment_scales=None,config=ForegroundConfig()):
+    """Locate temporal warnings before/after alignment; never infer true depth.
+
+    A warning already present in raw foreground depth cannot be explained solely
+    by the later human-alignment multiplier. This is input diagnosis, not repair.
+    """
+    raw=audit(raw_measurements,timestamps_s,config=config)
+    aligned=audit(aligned_measurements,timestamps_s,config=config)
+    if raw['source_frames']!=aligned['source_frames']:
+        raise ValueError('Raw and aligned source coverage differs')
+    scales=None
+    if alignment_scales is not None:
+        scales=np.asarray(alignment_scales,float)
+        if scales.shape!=(raw['source_frames'],) or not np.isfinite(scales).all() or np.any(scales<=0):
+            raise ValueError('Complete positive finite alignment scales required')
+    raw_warnings=set(raw['temporal_depth_warning_frames']);aligned_warnings=set(aligned['temporal_depth_warning_frames'])
+    return dict(schema='real2sim2real.foreground-depth-origin/1',raw=raw,aligned=aligned,
+        alignment_scales=None if scales is None else scales.tolist(),
+        warnings_already_in_raw=sorted(raw_warnings&aligned_warnings),
+        warnings_only_after_alignment=sorted(aligned_warnings-raw_warnings),
+        warnings_only_in_raw=sorted(raw_warnings-aligned_warnings),
+        depth_modified=False,poses_modified=False,true_depth_established=False,
+        recommendation='Inspect foreground RGB/masks and raw depth at warning frames before adjusting tracking thresholds or alignment.',
+        limitation='Temporal warnings identify input conflicts, not proof of true object motion or correct foreground correspondence.')
+
+
 def overlay(rgb,object_mask,row):
     """Visualize source evidence only; no mask is drawn where none was observed."""
     a=np.asarray(rgb);m=np.asarray(object_mask)
@@ -97,7 +124,7 @@ def overlay(rgb,object_mask,row):
     return out
 
 
-def artifact_audit(source,output,*,camera='front_stereo_camera_left',config=ForegroundConfig()):
+def artifact_audit(source,output,*,camera='front_stereo_camera_left',config=ForegroundConfig(),include_raw_depth=False):
     """Stream a portable artifact's complete native timeline on CPU.
 
     Produces an audit receipt, never a reconstruction replacement. Heavy file
@@ -109,6 +136,7 @@ def artifact_audit(source,output,*,camera='front_stereo_camera_left',config=Fore
     from PIL import Image
     from real2sim2real.artifacts import load,digest,write_json
     source,output=Path(source),Path(output);config.validate()
+    if type(include_raw_depth) is not bool:raise ValueError('Raw-depth audit requires an explicit boolean')
     if output.exists():raise FileExistsError('Preserve previous visibility evidence')
     artifact=load(source,kinds={'reconstruction'})
     required=['geometry','depth','object_masks','human_masks']
@@ -117,15 +145,29 @@ def artifact_audit(source,output,*,camera='front_stereo_camera_left',config=Fore
     with np.load(files['geometry'],allow_pickle=False) as g:
         ids=g['frame_ids'];times=g['timestamps_s']
         if not np.array_equal(ids,np.arange(len(ids))):raise ValueError('Complete zero-based source timeline required')
-    rows=[]
+    rows=[];raw_rows=[];scales=None
     with h5py.File(files['depth']) as depth,h5py.File(files['object_masks']) as obj,h5py.File(files['human_masks']) as human:
         encoded=depth[f'aligned/{camera}']
+        if include_raw_depth:
+            raw_encoded=depth[f'raw/{camera}']
+            if len(raw_encoded)!=len(ids):raise ValueError('Raw depth/source coverage differs')
+            scale_path=f'alignment/{camera}/scale'
+            if scale_path in depth:scales=np.asarray(depth[scale_path])
         if len(encoded)!=len(ids) or obj['frames'].shape[0]!=len(ids) or human['frames'].shape!=obj['frames'].shape:
             raise ValueError('Native depth/mask/source coverage differs')
         for i in range(len(ids)):
             z=np.asarray(Image.open(io.BytesIO(encoded[i].tobytes())),np.float32)/1000
-            rows.append(measure(z,obj['frames'][i]!=0,human['frames'][i]!=0,frame_id=i,config=config))
+            object_mask,human_mask=obj['frames'][i]!=0,human['frames'][i]!=0
+            rows.append(measure(z,object_mask,human_mask,frame_id=i,config=config))
+            if include_raw_depth:
+                raw=np.asarray(Image.open(io.BytesIO(raw_encoded[i].tobytes())),np.float32)/1000
+                measured=measure(raw,object_mask,human_mask,frame_id=i,config=config)
+                valid=raw[(raw>0)&(raw<65.535)]
+                measured['full_frame_median_depth_m']=float(np.median(valid)) if len(valid) else None
+                raw_rows.append(measured)
     result=audit(rows,times,config=config)
+    if include_raw_depth:
+        result['depth_origin']=depth_origin(raw_rows,rows,times,alignment_scales=scales,config=config)
     result['source_identity']=dict(artifact_sha256=digest(source/'artifact.json'),
         files={role:artifact['files'][role]['sha256'] for role in required},
         own_predicted_inputs_only=True,camera=camera)
@@ -136,7 +178,9 @@ def artifact_audit(source,output,*,camera='front_stereo_camera_left',config=Fore
 if __name__=='__main__':
     import argparse
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--input',required=True);p.add_argument('--output',required=True)
-    p.add_argument('--camera',default='front_stereo_camera_left');a=p.parse_args()
-    result=artifact_audit(a.input,a.output,camera=a.camera)
+    p.add_argument('--camera',default='front_stereo_camera_left')
+    p.add_argument('--include-raw-depth',action='store_true',help='Compare temporal foreground warnings before and after human-depth alignment; no depth is changed')
+    a=p.parse_args()
+    result=artifact_audit(a.input,a.output,camera=a.camera,include_raw_depth=a.include_raw_depth)
     print(dict(source_frames=result['source_frames'],full_observation_workflow_ready=result['full_observation_workflow_ready'],
                unavailable_spans=len(result['unavailable_observation_spans']),temporal_warnings=len(result['temporal_depth_warning_frames'])))

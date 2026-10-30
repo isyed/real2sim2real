@@ -22,3 +22,11 @@ Output is a portable `motion_v1` Parquet with object mesh/URDF closure and a
 hand–object proximity schedule. The default 2 cm contact threshold labels
 reference proximity; it is not evidence that the simulated fingers touched
 or held the object. Physics evaluation follows retargeting.
+
+`options.soma_assets` can point to a separate local SOMA model directory when
+body-model assets and robot assets are provisioned independently. The standalone
+stage creates its output directory and refuses existing retargeting results.
+`retargeting.frames.reframe_object` applies rigid world/body changes to the
+paired mesh and trajectory without scaling or changing their world surface.
+OBJ export omits vertex colors/textures for predictable collision import while
+preserving geometry; this does not simplify the simulation mesh.

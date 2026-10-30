@@ -63,3 +63,12 @@ default. Rebuilding a fresh buffer is possible, but changes the experiment.
 
 The GPU stack is pinned in `requirements-gpu.txt`. No pretrained weights,
 episode-specific actors, datasets or cloud launchers are embedded here.
+
+## Frozen baseline without actor training
+
+Use the standalone `frozen`, `evaluate_frozen` and `render_frozen` entry points to
+package SONIC plus fixed hands and evaluate deterministic zero corrections.
+The portable bundle pins model/reference/robot assets and disables all assistance.
+Saved kinematic targets and actual physical states are separate. See
+[the frozen-controller workflow](../../docs/FROZEN_CONTROLLERS.md) for commands,
+CPU video extras, supported scene scope and integration-test evidence.

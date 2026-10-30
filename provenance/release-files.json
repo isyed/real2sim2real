@@ -40,6 +40,11 @@
       "sha256": "ec4d7a624a7ec11ee1433f27969c08acdaabeea79f590987d928e6ff74e11dec"
     },
     {
+      "path": "docs/FROZEN_CONTROLLERS.md",
+      "bytes": 3398,
+      "sha256": "5a00c462f41884abfada3e80c2f25030a7af0c282644dbb15912389b1cd90705"
+    },
+    {
       "path": "docs/INSTALL.md",
       "bytes": 3425,
       "sha256": "eff7b1db0800dfaec1c5cc7aadd6fe68cfdf45b2062d5c9714f2827043ed2638"
@@ -136,13 +141,13 @@
     },
     {
       "path": "modules/controller-actor-training/README.md",
-      "bytes": 3338,
-      "sha256": "1727601795c3031589297383d642d40479bdc367193e7b2a945beaadc7784e7f"
+      "bytes": 3845,
+      "sha256": "2991422509b5a0a6afa8741e86c9759fdc2c7eeb80763f0515ea6b84138cad3b"
     },
     {
       "path": "modules/controller-actor-training/pyproject.toml",
-      "bytes": 685,
-      "sha256": "7743c8e81465188a093d28bb14fe799ad92f795f10cdb7ca1784d3700d671296"
+      "bytes": 858,
+      "sha256": "011b0245ad4205a3b1ea8eae84bb159733a83e0d9840eda05b603c1f038033bb"
     },
     {
       "path": "modules/controller-actor-training/requirements-gpu.txt",
@@ -306,8 +311,8 @@
     },
     {
       "path": "modules/controller-actor-training/src/flash_chord/configs/experiment/g1_recon_body_flash_sac.yaml",
-      "bytes": 2306,
-      "sha256": "e2d3edcdf0dafd8dc241d4318d54d537ebb77d62cefc62203c0f35cacea075d8"
+      "bytes": 2350,
+      "sha256": "5113885baf656e46f388fbb9d5f8dbae53463a09ec975eff2e43fc2bc205682c"
     },
     {
       "path": "modules/controller-actor-training/src/flash_chord/configs/experiment/g1_recon_body_ppo.yaml",
@@ -948,6 +953,21 @@
       "path": "modules/controller-actor-training/src/real2sim2real/controller_actor_training/evaluate.py",
       "bytes": 3773,
       "sha256": "4563b036d6fa70bf0eec398ec196e7bf6577b1d5a21b7dd4c4e55b0def70d94d"
+    },
+    {
+      "path": "modules/controller-actor-training/src/real2sim2real/controller_actor_training/evaluate_frozen.py",
+      "bytes": 5456,
+      "sha256": "78ab41294b38c94e2004f3a09fbe1259efe2b0dd9c053d6d7aa8dcbce2c49e43"
+    },
+    {
+      "path": "modules/controller-actor-training/src/real2sim2real/controller_actor_training/frozen.py",
+      "bytes": 6916,
+      "sha256": "d66ebb68c35675c0721f6d34e2910e18baabeeff9270f3f522844e606967c460"
+    },
+    {
+      "path": "modules/controller-actor-training/src/real2sim2real/controller_actor_training/render_frozen.py",
+      "bytes": 7710,
+      "sha256": "c5790742094e9fafce057654633751b479ac0039d47b9cd74e8f0f8c48380546"
     },
     {
       "path": "modules/controller-actor-training/src/real2sim2real/controller_actor_training/stage.py",
@@ -2861,8 +2881,8 @@
     },
     {
       "path": "modules/retargeting/README.md",
-      "bytes": 1366,
-      "sha256": "ff110796a20492cfe392e679a5b77d48040a5030ee33135b962b641cfeef2e47"
+      "bytes": 1899,
+      "sha256": "f9f903abe57e83e307f9552f6ec09fb4904620784d65e6d72e3b44f384421988"
     },
     {
       "path": "modules/retargeting/licenses/SAM-LICENSE",
@@ -2893,6 +2913,11 @@
       "path": "modules/retargeting/src/real2sim2real/retargeting/configs/g1/retargeter.json",
       "bytes": 2197,
       "sha256": "ed83069251930ef8bf88c4e4938b4869f545d406ebe7500c8d03719bd8b4900e"
+    },
+    {
+      "path": "modules/retargeting/src/real2sim2real/retargeting/frames.py",
+      "bytes": 1258,
+      "sha256": "a180d4e2bed087c3f2a7e7c432434ed66c4cda96041292a686f391c7d436561d"
     },
     {
       "path": "modules/retargeting/src/real2sim2real/retargeting/ground_alignment.py",
@@ -2951,13 +2976,13 @@
     },
     {
       "path": "modules/retargeting/src/real2sim2real/retargeting/soma_to_robot.py",
-      "bytes": 45633,
-      "sha256": "13160f476db2cdd9a9f5ada76990ceeae15b4ce1d98669edb1d905325b6a7e59"
+      "bytes": 45838,
+      "sha256": "a88a454915b9610196539cca20473ac662c57d530d8e656f7cdf3484ce859ca1"
     },
     {
       "path": "modules/retargeting/src/real2sim2real/retargeting/stage.py",
-      "bytes": 5256,
-      "sha256": "df7ea797ecf248ac6243c5d775e6ac462d482442d19b2b008bfa289303b3ca9a"
+      "bytes": 5499,
+      "sha256": "c7568b8c53f59e18acc99ed39ae0e2743708b521802c4ff8c644831837a2a5ff"
     },
     {
       "path": "modules/retargeting/src/real2sim2real/retargeting/viser_playback.py",
@@ -3045,6 +3070,16 @@
       "sha256": "da77e6b2c77820a11121faded3069b77b2675acd1fd5bc4716b9c6d5c080afd6"
     },
     {
+      "path": "tests/test_frozen_controller.py",
+      "bytes": 2598,
+      "sha256": "93dd969d12543cf380f3dbee8976ef15b712db38888b1485a4778198827f0c6e"
+    },
+    {
+      "path": "tests/test_frozen_render_meshes.py",
+      "bytes": 1047,
+      "sha256": "a50986d2c55933863fd0260babffd9efc6b8990585780d3b123d92500373dd6f"
+    },
+    {
       "path": "tests/test_human_surface.py",
       "bytes": 2358,
       "sha256": "eaca3bc39baae2127cd91c90f32216eed87925e132736064dbf4a5cc9acb0f7c"
@@ -3088,6 +3123,11 @@
       "path": "tests/test_recovery_engine_binding.py",
       "bytes": 1618,
       "sha256": "951e8eee47c3062bca79b41a0448e3bd3432a1ba77fb4e9f250f240e60aa0e7a"
+    },
+    {
+      "path": "tests/test_retarget_frames.py",
+      "bytes": 968,
+      "sha256": "05d920a78cd5a1359ce0ad895651f9e619be2392e1b21a3d3fa2e3c1bca9474c"
     },
     {
       "path": "tests/test_rgb_tracking_mode.py",

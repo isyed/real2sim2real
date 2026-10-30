@@ -259,6 +259,8 @@ def run_window(source,provenance_path,output,config=TemporalPoseConfig(), *,
         from .metric_preflight import window_metric_preflight
         metric=window_metric_preflight(data,metric_bundle,metric_calibration)
     candidate,report=refine_window(data,config)
+    from .window_diagnostics import explain
+    report['failure_explanation']=explain(report,locked_frame_ids=data['frame_ids'][data['locked'].astype(bool)].tolist())
     report.update(metric_size_preflight=metric,diagnostic_only=bool(diagnostic_only),metric_size_verified=bool(metric['passed']))
     report.update(provenance=provenance,source_sha256={p.name:file_sha256(p) for p in Path(__file__).parent.glob('*.py')})
     output.mkdir(parents=True)

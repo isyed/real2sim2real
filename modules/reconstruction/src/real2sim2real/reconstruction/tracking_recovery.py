@@ -7,7 +7,7 @@ never carried into the next accepted state or a published trajectory.
 from pathlib import Path
 import argparse,hashlib,json
 import numpy as np
-from .recovery_quality import Limits,consistency,local_proposals,protocol,rejection_reasons,rigid,sample_vertices
+from .recovery_quality import Limits,configured_limits,consistency,local_proposals,protocol,rejection_reasons,rigid,sample_vertices
 
 
 def load_exporter():
@@ -26,13 +26,13 @@ def load_exporter():
         observed_initial_pose='seed.json',viz_file=None)
     return upstream
 
-def install_recovery(upstream, support, output, *, continuous_recovery=None, max_continuous_calls=4):
+def install_recovery(upstream, support, output, *, continuous_recovery=None, max_continuous_calls=4,recovery_frame_budget=None):
     if (isinstance(max_continuous_calls,bool) or not isinstance(max_continuous_calls,int)
             or max_continuous_calls<1 or (continuous_recovery is not None and not callable(continuous_recovery))):
         raise ValueError('Explicit callable and positive integer continuous-recovery budget required')
     import torch
     from scipy.spatial.transform import Rotation
-    limits = Limits()
+    limits = configured_limits(recovery_frame_budget)
     context = {}
     events = []
     original_iterator = upstream._foundationpose_frame_iterator
@@ -170,7 +170,7 @@ def install_recovery(upstream, support, output, *, continuous_recovery=None, max
                 source='foundationpose_rgb_seed_with_bounded_tracking_recovery',
                 selection_pipeline='quality_checked_tracking_then_bounded_pose_recovery',
                 threshold_relaxation=False, unrestricted_candidate_acceptance=False,
-                recovery_protocol=protocol(),
+                recovery_protocol=protocol(recovery_frame_budget=recovery_frame_budget),
                 recovery_frame_count=sum(e['recovery'] for e in events),
                 recovery_registration_count=events[-1]['global_calls_after'] if events else 0,
                 continuous_cpu_recovery_enabled=continuous_recovery is not None,
@@ -255,6 +255,8 @@ def main():
         parser.add_argument('--'+key,required=True)
     parser.add_argument('--continuous-cpu-recovery',action='store_true',
         help='Opt in to at most four bounded CPU pose fits; every result is revalidated on GPU before use')
+    parser.add_argument('--recovery-frame-budget',type=int,
+        help='Finite work allowance for failed tracker updates, at most source frames minus one; quality gates are unchanged')
     args=parser.parse_args()
     if (Path(args.export)/'poses.npy').exists() or Path(args.output).exists():
         raise ValueError('Require isolated prediction-only inputs and a fresh output')
@@ -262,6 +264,9 @@ def main():
     if support.get('ground_truth_used') is not False or support.get('coordinate_frame')!='camera' or not support.get('evidence'):
         raise ValueError('Require explicit predicted camera-frame support evidence')
     upstream=load_exporter()
+    if args.recovery_frame_budget is not None:
+        from prep.mhr_export_utils import frame_names
+        configured_limits(args.recovery_frame_budget,source_frames=len(frame_names(Path(args.export),0)))
     install_rgb_mode(upstream)
     continuous=None
     if args.continuous_cpu_recovery:
@@ -269,7 +274,7 @@ def main():
         # reconstruction + repair recovery mode, never for ordinary tracking.
         from real2sim2real.reconstruction_repair.local_registration import propose
         continuous=propose
-    install_recovery(upstream,support,args.output,continuous_recovery=continuous)
+    install_recovery(upstream,support,args.output,continuous_recovery=continuous,recovery_frame_budget=args.recovery_frame_budget)
     install_state_recording(upstream,args.output)
     try:
         upstream.run_foundationpose_mhr_export(args.export,args.depth,args.output,
@@ -278,7 +283,7 @@ def main():
             sequence_mode=upstream.FOUNDATIONPOSE_SEQUENCE_MODE_REGISTER_FIRST_THEN_TRACK,
             observed_initial_pose=args.seed,viz_file=None)
     except BaseException as error:
-        Path(args.output).with_suffix('.failure.json').write_text(json.dumps(dict(error=str(error),protocol=protocol(),tracking_refiner_mode='rgb_only',accepted_reference=False),indent=2)+'\n')
+        Path(args.output).with_suffix('.failure.json').write_text(json.dumps(dict(error=str(error),protocol=protocol(recovery_frame_budget=args.recovery_frame_budget),tracking_refiner_mode='rgb_only',accepted_reference=False),indent=2)+'\n')
         raise
 
 if __name__=='__main__':main()

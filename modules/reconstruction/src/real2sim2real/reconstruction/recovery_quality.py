@@ -5,7 +5,7 @@ check within its footprint, never a constraint requiring an object to stay down.
 """
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 import numpy as np
 from scipy.spatial.transform import Rotation
 
@@ -23,6 +23,17 @@ class Limits:
     step_rotation_deg: float = 30.
     max_global_registrations: int = 12
     max_recovery_frames: int = 180
+
+
+def configured_limits(recovery_frame_budget=None,*,source_frames=None):
+    """Change a finite work allowance, never an image/depth/motion threshold."""
+    limits=Limits()
+    if recovery_frame_budget is None:return limits
+    if (type(recovery_frame_budget) is not int or recovery_frame_budget<1
+        or (source_frames is not None and (type(source_frames) is not int or source_frames<2
+            or recovery_frame_budget>source_frames-1))):
+        raise ValueError('Recovery-frame budget must be a positive integer within the source update count')
+    return replace(limits,max_recovery_frames=recovery_frame_budget)
 
 
 def rigid(pose):
@@ -153,8 +164,8 @@ def local_proposals(previous, current, K, geometry):
     return np.stack(proposals)
 
 
-def protocol():
-    return dict(schema='real2sim2real.tracking-recovery/1', limits=asdict(Limits()),
+def protocol(*,recovery_frame_budget=None):
+    return dict(schema='real2sim2real.tracking-recovery/1', limits=asdict(configured_limits(recovery_frame_budget)),
         observed_depth='own monocular estimate, not ground truth',
         support='reject penetration only inside the reviewed support footprint; lifting is allowed',
         recovery='local hypotheses, then at most one depth and one RGB registration per failing frame',

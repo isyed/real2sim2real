@@ -41,3 +41,25 @@ The helper validates matching frame identities, finite measurements and the scop
 of locked frames. Tests cover inherited support violations, introduced image loss,
 unavailable depth and mismatched evidence. It performs no inference, optimization,
 artifact mutation or network access.
+
+## A bounded smaller-correction retry
+
+When a translation proposal smooths motion but slightly worsens a formerly good
+image/depth fit, the existing `localized_pose.backtrack_translation` function can
+test smaller fractions of that proposal under the **same** acceptance rules:
+
+```python
+from real2sim2real.reconstruction_repair.localized_pose import backtrack_translation
+
+candidate, report = backtrack_translation(
+    window_inputs, proposed_camera_poses, original_config,
+    fractions=(0.5, 0.25, 0.125, 0.0625),
+)
+```
+
+Rotations and locked frames stay exact. A passing local result remains subject to
+metric, interaction and whole-trajectory checks. Fractions are selected using
+these validation measurements; they are not an independent final test. If every
+fraction fails, the function returns the original poses and retains trial reports.
+An invalid locked anchor identified by `explain` is a reason to skip this retry:
+shrinking edits to other frames cannot repair that unchanged anchor.

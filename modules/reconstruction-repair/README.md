@@ -78,3 +78,16 @@ This is not a default reconstruction filter or permission to train an actor.
 After qualification, rerun the same retained calibration samples and native
 image/depth/support checks; a passed depth-evidence check does not accept a resize
 or its full pose trajectory.
+
+## Tracking-first bounded repair
+
+`tracking_plan.plan` keeps size calibration separate from pose tracking. A valid
+resize hypothesis requires a newly generated tracking input and a fresh
+registration; it never rescales the old pose sequence. Inconsistent calibration
+retains the original mesh and permits a bounded registration diagnosis only.
+Normal fine repair remains blocked. `tracking_plan.assess_replacement` requires
+the complete accepted-state trace, full-clip motion checks, unchanged native
+image/depth/support gates, current-size evidence and a measured image improvement.
+A better mean cannot hide regressions on previously good frames. These decisions
+do not approve actor training or physics. GPU execution, resource deadlines and
+scenario-specific support evidence belong to the caller.

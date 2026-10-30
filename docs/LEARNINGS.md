@@ -150,3 +150,14 @@ and identifies later-frame prompts that need their own review. CPU preflight
 callers should inspect this preview before launching model phases. A downstream
 RGB-only prompt correction is retained separately from its failed attempt; the
 active frozen inference snapshot remains unchanged.
+
+**R-015 — few jumps can coexist with an entirely wrong trajectory:** a fresh
+multi-sequence run completed and published quality reports, but one near-zero
+image-agreement trajectory had fewer discontinuities than a much better tracked
+sequence. A smooth or slowly drifting prediction is not accurate motion. Keep
+image agreement and continuity as independent findings; repair recommendations
+must not rank solely by jump count or average over a good initial segment.
+Visible-depth calibration can also become unassessed when occlusion leaves too
+little reliable evidence. Preserve that result rather than inferring a resize
+from the remaining frames or allowing continuity to override missing evidence.
+The existing quality flags expose these cases; no acceptance threshold changed.

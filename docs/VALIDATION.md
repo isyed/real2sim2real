@@ -148,3 +148,12 @@ preview limitations and the distinction between valid coordinates and correct
 subject selection. The new first-frame preview does not automatically recognize
 objects or approve prompt semantics. A downstream retry validates the actual
 corrected segmentation/depth behavior separately.
+
+Six additional fresh reconstructions completed with all 4659 source frames and
+hash-validated artifacts, including the integrated quality-publication path.
+Their immutable inference snapshot predates the prompt-preview addition; that
+addition has separate CPU validation. One RGB-only prompt correction enabled a
+previously failed human-depth alignment to complete all 546 frames, with at least
+12180 corresponding pixels per frame under the unchanged 100-pixel minimum.
+Completed execution still exposed substantial tracking/registration issues; none
+of these results establishes retargeting, physical task success or actor readiness.

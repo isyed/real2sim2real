@@ -47,3 +47,23 @@ Tests cover numeric pose improvement with unchanged limits, failure on wrong mes
 size, out-of-bound seeds, provenance/grid checks, and acceptance versus rejection
 of a CPU proposal by the independent GPU-adapter boundary (CPU stand-in tests).
 Actual GPU execution remains a separate guarded integration check.
+
+## Integration lessons
+
+A guarded RGB-video integration trial verified continuous CPU proposals through
+the actual GPU rasterizer at silhouette IoU approximately 0.775 and 0.701,
+with the unchanged image/depth/support/motion limits. A later proposal reached
+GPU IoU approximately 0.849 but was correctly rejected because its median depth
+error was 0.143 m, exceeding the 0.10 m bound. This establishes the benefit and
+the rejection behavior on those frames; the clip did not complete and these
+numbers are not a general performance claim.
+
+When the object becomes partly hidden, its predicted depth may jump to a
+background surface while the predicted floor remains stable. Thousands of valid
+depth pixels or a narrow within-frame depth spread do not establish that they
+belong to the correct foreground surface. A global floor-scale correction does
+not explain every local object-depth failure. Diagnose mask/foreground-depth
+association and visibility across time; do not increase motion/depth tolerances
+or silently carry an unobserved object merely to finish a trajectory. The current
+optional recovery does not implement temporal foreground-depth correction or
+hidden-object motion inference.

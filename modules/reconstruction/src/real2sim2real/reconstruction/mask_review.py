@@ -9,6 +9,30 @@ import numpy as np
 from real2sim2real.artifacts import digest,write_json
 
 
+def audit_mask_timelines(masks_root,frame_count):
+    """Match SAM 3D Body's existing 20-pixel input requirement before model work."""
+    from PIL import Image
+    if isinstance(frame_count,bool) or not isinstance(frame_count,int) or frame_count<1:
+        raise ValueError('Expected positive source frame count')
+    root=Path(masks_root);counts={};grid=None
+    for identity,role in ((0,'human'),(1,'object')):
+        paths=sorted((root/str(identity)).glob('*.png'))
+        if [p.name for p in paths]!=[f'{i:06d}.png' for i in range(frame_count)]:
+            raise ValueError('Segmentation masks do not cover the complete source timeline')
+        values=[]
+        for path in paths:
+            with Image.open(path) as im:mask=np.asarray(im.convert('L'))
+            if grid is None:grid=mask.shape
+            if mask.shape!=grid:raise ValueError('Mask pixel grid changes within timeline')
+            values.append(int(np.count_nonzero(mask)))
+        counts[role]=values
+    sparse=[i for i,n in enumerate(counts['human']) if n<20]
+    return dict(foreground_counts=counts,native_mask_shape=list(grid),
+        required_human_foreground_pixels=20,sparse_human_frames=sparse,
+        model_prompt_inputs_valid=not sparse,
+        source='Existing SAM 3D Body raw prompt-mask minimum; not a semantic quality threshold')
+
+
 def sample_overlay(rgb,masks,roles):
     from PIL import Image,ImageDraw
     image=np.asarray(rgb)
@@ -42,10 +66,7 @@ def review_masks(video,masks_root,output,*,frame_count,source_video_sha256,promp
     if not ids or any(isinstance(i,bool) or not isinstance(i,int) or not 0<=i<frame_count for i in ids):
         raise ValueError('Review frames must be source timeline indices')
     masks_root,output=Path(masks_root),Path(output);roles=['human','object'];samples=[]
-    for identity in (0,1):
-        actual=sorted(x.name for x in (masks_root/str(identity)).glob('*.png'))
-        expected=[f'{i:06d}.png' for i in range(frame_count)]
-        if actual!=expected:raise ValueError('Segmentation masks do not cover the complete source timeline')
+    audit=audit_mask_timelines(masks_root,frame_count)
     output.mkdir(parents=True,exist_ok=True);previews=[];decoded=0
     with av.open(str(video)) as source:
         for i,frame in enumerate(source.decode(video=0)):
@@ -65,8 +86,12 @@ def review_masks(video,masks_root,output,*,frame_count,source_video_sha256,promp
     sheet.save(output/'contact_sheet.jpg',quality=90)
     result=dict(schema='real2sim2real.mask-review/1',source_video_sha256=source_video_sha256,
         prompts_sha256=digest(prompts),source_frames=frame_count,mask_timelines_complete=True,
-        reviewed_frame_indices=ids,samples=samples,semantics_verified=False,
+        reviewed_frame_indices=ids,samples=samples,semantics_verified=False,all_frame_audit=audit,
         empty_sample_masks=[dict(frame_index=s['frame_index'],role=m['role']) for s in samples for m in s['masks'] if not m['foreground_pixels']],
         limitations=['Inspect which subject each mask selects; foreground counts alone cannot verify human or object identity.',
             'Sampled previews do not certify all-frame mask quality or physical correctness.'])
-    write_json(output/'mask_review.json',result);return result
+    write_json(output/'mask_review.json',result)
+    if not audit['model_prompt_inputs_valid']:
+        raise ValueError('Human masks below the existing 20-pixel SAM 3D Body input minimum at source frames '
+            +str(audit['sparse_human_frames'][:20])+'. Correct RGB prompts; retained review: '+str(output/'mask_review.json'))
+    return result

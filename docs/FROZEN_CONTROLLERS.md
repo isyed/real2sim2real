@@ -53,3 +53,18 @@ no assistance; both task-success measures stayed zero. Numerical and portability
 checks passed nine tests, plus two CPU visual-transform tests. Both actual SONIC
 models also passed offline CPU forwards. These establish the baseline's execution
 and handoffs, not general grasp quality or hardware deployment readiness.
+
+## CPU preflight before scheduling physics
+
+`controller_actor_training.verify_frozen.verify(policy, expected_frames=...)`
+checks full G1/Dex3 reference coverage, zero reference fingers, every portable
+URDF mesh path and actual finite forward passes through both SONIC ONNX models.
+Set `CUDA_VISIBLE_DEVICES=''`; the function explicitly selects ONNX Runtime's
+CPU provider. It returns model/reference hashes and geometric contact counts.
+These checks establish loadability, not physical contact or task success.
+
+Reusing a human conversion requires matching human parameters, model assets,
+frame identities and world transform. A newer reconstruction with different human
+parameters needs a new MHR-to-SOMA conversion even if the source video is the
+same. Reusing an old physics rollout requires the exact same complete reference
+and evaluator; a changed mesh or trajectory invalidates that comparison.

@@ -41,8 +41,8 @@
     },
     {
       "path": "docs/FROZEN_CONTROLLERS.md",
-      "bytes": 3398,
-      "sha256": "5a00c462f41884abfada3e80c2f25030a7af0c282644dbb15912389b1cd90705"
+      "bytes": 4301,
+      "sha256": "ab03cf841ff91e0139d4100c59e7d44eb9977399b67d17fd287aa868e568107d"
     },
     {
       "path": "docs/INSTALL.md",
@@ -978,6 +978,11 @@
       "path": "modules/controller-actor-training/src/real2sim2real/controller_actor_training/train.py",
       "bytes": 4834,
       "sha256": "9f40e77083f68b229bf8f4b7d48d236c06fe883d995f5f2b07c81b45948ab69f"
+    },
+    {
+      "path": "modules/controller-actor-training/src/real2sim2real/controller_actor_training/verify_frozen.py",
+      "bytes": 2895,
+      "sha256": "8f37072bfa64f1a020dea71abef0b64df551425ee4b6aa354c67eab644d7f5f7"
     },
     {
       "path": "modules/controller-actor-training/tests/test_curriculum.py",

@@ -165,6 +165,12 @@ def run(request, phase, *, check_backend=False):
         masks_pack_cari4d_h5(
             local, output / "masks/0", output / "masks/1", output / "masks.h5"
         )
+        from .mask_review import review_masks
+
+        review_masks(local,output/"masks",output/"mask_review",
+            frame_count=json.loads((output/"timeline.json").read_text())["frames"],
+            source_video_sha256=request["input_sha256"],prompts=prompts,
+            frame_ids=options.get("mask_review_frames"))
         return
 
     if phase == "depth":

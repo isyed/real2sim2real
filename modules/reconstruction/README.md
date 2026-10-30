@@ -159,3 +159,15 @@ prompt can be inside image bounds yet identify a neighboring person or backgroun
 prompts need their own image inspection. Correct misplaced prompts and regenerate
 the dependent masks/human/depth/mesh stages while retaining the rejected attempt;
 do not weaken downstream geometry checks to accept the wrong segmentation.
+
+After mask packing, `mask_review/contact_sheet.jpg` and `mask_review.json` expose
+the propagated **human** and **object** masks separately on source RGB. Both mask
+timelines must cover every source frame. Five sampled frames are shown by
+default; `mask_review_frames` accepts explicit source-frame indices. The report
+pins RGB/prompt/mask hashes and records foreground areas, bounding boxes and empty
+samples. Inspect subject identity before geometry inference or after correcting
+prompts: a well-populated mask may still follow background. These CPU diagnostics
+keep `semantics_verified=false`; they do not lower alignment gates or approve a
+reference for training. Corrections invalidate masks, human inference, human-depth
+alignment and dependent object geometry/tracking. RGB-only raw depth can be reused
+only with verified source/model identity and an explicit derived-file receipt.

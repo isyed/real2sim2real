@@ -50,6 +50,11 @@
       "sha256": "b0321d7be0de82fc58422d195c7c24aacff5f4ca7497cc64a67a4d97276033d1"
     },
     {
+      "path": "docs/INITIAL_POSE_FITTING.md",
+      "bytes": 2372,
+      "sha256": "4bca9eede1dc0828bbb426bc2dcd01b715f01a617d15354336d8633a3a349b46"
+    },
+    {
       "path": "docs/INSTALL.md",
       "bytes": 3425,
       "sha256": "eff7b1db0800dfaec1c5cc7aadd6fe68cfdf45b2062d5c9714f2827043ed2638"
@@ -1165,6 +1170,11 @@
       "sha256": "2ffc77287401c2ce2c3029df6c94beb09237c0dda9da24faaf47cdf41d103b80"
     },
     {
+      "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/initial_pose_fit.py",
+      "bytes": 6309,
+      "sha256": "e0144bb979b86aca421c48f1e9c693dbb4fe546712f8b9f7646933719f20c21d"
+    },
+    {
       "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/local_registration.py",
       "bytes": 6525,
       "sha256": "f2a2e99af4d5df4ea5f6d7b57bb4d575e70a2b9211ee63ed99d3f249d98da0ac"
@@ -1303,6 +1313,11 @@
       "path": "modules/reconstruction-repair/tests/test_human.py",
       "bytes": 10677,
       "sha256": "24d1a94cb62db6baf92b2896e25d148764fd1715649dc9f8877d8e2b27c422ca"
+    },
+    {
+      "path": "modules/reconstruction-repair/tests/test_initial_pose_fit.py",
+      "bytes": 2706,
+      "sha256": "f6630d9cf44ed5d73684ce1a54a3f5061002cd47863e6ff916d1bbdbc3573765"
     },
     {
       "path": "modules/reconstruction-repair/tests/test_local_registration.py",

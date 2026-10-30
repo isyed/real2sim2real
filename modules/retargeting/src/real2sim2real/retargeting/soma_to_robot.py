@@ -63,7 +63,9 @@ def _convert_glb_to_obj(glb_path: Path, dst_dir: Path) -> Path:
             f"Could not convert {glb_path} to a single trimesh.Trimesh "
             f"(got {type(mesh).__name__})."
         )
-    mesh.export(obj_path)
+    # Collision import needs geometry, not vertex RGB. Colored OBJ vertices can
+    # trigger a much slower parser path. Preserve topology and metric positions.
+    mesh.export(obj_path, include_color=False, include_texture=False)
     return obj_path
 
 

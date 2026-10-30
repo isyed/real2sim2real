@@ -19,9 +19,13 @@ def run(request):
     options = request["options"]
     artifact = load(source, kinds={"reconstruction", "soma"})
     assets = option_path(request, "assets")
+    soma_assets = option_path(request, "soma_assets", required=False) or assets / "body_models/soma"
     configs = option_path(request, "robot_config_root")
     os.environ["R2S2R_ASSETS"] = str(assets)
     inputs = out / "retarget_input"
+    if inputs.exists() or (out / "artifact.json").exists():
+        raise FileExistsError("Preserve existing retargeting outputs")
+    out.mkdir(parents=True, exist_ok=True)
     inputs.mkdir()
     geometry = np.load(role_path(source, "geometry"), allow_pickle=False)
     n = len(geometry["frame_ids"])
@@ -56,7 +60,7 @@ def run(request):
         diagnostics = invert_mhr_to_soma(
             packed,
             mhr_model=option_path(request, "mhr_model"),
-            soma_assets=assets / "body_models/soma",
+            soma_assets=soma_assets,
             output=inputs / "soma_params.npz",
             world_transform=np.eye(4),
             device=options.get("device", "cpu"),
@@ -77,7 +81,7 @@ def run(request):
         "--robot-config-root",
         str(configs),
         "--soma-data-root",
-        str(assets / "body_models/soma"),
+        str(soma_assets),
         "--motion-root",
         str(out / "motion"),
         "--fps",

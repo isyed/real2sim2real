@@ -2,6 +2,7 @@
 
 # Canonical G1+Dex3/SONIC ReconBody FlashSAC recipe.
 defaults:
+  - override /training: reference_flash_sac
   - override /sim: recon_body
   - override /collision: physical
   - override /embodiment: g1_dex3

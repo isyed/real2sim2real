@@ -164,3 +164,13 @@ cannot fit the scale; rejection still produces no calibrated mesh. The new test
 checks exact conflicting frames, unchanged fit-versus-held-out acceptance, and
 review text that preserves the input mesh on rejection. No metric threshold or
 normal fine-repair requirement changed.
+
+The experimental depth-evidence helper passes seven synthetic tests covering
+protected-pixel preservation, zero/missing-only changes, unchanged unsupported
+and clean frames, inconsistent/unreviewed anchors, nonfinite data and invalid
+limits. The related metric calibration/preflight suite still passes 25 tests.
+A downstream run verified all 546 raw depth payloads, every unaffected aligned
+payload, and unaffected calibration arrays remained identical. It retained the
+same twelve calibration samples/split while qualifying contradictory pixels in
+26 frames. Native seed validation subsequently prevented reference promotion;
+no new full tracking, physics or actor-training result is claimed.

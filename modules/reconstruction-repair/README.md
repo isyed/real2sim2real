@@ -58,3 +58,23 @@ do not apply the displayed scale multiplier merely because it was calculated.
 Normal fine repair remains blocked until current-size evidence is consistent.
 The runner recommends resize/retracking only when an independently retained
 calibration hypothesis passes its evidence checks and requires a different size.
+
+### Qualify contradictory object depth (experimental, opt-in)
+
+`depth_evidence.qualify_depth` can mark unsupported predicted object depths as
+missing before calibration or fresh tracking. It requires explicit RGB-reviewed,
+bracketing temporal depth anchors for the same rigid object, compatible metre
+depth/native boolean masks, substantial foreground support, and consistent anchor
+depths. Frame IDs assume uniform temporal sampling. The caller must preserve the
+source hashes, anchor selection and per-frame receipts in a derived artifact.
+
+The helper uses no object poses, mesh size, or calibration fit/held-out labels.
+It changes only visible object pixels outside the occluder mask, and only when a
+substantial contradictory depth population coexists with a consistent foreground
+population. Those pixels become zero/missing; no surface depth is imputed. It
+returns an unchanged copy if support is insufficient or the frame is consistent.
+Keep the original depth and mark the derived artifact as requiring revalidation.
+This is not a default reconstruction filter or permission to train an actor.
+After qualification, rerun the same retained calibration samples and native
+image/depth/support checks; a passed depth-evidence check does not accept a resize
+or its full pose trajectory.

@@ -46,8 +46,8 @@
     },
     {
       "path": "docs/LEARNINGS.md",
-      "bytes": 13008,
-      "sha256": "f7b57052694467111ae7a15a483550be9c10ee119afcc1b28bf210a06cfa139e"
+      "bytes": 14173,
+      "sha256": "10f6ce7ca58007c1860cb91f93be1b35dbc5ccc8f2fb601fb2303bd412b1025e"
     },
     {
       "path": "docs/REPRODUCIBILITY.md",
@@ -61,8 +61,8 @@
     },
     {
       "path": "docs/VALIDATION.md",
-      "bytes": 10132,
-      "sha256": "5fe8738c75b41834e8381290a9953a144622bbd2a4381f3e9b981d660b1ad932"
+      "bytes": 10827,
+      "sha256": "239c392a265eb68fef5cc410dd12c4151bec069c19cc2f5c9d43f22c85756995"
     },
     {
       "path": "examples/full-pipeline.json",
@@ -976,8 +976,8 @@
     },
     {
       "path": "modules/reconstruction-repair/README.md",
-      "bytes": 3534,
-      "sha256": "8e476ac5083574dbd77983f059fe4cc35194a67497d2e1727582d032476c12da"
+      "bytes": 4825,
+      "sha256": "a58124392611dd7eda61479cae3713ad1e55e1e1c31a7b2a7f0dc18d9f6bde0a"
     },
     {
       "path": "modules/reconstruction-repair/licenses/SAM-LICENSE",
@@ -1013,6 +1013,11 @@
       "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/contracts.py",
       "bytes": 5425,
       "sha256": "74d7df81d1ff9cb3a03ac9eae014cf3f6d3f4022c6f6b20e1a0aadfebc82b1b8"
+    },
+    {
+      "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/depth_evidence.py",
+      "bytes": 4072,
+      "sha256": "333759385dcaf0d31497120b06589895c5653a270fa32c8e202f49483704842a"
     },
     {
       "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/depth_scale.py",
@@ -1133,6 +1138,11 @@
       "path": "modules/reconstruction-repair/tests/test_dense_geometry.py",
       "bytes": 1919,
       "sha256": "b416fd83a2d133d823ed4ed2aef707602d6a161bd17b7b60808616136731c32d"
+    },
+    {
+      "path": "modules/reconstruction-repair/tests/test_depth_evidence.py",
+      "bytes": 1873,
+      "sha256": "cb93f1a9d0949025e944f4efb0b92e9f1a0fe03fc885face4cb02d8deed53d68"
     },
     {
       "path": "modules/reconstruction-repair/tests/test_depth_scale.py",

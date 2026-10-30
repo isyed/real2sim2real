@@ -172,3 +172,20 @@ Thin, nearly edge-on objects require particular care: a foreground mask can
 contain mostly background-like depth while the inferred floor remains stable.
 Inspect the native RGB/mask/depth together rather than deleting the held-out
 failure or treating its proposed scale as an approved correction.
+
+**R-017 — reject contradictory depth without inventing a surface:** a thin rigid
+object turning edge-on can receive background-like predicted depth while a
+smaller visible component remains consistent with reviewed views on either side.
+The experimental `depth_evidence.qualify_depth` requires explicit bracketing
+source evidence and substantial consistent foreground; it marks contradictory
+visible object pixels missing, preserving occluders, other pixels and original
+inputs. It never fills depths from an existing pose or a desired size, and does
+not inspect calibration split labels. Insufficient support preserves the input.
+
+A downstream bounded trial retained the original calibration sample IDs/split
+and reduced held-out extent disagreement from 0.6771 to 0.1615 without changing
+the 0.20 bound. However, a proposed smaller mesh still failed one of twelve native
+seed-view gates after bounded registration refinement. Keep depth qualification,
+size evidence and pose acceptance as separate outcomes; the depth result alone
+is not a validated reference. No default filter, resize, gate threshold or actor
+approval follows from this experimental helper.

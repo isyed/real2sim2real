@@ -25,7 +25,17 @@ def choose_seed(poses, metrics, geometry, *, limits=Limits()):
     return (max(eligible, key=lambda i: metrics[i]['iou']) if eligible else None), reports
 
 
-def probe(upstream, export, depth, support, output):
+def proposal_poses(path):
+    """Load bounded external hypotheses; their CPU scores confer no acceptance."""
+    from .recovery_quality import rigid
+    with np.load(path, allow_pickle=False) as data:
+        poses = np.asarray(data['poses_camera'], dtype=np.float32)
+    if poses.ndim != 3 or poses.shape[1:] != (4, 4) or not 1 <= len(poses) <= 32 or not all(rigid(p) for p in poses):
+        raise ValueError('Require one to 32 rigid camera-frame pose proposals')
+    return poses
+
+
+def probe(upstream, export, depth, support, output, *, candidate_poses=None):
     """Use the packaged exporter/model; stop after measuring frame-zero poses."""
     output = Path(output)
     if output.exists():
@@ -35,6 +45,8 @@ def probe(upstream, export, depth, support, output):
     if (support.get('ground_truth_used') is not False or support.get('coordinate_frame') != 'camera'
             or not support.get('evidence')):
         raise ValueError('Explicit predicted support provenance required')
+    proposals = None if candidate_poses is None else proposal_poses(candidate_poses)
+    proposal_hash = None if candidate_poses is None else hashlib.sha256(Path(candidate_poses).read_bytes()).hexdigest()
     output.mkdir(parents=True)
     original_class = upstream.FoundationPose
     original_iterator = upstream._foundationpose_frame_iterator
@@ -53,10 +65,13 @@ def probe(upstream, export, depth, support, output):
 
     class InitialPose(original_class):
         def register(self, *args, **kwargs):
-            kwargs.update(rgb_only=True, both_depth_and_rgb=False)
-            super().register(*args, **kwargs)
             transform = upstream._tensor_to_numpy(self.get_tf_to_centered_mesh())
-            centered = upstream._tensor_to_numpy(self.poses)[:32]
+            if proposals is None:
+                kwargs.update(rgb_only=True, both_depth_and_rgb=False)
+                super().register(*args, **kwargs)
+                centered = upstream._tensor_to_numpy(self.poses)[:32]
+            else:
+                centered = proposals @ np.linalg.inv(transform)
             poses = centered @ transform
             masks = upstream._render_candidate_masks(self, centered, context['K'], context['object'].shape)
             measured = upstream.measure_visible_silhouettes(masks, context['human'], context['object'])
@@ -71,6 +86,8 @@ def probe(upstream, export, depth, support, output):
                           candidates=reports, limits=Limits().__dict__,
                           later_frames_inspected=False, thresholds_relaxed=False,
                           full_reference_accepted=False, physics_validated=False,
+                          proposal_source='fresh_rgb_registration' if proposals is None else 'external_camera_pose_hypotheses',
+                          proposal_sha256=proposal_hash,
                           implementation_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest())
             (output/'report.json').write_text(json.dumps(report, indent=2, allow_nan=False)+'\n')
             np.savez_compressed(output/'candidates.npz', poses_camera=poses)
@@ -103,10 +120,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('export', 'depth', 'support', 'output'):
         parser.add_argument('--'+name, required=True)
+    parser.add_argument('--candidate-poses', help='Optional NPZ poses_camera; measured with the actual GPU renderer and unchanged gates')
     args = parser.parse_args()
     from .tracking_recovery import load_exporter
     report = probe(load_exporter(), args.export, args.depth,
-                   json.loads(Path(args.support).read_text()), args.output)
+                   json.loads(Path(args.support).read_text()), args.output, candidate_poses=args.candidate_poses)
     if not report['accepted']:
         raise SystemExit('No first-frame pose passes the unchanged independent validity gates')
 

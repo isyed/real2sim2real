@@ -169,6 +169,7 @@ def artifact_audit(source,output,*,camera='front_stereo_camera_left',config=Fore
     if include_raw_depth:
         result['depth_origin']=depth_origin(raw_rows,rows,times,alignment_scales=scales,config=config)
     result['source_identity']=dict(artifact_sha256=digest(source/'artifact.json'),
+        video_sha256=artifact['metadata'].get('source_video_sha256'),
         files={role:artifact['files'][role]['sha256'] for role in required},
         own_predicted_inputs_only=True,camera=camera)
     output.mkdir(parents=True);write_json(output/'report.json',result)

@@ -138,3 +138,29 @@ def test_two_steps_cannot_accumulate_contact_regression(make_bundle, tmp_path, m
     assert r.report["status"] == "unchanged_with_review_items"
     assert file_sha256(r.output_bundle / "geometry.npz") == file_sha256(b.root / "geometry.npz")
     assert len([s for s in r.report["stages"] if s["outcome"] == "superseded_by_final_fallback"]) == 2
+
+
+def test_rejected_hypothesis_is_retained_without_replacing_selected_geometry(make_bundle,tmp_path):
+    g=box_geometry();g['object_rotation'][4]=Rotation.from_euler('z',75,degrees=True).as_matrix()
+    b=make_bundle(g=g);result=repair_run(b.root,tmp_path/'run',only('rotation_spikes'))
+    row=next(x for x in result.report['stages'] if x['stage']=='rotation_spikes')
+    assert row['outcome']=='rejected' and not row['proposal_is_selected_reference']
+    p=tmp_path/'run'/row['proposal_geometry'];assert file_sha256(p)==row['proposal_geometry_sha256']
+    receipt=json.loads(p.with_suffix('.json').read_text());assert receipt['acceptance_checked'] and not receipt['full_reference_accepted']
+    assert file_sha256(result.output_bundle/'geometry.npz')==file_sha256(b.root/'geometry.npz')
+    assert p.with_name(p.stem+'_per_frame.csv').exists()
+
+
+def test_interruption_keeps_unscored_proposal_explicitly_unaccepted(make_bundle,tmp_path,monkeypatch):
+    from real2sim2real.reconstruction_repair import runner
+    real=runner.geometry_scores;calls=[0]
+    def scores(*a,**kw):
+        calls[0]+=1
+        if calls[0]==2:raise RuntimeError('stop during proposal scoring')
+        return real(*a,**kw)
+    monkeypatch.setattr(runner,'geometry_scores',scores)
+    g=box_geometry();g['object_rotation'][4]=Rotation.from_euler('z',75,degrees=True).as_matrix();b=make_bundle(g=g)
+    with pytest.raises(RuntimeError):repair_run(b.root,tmp_path/'run',only('rotation_spikes'))
+    files=list((tmp_path/'run/proposals').glob('*.json'));assert len(files)==1
+    info=json.loads(files[0].read_text());assert not info['acceptance_checked'] and not info['full_reference_accepted']
+    assert files[0].with_suffix('.npz').exists()

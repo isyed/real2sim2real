@@ -200,10 +200,25 @@ def _run_stages(bundle: ReconstructionBundle, output: Path, config: RepairConfig
                 if same:
                     record.update(outcome="unchanged")
                 else:
+                    # Preserve hypotheses before scoring, so a bounded interruption
+                    # or failed gate cannot erase a measurable partial improvement.
+                    proposals = output / "proposals"
+                    proposals.mkdir(exist_ok=True)
+                    hypothesis = proposals / f"{index:02d}_{stage}.npz"
+                    arrays_atomic(hypothesis, proposal.geometry)
+                    record.update(proposal_geometry=str(hypothesis.relative_to(output)),
+                                  proposal_geometry_sha256=file_sha256(hypothesis),
+                                  proposal_is_selected_reference=False)
+                    proposal_receipt = hypothesis.with_suffix(".json")
+                    json_atomic(proposal_receipt, dict(record, acceptance_checked=False,
+                                                       full_reference_accepted=False))
                     proposal_scores = geometry_scores(bundle, proposal.geometry, config.max_gap_s)
+                    _frame_table(proposals / f"{index:02d}_{stage}_per_frame.csv", current_scores, proposal_scores)
                     validation = proposal_validate(bundle, current, proposal, current_scores, proposal_scores, config)
                     record.update(validation=validation, scores=scores_compare(current_scores, proposal_scores),
                                   outcome="accepted" if validation["accepted"] else "rejected")
+                    json_atomic(proposal_receipt, dict(record, acceptance_checked=True,
+                                                       full_reference_accepted=False))
                     if validation["accepted"]:
                         current, current_scores = proposal.geometry, proposal_scores
             arrays_atomic(checkpoint, current)

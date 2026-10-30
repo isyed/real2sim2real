@@ -45,6 +45,29 @@ def rotation_angle(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     return Rotation.from_matrix(a @ b.swapaxes(-1, -2)).magnitude()
 
 
+
+def _unique_raster_triangles(pixels,faces):
+    """Exact ordered integer-polygon deduplication using collision-free keys.
+
+    Packing is only an acceleration. Oversized ranges/counts use the legacy
+    six-coordinate unique operation; no approximate welding or decimation occurs.
+    """
+    def legacy():
+        return np.unique(np.trunc(pixels[faces]).astype(np.int64).reshape(-1,6),axis=0).reshape(-1,3,2)
+    if not np.isfinite(pixels).all() or np.max(np.abs(pixels))>=2**61:return legacy()
+    integer=np.trunc(pixels).astype(np.int64);lower=integer.min(0);upper=integer.max(0)
+    width=int(upper[0])-int(lower[0])+1;height=int(upper[1])-int(lower[1])+1
+    maximum=np.iinfo(np.uint64).max
+    if width*height>maximum:return legacy()
+    point_keys=(integer[:,0]-lower[0]).astype(np.uint64)+np.uint64(width)*(integer[:,1]-lower[1]).astype(np.uint64)
+    values,inverse=np.unique(point_keys,return_inverse=True);base=len(values)
+    if base**3>maximum:return legacy()
+    ordered=inverse[faces].astype(np.uint64)
+    keys=(ordered[:,0]*np.uint64(base)+ordered[:,1])*np.uint64(base)+ordered[:,2]
+    _,first=np.unique(keys,return_index=True)
+    return integer[faces[first]]
+
+
 def mesh_silhouette(g: dict, i: int, height: int, width: int,
                     intrinsics: np.ndarray | None = None) -> np.ndarray:
     """Triangle union, not a convex hull: holes in the input surface survive.
@@ -73,7 +96,7 @@ def mesh_silhouette(g: dict, i: int, height: int, width: int,
         # meshes often repeat the same raster triangle thousands of times.
         # Removing identical integer polygons preserves their exact union;
         # no geometry, topology, depth or silhouette resolution is changed.
-        raster_triangles = np.unique(np.trunc(raster_triangles).astype(np.int64).reshape(-1, 6), axis=0).reshape(-1, 3, 2)
+        raster_triangles = _unique_raster_triangles(pixels,faces[valid])
     for triangle in raster_triangles:
         draw.polygon([tuple(p) for p in triangle], fill=1)
     return np.asarray(canvas, dtype=bool)

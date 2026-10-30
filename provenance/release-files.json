@@ -35,6 +35,11 @@
       "sha256": "9771c9cefe22386b57d2ff85ba6d122d70e9a0e5e92f23a5c0886437124b6de5"
     },
     {
+      "path": "docs/CPU_REPAIR_EVIDENCE.md",
+      "bytes": 1181,
+      "sha256": "87428f97a2986ed8d4ae35c802c10749e911a082194279cce86f9cc649224095"
+    },
+    {
       "path": "docs/DATA_CONTRACTS.md",
       "bytes": 4232,
       "sha256": "ec4d7a624a7ec11ee1433f27969c08acdaabeea79f590987d928e6ff74e11dec"
@@ -1136,8 +1141,8 @@
     },
     {
       "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/geometry.py",
-      "bytes": 10642,
-      "sha256": "32972d8e92f127d111f18e6b1c30477b75a9aa3211cc776c1aeac3c88bb2e856"
+      "bytes": 11776,
+      "sha256": "c5769cb16723344ec37a507cc1e0a3db4885c5f795a58cfeef0e6034e6c841e5"
     },
     {
       "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/human_contract.py",
@@ -1206,8 +1211,8 @@
     },
     {
       "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/runner.py",
-      "bytes": 24152,
-      "sha256": "23fd6086a51048573d233736cd13b054b0b3566347d6f69bc5de35b16c2a45e5"
+      "bytes": 25344,
+      "sha256": "21935f74b43425f600c018b576ba3f29848d8d76ecdc3ed69a21bbc95da8056b"
     },
     {
       "path": "modules/reconstruction-repair/src/real2sim2real/reconstruction_repair/scoring.py",
@@ -1345,14 +1350,19 @@
       "sha256": "0313da554d5e709bb102463e22423c5ce5a32a338f9ef6521ad097b4ff6ff70f"
     },
     {
+      "path": "modules/reconstruction-repair/tests/test_raster_deduplication.py",
+      "bytes": 1558,
+      "sha256": "3c85d41b061672d6b0d097a1b6b74029cd342f6a76144ced5f16dd7d671e4f96"
+    },
+    {
       "path": "modules/reconstruction-repair/tests/test_repairs.py",
       "bytes": 10004,
       "sha256": "9a6a33929cd8eb1afb5334e40540544bad08aa94e6ebc921fe68001f13126023"
     },
     {
       "path": "modules/reconstruction-repair/tests/test_runner.py",
-      "bytes": 6702,
-      "sha256": "6d3e9856af37a4234447ffe9469a792bb06c435c3673cc4dafd6de5c0f66150b"
+      "bytes": 8420,
+      "sha256": "b7a69cee9a13bfdb5c793d33f4e2a87cbb3597c305320c9deca9cc27609a2ecd"
     },
     {
       "path": "modules/reconstruction-repair/tests/test_scoring.py",

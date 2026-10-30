@@ -83,7 +83,9 @@ def install_recovery(upstream, support, output):
                 raise ValueError('Recovery context does not match the sequential source frame')
             original = self.assess(current[None], previous, recovery=False)[0]
             event = dict(frame=frame, original=original, recovery=False,
-                         method='tracked_update', global_calls_before=self.global_calls)
+                         method='tracked_update', global_calls_before=self.global_calls,
+                         previous_pose_camera=previous.tolist(),proposed_pose_camera=current.tolist(),
+                         proposed_translation_step_m=float(np.linalg.norm(current[:3,3]-previous[:3,3])))
             selected, report = current, original
             if original['rejected_for']:
                 self.recovery_frames += 1
@@ -94,6 +96,8 @@ def install_recovery(upstream, support, output):
                 selected, report, local_reports = self.choose(proposals, previous)
                 event['local_candidates'] = len(proposals)
                 event['local_best_iou'] = max(p['metrics']['iou'] for p in local_reports)
+                event['local_reports'] = local_reports
+                event['local_poses_camera'] = np.asarray(proposals,dtype=np.float32).tolist()
                 event['method'] = 'local_rgb_depth_recovery'
                 for rgb_only in (False, True):
                     if selected is not None:

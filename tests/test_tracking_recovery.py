@@ -143,3 +143,22 @@ def test_adapter_rolls_back_bad_update_and_records_actual_recovery(monkeypatch, 
     assert event['frame'] == 1 and event['recovery']
     assert 'translation_step' in event['original']['rejected_for']
     assert not event['selected']['rejected_for']
+    assert event['proposed_translation_step_m'] > .08
+    assert len(event['local_reports']) == len(event['local_poses_camera'])
+
+
+def test_float32_local_proposals_remain_inside_unchanged_translation_gate():
+    rng = np.random.default_rng(83)
+    K = np.diag([800., 800., 1.])
+    metrics = dict(iou=.9, precision=.9, recall=.9)
+    for _ in range(500):
+        previous = np.eye(4, dtype=np.float32)
+        previous[:3, 3] = [*rng.uniform(-2., 2., 2), rng.uniform(1., 8.)]
+        geometry = good_geometry()
+        geometry.update(depth_shift_m=float(rng.choice([-1., 1.])),
+                        centroid_shift_px=rng.uniform(-100., 100., 2))
+        candidates = local_proposals(previous, previous, K, geometry).astype(np.float32)
+        for candidate in candidates:
+            # Exactly the dtype used by the adapter, without tolerance inflation.
+            assert 'translation_step' not in rejection_reasons(
+                candidate, previous, metrics, geometry, recovery=True)

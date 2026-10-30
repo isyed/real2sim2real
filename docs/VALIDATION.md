@@ -189,3 +189,8 @@ rejected, and an incompatible observed-seed API is rejected before tracking. The
 combined recovery/RGB/binding suite passes 16 tests. Corrected offline preflight
 prints the actual frozen exporter source and loads both real checkpoints; this
 still does not replace the guarded GPU acceptance run.
+
+The recovery suite passes 17 tests after adding exact proposal diagnostics and a
+500-configuration float32 motion-bound regression test. The generator leaves a
+small representational margin inside the existing 0.08 m limit. This fixes a
+numerical proposal defect; it does not establish full-clip reconstruction quality.

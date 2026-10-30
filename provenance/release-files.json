@@ -46,8 +46,8 @@
     },
     {
       "path": "docs/LEARNINGS.md",
-      "bytes": 15720,
-      "sha256": "c003d89a462b501519333a848633aeee860a5dcae46e3dd0eeb294f46d42aa9c"
+      "bytes": 16504,
+      "sha256": "2590b2b53dc07906a448508038f624363203af5fa388f827a779568576fe74a4"
     },
     {
       "path": "docs/REPRODUCIBILITY.md",
@@ -61,8 +61,8 @@
     },
     {
       "path": "docs/VALIDATION.md",
-      "bytes": 11842,
-      "sha256": "025f5d88c3e2e2b2aefd21def3b19f7d10e9e60683543eb753cb6f4d8ce6571c"
+      "bytes": 12163,
+      "sha256": "ebfc2e04949301c8e888a8184e0ff74afce157d7d01f75645b6d4c92076246d5"
     },
     {
       "path": "examples/full-pipeline.json",
@@ -2821,8 +2821,8 @@
     },
     {
       "path": "modules/reconstruction/src/real2sim2real/reconstruction/recovery_quality.py",
-      "bytes": 7235,
-      "sha256": "b43e2023d853f8a76da0638085e7258bd9889c2f04a5dc7de921162e864def19"
+      "bytes": 7736,
+      "sha256": "9fb7b0f97914bd9ab7847289fe75c0f67197caa596a4ca3b1a3753d6359b2355"
     },
     {
       "path": "modules/reconstruction/src/real2sim2real/reconstruction/stage.py",
@@ -2831,8 +2831,8 @@
     },
     {
       "path": "modules/reconstruction/src/real2sim2real/reconstruction/tracking_recovery.py",
-      "bytes": 13456,
-      "sha256": "827b68379641fde6d7ecf9e6bc53c8054189f92d34fabf6fd643258c4242c608"
+      "bytes": 13814,
+      "sha256": "972e8646723b14ddf82380df6eb984e919274a9e139bcca999ddb0a6e09589ee"
     },
     {
       "path": "modules/reconstruction/src/real2sim2real/reconstruction/tracking_runtime.py",
@@ -3081,8 +3081,8 @@
     },
     {
       "path": "tests/test_tracking_recovery.py",
-      "bytes": 6845,
-      "sha256": "8a23b2b595fc8e4d5c36ee222429d918a004cd17099f1bfe6920e67406d8f243"
+      "bytes": 7838,
+      "sha256": "2570bc1d814859a4f74e52030eb522f91beb3064cd7bcfb0309786ce3e5e70f2"
     },
     {
       "path": "tests/test_tracking_runtime.py",

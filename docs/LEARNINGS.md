@@ -222,3 +222,13 @@ clamp arbitrary tracker outputs into acceptance, or bypass image/depth/support
 checks. Five hundred sampled camera-frame configurations exercise the actual
 float32 boundary; full tracking remains independently gated. Recovery logs now
 include exact proposed/local poses and per-candidate rejection measurements.
+
+A guarded full-clip retry after this fix still stopped on an image/depth/motion
+conflict: silhouette IoU 0.8846 and depth error 2.33 cm required an 11.35 cm step,
+while all local candidates inside the unchanged 8 cm bound failed depth. The
+fix moved the stopping frame only two frames later. Both global registration
+modes had zero temporally eligible candidates. No complete reference was
+published. This demonstrates that a numerical defect can coexist with a deeper
+tracking problem; fixing it does not authorize weaker checks or actor training.
+Joint temporal registration is a separate research direction requiring a new
+bounded protocol and independent held-out evidence, not an automatic fallback.

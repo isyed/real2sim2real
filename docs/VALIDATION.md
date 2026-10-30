@@ -141,3 +141,10 @@ reporting. Its regression test verifies that a rejected outline improvement
 records an observed increase above the unchanged 0.005 m limit. No acceptance
 threshold changed. A real standalone GPU tracker subsequently completed a full
 clip with explicit checkpoints; reconstruction quality remains separately gated.
+
+Native prompt-review and reconstruction-dispatch tests pass 22 checks. They cover
+native-image bounds, degenerate/nonfinite boxes, source-frame range, later-frame
+preview limitations and the distinction between valid coordinates and correct
+subject selection. The new first-frame preview does not automatically recognize
+objects or approve prompt semantics. A downstream retry validates the actual
+corrected segmentation/depth behavior separately.

@@ -8,6 +8,31 @@ from pathlib import Path
 import argparse,json,os
 
 
+def settling_summary(states,*,recording_hz=50.,tail_seconds=1.):
+    """Measure late drift separately from initial gravity/contact settling.
+
+    Reports measurements only; callers own task-appropriate admission criteria.
+    A small late drift does not certify the source reference or initial pose.
+    """
+    import numpy as np
+    from scipy.spatial.transform import Rotation
+    q=np.asarray(states,float)
+    if (q.ndim!=2 or q.shape[1]!=7 or len(q)<2 or not np.isfinite(q).all()
+            or not np.allclose(np.linalg.norm(q[:,3:],axis=1),1.,atol=1e-4)
+            or isinstance(recording_hz,bool) or not np.isfinite(recording_hz) or recording_hz<=0
+            or isinstance(tail_seconds,bool) or not np.isfinite(tail_seconds) or tail_seconds<=0):
+        raise ValueError('Finite rigid xyzw states, recording frequency and tail duration required')
+    count=min(len(q),max(2,int(round(tail_seconds*recording_hz))+1));tail=q[-count:]
+    rotation=Rotation.from_quat(tail[:,3:])
+    angles=(rotation*rotation[0].inv()).magnitude()
+    return dict(observed_tail_seconds=(count-1)/recording_hz,
+        displacement_m=float(np.linalg.norm(tail[:,:3]-tail[0,:3],axis=1).max()),
+        rotation_deg=float(np.rad2deg(angles).max()),
+        max_linear_speed_mps=float(np.linalg.norm(np.diff(tail[:,:3],axis=0)*recording_hz,axis=1).max()),
+        max_angular_speed_radps=float(((rotation[1:]*rotation[:-1].inv()).magnitude()*recording_hz).max()),
+        initial_pose_quality_established=False,task_success_established=False)
+
+
 def run(urdf,pose,output,*,seconds=3.,device='cpu',friction=1.):
     import numpy as np
     import newton,warp as wp
@@ -45,6 +70,8 @@ def run(urdf,pose,output,*,seconds=3.,device='cpu',friction=1.):
             body_inertia_kg_m2=model.body_inertia.numpy().tolist(),max_displacement_m=float(delta.max()),
             max_rotation_deg=float(angle.max()),finite=bool(np.isfinite(states).all()),robot_present=False,object_assistance=False,
             stability_only=True,task_success_established=False)
+        value['settling_tail']=(settling_summary(states) if len(states)>=2 else
+            dict(available=False,reason='Probe is too short for two recorded states'))
         output.mkdir(parents=True);np.savez_compressed(output/'states.npz',body_q=states)
         write_json(output/'RESULTS.json',value);print(json.dumps(value,indent=2),flush=True)
         return value

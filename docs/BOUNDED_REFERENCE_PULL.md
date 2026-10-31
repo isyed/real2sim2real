@@ -33,3 +33,10 @@ frame masks can exclude fallen/invalid states. The diagnostic is invariant to a
 common rigid change of world coordinates; it neither changes states nor labels
 proximity as grasp success. Retain stability and object-tracking gates even when
 this reach error improves, and require all verification repeats to pass.
+
+Use `reach_audit.summarize_contacts` with saved contact counts, their explicit
+hand-slot mapping, intended contact phases and an upright/valid-frame mask to
+distinguish incidental touches from task-phase contact. Increasing total contacts
+alone can reward an early collision that never helps manipulation. Report both;
+do not reinterpret a screening contact increase as grasp acquisition or silently
+change predeclared experiment gates after observing results.

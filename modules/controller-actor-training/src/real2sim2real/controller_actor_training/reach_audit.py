@@ -38,3 +38,31 @@ def summarize(physical,reference,*,palm_body_ids,object_body_id,pelvis_body_id,c
         target_frame='Reference palm carried from reference-object coordinates to current physical object pose',
         geometry_or_states_modified=False,grasp_success_established=False,
         limitation='Proximity counts are diagnostics; measured contact, stability and task completion remain separate.')
+
+
+def summarize_contacts(contact_counts, slot_hand_ids, contact_active, *, valid_frames=None):
+    """Separate incidental physical contact from contact during intended phases.
+
+    Counts are recorded simulator contacts, not inferred geometric proximity.
+    Slots map explicitly to the columns of the boolean [frame, hand] phase mask.
+    valid_frames can restrict analysis to upright/nonfailed robot states.
+    """
+    import numpy as np
+    counts,slots,phase=map(np.asarray,(contact_counts,slot_hand_ids,contact_active))
+    if (counts.ndim!=2 or not len(counts) or not np.issubdtype(counts.dtype,np.integer)
+            or np.any(counts<0) or phase.ndim!=2 or phase.dtype!=bool
+            or phase.shape[0]!=len(counts) or phase.shape[1]<1
+            or slots.shape!=(counts.shape[1],) or not np.issubdtype(slots.dtype,np.integer)
+            or np.any(slots<0) or np.any(slots>=phase.shape[1])):
+        raise ValueError('Require nonnegative integer counts, explicit hand slots and boolean phase masks')
+    valid=np.ones(len(counts),bool) if valid_frames is None else np.asarray(valid_frames)
+    if valid.shape!=(len(counts),) or valid.dtype!=bool:raise ValueError('Boolean valid-frame mask required')
+    rows=[]
+    for hand in range(phase.shape[1]):
+        contact=np.any(counts[:,slots==hand]>0,axis=1)
+        rows.append(dict(hand=hand,physical_contact_frames=int(np.count_nonzero(contact)),
+            valid_contact_frames=int(np.count_nonzero(contact&valid)),
+            valid_phase_contact_frames=int(np.count_nonzero(contact&valid&phase[:,hand])),
+            valid_outside_phase_contact_frames=int(np.count_nonzero(contact&valid&~phase[:,hand]))))
+    return dict(schema='real2sim2real.saved-contact-phase-audit/1',hands=rows,
+        grasp_success_established=False,limitation='Physical contact can be incidental; even phase-matched contact is not a successful grasp.')

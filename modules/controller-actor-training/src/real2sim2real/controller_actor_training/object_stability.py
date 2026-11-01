@@ -33,7 +33,7 @@ def settling_summary(states,*,recording_hz=50.,tail_seconds=1.):
         initial_pose_quality_established=False,task_success_established=False)
 
 
-def run(urdf,pose,output,*,seconds=3.,device='cpu',friction=1.):
+def run(urdf,pose,output,*,seconds=3.,device='cpu',friction=1.,support_usda=None):
     import numpy as np
     import newton,warp as wp
     from scipy.spatial.transform import Rotation
@@ -53,6 +53,11 @@ def run(urdf,pose,output,*,seconds=3.,device='cpu',friction=1.):
         builder.add_urdf(str(urdf),floating=True,enable_self_collisions=False,collapse_fixed_joints=True,ignore_inertial_definitions=False)
         if builder.body_count!=1 or builder.joint_coord_count!=7:raise ValueError('One rigid free-root object required')
         builder.joint_q[:7]=pose.tolist();hulls=_decompose_object_collision(builder,ShapeSpan(0,builder.shape_count))
+        support_binding=None
+        if support_usda is not None:
+            from flash_chord.scene.support import add_support_surfaces
+            support_usda=Path(support_usda)
+            support_binding=add_support_surfaces(builder,support_usda)
         from dataclasses import replace
         builder.add_ground_plane(cfg=replace(builder.default_shape_cfg,mu=float(friction)))
         model=builder.finalize(device=device);a,b=model.state(),model.state();control=model.control()
@@ -62,7 +67,15 @@ def run(urdf,pose,output,*,seconds=3.,device='cpu',friction=1.):
         for step in range(steps):
             a.clear_forces();solver.step(a,b,control,None,.005);a,b=b,a
             if (step+1)%4==0:states.append(a.body_q.numpy().copy())
-        states=np.asarray(states)[:,0];delta=np.linalg.norm(states[:,:3]-states[0,:3],axis=1)
+        all_states=np.asarray(states)
+        support_motion=None
+        if support_binding is not None:
+            support_states=all_states[:,support_binding.body_id]
+            support_motion=dict(body_id=support_binding.body_id,
+                **(settling_summary(support_states,tail_seconds=seconds)
+                   if len(support_states)>=2 else
+                   dict(available=False,reason='Probe is too short for two recorded states')))
+        states=all_states[:,0];delta=np.linalg.norm(states[:,:3]-states[0,:3],axis=1)
         angles=Rotation.from_quat(states[:,3:])*Rotation.from_quat(states[0,3:]).inv();angle=np.rad2deg(angles.magnitude())
         value=dict(urdf_sha256=digest(urdf),backend='MuJoCo-C CPU' if device=='cpu' else 'MuJoCo-Warp CUDA',
             seconds=seconds,physics_hz=200.,recording_hz=50.,collision_hulls=hulls,
@@ -70,13 +83,17 @@ def run(urdf,pose,output,*,seconds=3.,device='cpu',friction=1.):
             body_inertia_kg_m2=model.body_inertia.numpy().tolist(),max_displacement_m=float(delta.max()),
             max_rotation_deg=float(angle.max()),finite=bool(np.isfinite(states).all()),robot_present=False,object_assistance=False,
             stability_only=True,task_success_established=False)
+        value.update(support_sha256=digest(support_usda) if support_usda is not None else None,
+            support_shape_count=len(support_binding.shapes) if support_binding is not None else 0,
+            support_scope='Explicit saved support geometry' if support_usda is not None else 'Ground plane only',
+            support_motion=support_motion)
         value['settling_tail']=(settling_summary(states) if len(states)>=2 else
             dict(available=False,reason='Probe is too short for two recorded states'))
-        output.mkdir(parents=True);np.savez_compressed(output/'states.npz',body_q=states)
+        output.mkdir(parents=True);np.savez_compressed(output/'states.npz',body_q=states,all_body_q=all_states)
         write_json(output/'RESULTS.json',value);print(json.dumps(value,indent=2),flush=True)
         return value
 
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--urdf',required=True,type=Path);p.add_argument('--pose',required=True,type=Path);p.add_argument('--output',required=True,type=Path);p.add_argument('--seconds',type=float,default=3.);p.add_argument('--device',choices=['cpu','cuda:0'],default='cpu');a=p.parse_args()
-    run(a.urdf,json.loads(a.pose.read_text())['pose_xyzw'],a.output,seconds=a.seconds,device=a.device)
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--urdf',required=True,type=Path);p.add_argument('--pose',required=True,type=Path);p.add_argument('--output',required=True,type=Path);p.add_argument('--seconds',type=float,default=3.);p.add_argument('--device',choices=['cpu','cuda:0'],default='cpu');p.add_argument('--support',type=Path);a=p.parse_args()
+    run(a.urdf,json.loads(a.pose.read_text())['pose_xyzw'],a.output,seconds=a.seconds,device=a.device,support_usda=a.support)

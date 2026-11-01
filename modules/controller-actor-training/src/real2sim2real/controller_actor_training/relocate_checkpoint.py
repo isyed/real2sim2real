@@ -9,7 +9,7 @@ from pathlib import Path
 import struct
 
 
-def relocate(source, output, replacements, *, evidence):
+def relocate(source, output, replacements, *, evidence, allow_deployment_chain=False):
     """Replace only declared path fields, retaining original metadata and payload.
 
     replacements maps dotted configuration fields to (expected_old, new) strings.
@@ -23,8 +23,15 @@ def relocate(source, output, replacements, *, evidence):
     header = json.loads(raw[8:8 + size])
     payload = raw[8 + size:]
     metadata = header['__metadata__']
+    parent=None
     if 'user.deployment_relocation_json' in metadata:
-        raise ValueError('Relocate the original training checkpoint, not a deployment copy')
+        if not allow_deployment_chain:
+            raise ValueError('Relocate the original training checkpoint, not a deployment copy')
+        parent=json.loads(metadata['user.deployment_relocation_json'])
+        if (parent.get('tensors_changed') is not False
+                or parent.get('tensor_payload_sha256')!=hashlib.sha256(payload).hexdigest()
+                or 'user.original_resolved_config_json' not in metadata):
+            raise ValueError('Deployment ancestry or tensor payload is inconsistent')
     original = metadata['user.resolved_config_json']
     config = json.loads(original)
     allowed = {'task.parquet', 'reference.parquet', 'action.policy_dir', 'env.action.policy_dir'}
@@ -42,7 +49,8 @@ def relocate(source, output, replacements, *, evidence):
         tensor_payload_sha256=hashlib.sha256(payload).hexdigest(),
         replacements=replacements, evidence=evidence, tensors_changed=False,
         training_performed=False, deployment_copy=True)
-    metadata['user.original_resolved_config_json'] = original
+    if parent is not None:receipt['parent_deployment']=parent
+    else:metadata['user.original_resolved_config_json'] = original
     metadata['user.resolved_config_json'] = json.dumps(config, separators=(',', ':'))
     metadata['user.deployment_relocation_json'] = json.dumps(receipt, separators=(',', ':'))
     encoded = json.dumps(header, separators=(',', ':')).encode()

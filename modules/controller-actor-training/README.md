@@ -1,5 +1,42 @@
 # Controller and actor training
 
+`reference_window.prepare` produces an explicit native-frame diagnostic window
+while preserving pose values and rebuilding the control clock. It copies only
+declared assets, excluding stale derived parquets. `unassisted_pilot.configure`
+sets both the object-assistance override and all curriculum scales to zero,
+with explicit reset probability and bounded replay capacity. These helpers do
+not establish full-task actor compatibility or training success.
+
+Saved-state previews use guarded display decimation: a truncated object fails
+the extent check, triggers a larger display budget, or falls back to source
+geometry. Simulation and collision geometry remain unchanged. See
+`display_geometry.json` in each new preview for the actual display choices.
+
+Use `settling_compatibility.isolated_run_parameters` to match an isolated
+settling probe to the controller's supported solver settings. The isolated scene
+uses world-static supports because it has no reset loop to pin a kinematic body.
+Record both solver parameters and backend with the result.
+
+When retargeting changes only an object's body coordinate frame,
+`rigid_collision_cache.reframe` preserves its validated collision hulls through
+that rigid transform. Re-running convex decomposition can produce different
+contact geometry even for the same visual surface. The helper requires matching
+vertex correspondence/topology and rejects scaling, reflection and nonrigid
+changes. Package its cache with `frozen.package(..., collision_cache=...)`, retain
+the receipt, verify COM/inertia in the new frame, and repeat settling/physics
+before training.
+
+Keep runtime collision caches separate for each validated policy. A cache key
+hashes mesh inputs and decomposition parameters; it does not uniquely identify
+the resulting hull arrays. Separate runs can pin different hulls for the same
+key. `policy_cache.seed_policy_caches` copies each policy's exact saved files
+into `cache_root/<namespace>/convex`, checks all conflicts before copying, and
+rejects an overwrite within a namespace. Set `FLASH_CHORD_CACHE_DIR` to that
+policy's `cache_root/<namespace>` for both admission and training. Do not merge
+all policies into one directory, choose a winner arbitrarily or recompute
+validated hulls just to resolve a cache conflict. The helper is stdlib-only
+and its receipt establishes byte preservation, not physical task success.
+
 This module contains FlashCHORD simulation and the actual FlashSAC learner,
 replay buffer, checkpoints and unassisted evaluation code.
 
@@ -61,6 +98,29 @@ native `training.resume`, `training.checkpoint_path` and
 `training.checkpoint.load_replay_path` settings. Saving replay is off by
 default. Rebuilding a fresh buffer is possible, but changes the experiment.
 
+When the task or reference horizon changes, `train_actor_warm_start` can copy
+only a checkpoint's actor parameters and batch statistics into a fresh learner.
+It verifies the checkpoint hash, exact action/observation schema and network
+configuration. Critic, optimizers, replay, temperature and step counters remain
+fresh. This is an explicitly declared transfer experiment, not exact resume.
+The source checkpoint remains untouched and ancestry is saved in all new
+checkpoints as `actor_warm_start_json`.
+
+```bash
+python -m real2sim2real.controller_actor_training.train_actor_warm_start \
+  --actor /path/to/retained-policy.safetensors \
+  --actor-sha256 CHECKPOINT_SHA256 \
+  --transfer-evidence /path/to/transfer.json \
+  --config-path /path/to/new-task-config --config-name train
+```
+
+The evidence JSON must declare `"task_changed": true` and should describe the
+source/target task and reference horizons. Use a fresh training configuration
+(`resume: false`), verify controller/geometry compatibility separately, and
+evaluate the retained actor on the new task before updating it. Policy-based
+replay warm-up and a conservative actor learning rate can preserve useful
+behavior while a new critic learns, but neither guarantees preservation.
+
 The GPU stack is pinned in `requirements-gpu.txt`. No pretrained weights,
 episode-specific actors, datasets or cloud launchers are embedded here.
 
@@ -72,3 +132,135 @@ The portable bundle pins model/reference/robot assets and disables all assistanc
 Saved kinematic targets and actual physical states are separate. See
 [the frozen-controller workflow](../../docs/FROZEN_CONTROLLERS.md) for commands,
 CPU video extras, supported scene scope and integration-test evidence.
+
+
+Tabletop frozen baselines can run the standalone CPU `support_check` before GPU
+evaluation. The matched video renderer includes the recorded triangle supports;
+unsupported support geometry fails explicitly. Both helpers are scenario-neutral
+and keep clean-target scoring and submission packaging downstream.
+
+For an explicitly declared convex collision approximation, use
+`collision_proxy.package` on a portable robot reference before frozen packaging.
+It preserves visual geometry, motion and inertia, records its filled-concavity
+assumption, and requires fresh physical validation. See
+[placement tracking and first-grasp diagnostics](../../docs/PLACEMENT_TRACKING.md).
+
+## Portable residual-actor pilots
+
+Use `residual.configuration` to initialize fresh FlashSAC learning from a verified
+frozen-controller bundle, and `evaluate_actor` to save unassisted physical states
+for a matched before/after comparison. These helpers preserve the source duration
+and fixed hand controller. See [the residual pilot workflow](../../docs/RESIDUAL_ACTOR_PILOTS.md)
+for continuation, inference-only recording and CPU video commands.
+
+For contact diagnosis, see [palm tracking and contact retention](../../docs/GRASP_DIAGNOSTICS.md).
+[Bounded joint-reference experiments](../../docs/BOUNDED_JOINT_ABLATIONS.md) provide
+explicit inference-only wrist/arm ablations, with unchanged checkpoint tensors
+and separately recorded override provenance. These are opt-in diagnostics, not
+default controller changes or guaranteed grasp improvements.
+
+When changing object mass properties, use the
+[retained-actor transfer workflow](../../docs/INERTIAL_ACTOR_TRANSFER.md) to
+separate isolated settling improvements from controller performance. It includes
+a strict inertial-only model audit and explicit deployment provenance.
+
+## Task-specific contact admission
+
+`contact_admission.assess(hand_contact_active, collision, expected_effectors=..., effector_audit=...)`
+checks whether the configured controller can represent the interaction the task
+requires. Hand phases are required for a hand task. A foot-push task can correctly
+have zero hand phases: declare its foot effector, provide a source-geometry
+proximity audit, and enable the corresponding robot–object collisions. The check
+never invents contact labels or changes the controller. Downstream adapters must
+bind the audit to the exact reference and policy hashes. Admission compatibility
+does not certify scene stability, physical contact, task success or training
+readiness; evaluate those separately.
+
+`reward_alignment.audit(config, hand_contact_active, expected_effectors=...,
+control_fps=...)` checks the separate question of reward/task alignment. Object
+tracking can reward a foot push even without hand contact, while hand-only
+force-closure and hand-contact counters do not measure foot contact. The audit
+reports incidental hand phases, their enabled duration, missing collision scope,
+and the absence of a dedicated nonhand-contact term. Admission and this audit do
+not establish physical task success. Palm tracking follows the demonstration;
+it is not a grasp requirement. The existing progress term measures episode time,
+not independent object progress.
+
+For a separately versioned **fresh** nonhand experiment,
+`reward_alignment.without_hand_grasp_reward(config, expected_effectors=...)`
+returns a copy with hand force closure disabled in the base objective and all
+curriculum stages. It preserves body/palm/object rewards and reference phases.
+It rejects hand tasks, disabled nonhand collisions, and learner/replay resumes.
+This opt-in profile neither changes defaults nor adds a foot-contact reward;
+retain a comparable first pilot before introducing additional shaping.
+
+`planar_collision_base.propose(...)` is a bounded, experimental collision-only
+hypothesis for an uneven reconstructed resting base. With a reviewed unit support
+normal in object coordinates, it clips a declared band above the lowest point,
+limits per-vertex correction and volume loss, and returns a separate closed
+convex proxy. The caller must preserve visual geometry, poses and inertia in the
+packaged model and verify those identities. A millimetre-scale placement gap does
+not establish a stable contact patch or correct centre-of-mass support. Validate
+the hypothesis with independent source evidence, placement and isolated CPU/GPU
+settling; never adopt it automatically merely because it makes a box stand up.
+
+`object_stability.assess_settling` reports independent limits on initial motion
+and late drift, preserving the measured backend. A passing CPU screen requires
+confirmation on the intended GPU backend. A failed isolated test remains useful
+even when a robot rollout appears stable: the robot may be supporting the object.
+Use the exact initial pose, rigid-object inertia, support mesh and collision
+settings planned for training. Keep rejected geometry and the failed measurements
+instead of widening limits to admit it. Settling admission alone does not certify
+grasping, task success or actor-training readiness.
+
+Isolated tests use world-static support geometry by default, avoiding free
+support DOFs in a test without a reset/pinning loop. See
+[static-support settling and initial-rest verification](../../docs/STATIC_SUPPORT_SETTLING.md)
+for the standalone entry point, legacy diagnostic mode and required validation.
+
+Flat mesh contacts can be tested with explicit `SimConfig.enable_multiccd=True`;
+the legacy default is retained. `solver_ablation.package` prepares a separate,
+audited frozen policy with only that contact-generation setting changed. Use
+analytic controls and repeated isolated tests before new GPU/robot evaluation.
+The setting does not change a reconstruction or automatically improve a grasp.
+
+Flat objects can also rock because a mesh pair has only one contact point.
+`SimConfig.enable_multiccd` and the isolated tester's `--enable-multiccd` expose
+an explicit multiple-contact experiment; both default to false. Match the
+controller's `impratio` when comparing isolated results. See
+[controlled contact-mode diagnostics](../../docs/MULTICONTACT_SETTLING.md).
+Use new artifacts and fresh physics results when changing contact mode.
+
+`policy_settling` runs an isolated object test directly from a portable frozen
+policy. It reads the actual initial pose, URDF/inertia, static support and solver
+settings, including contact friction and free-object damping. For example:
+
+```bash
+python -m real2sim2real.controller_actor_training.policy_settling \
+  --policy /path/to/policy --output /path/to/new-probe --device cpu
+```
+
+Use the intended GPU backend under the caller's thermal/time supervision for
+confirmation. `POLICY_ADMISSION.json` binds the measured gate to the policy,
+support and object model. CPU and GPU measurements remain separate; a failed
+CPU screen is a warning requiring diagnosis and target-backend confirmation,
+not permission to relax the limits. Pin the measured collision decomposition
+when packaging so repeated probes and robot rollouts use the same hulls.
+
+`policy_physics.match_scene(configuration, policy_config)` optionally checks
+solver/timing parity and copies the policy's scene friction and free-object
+damping into a separate training configuration. It refuses solver changes and
+preserves world count, reward and curriculum settings. Its receipt lists actual
+changed fields, which can be empty when the original recipe already matches.
+This explicit check does not change default training recipes or certify task
+success. Settling, complete frozen execution and successful manipulation require
+separate evidence.
+
+For bounded approach experiments, `approach_diagnostics.summarize` measures
+time before a declared low-pelvis threshold, palm tracking error and sustained
+hand/object contact during the corresponding hand's reference phase. Contact
+after the first low-pelvis event is excluded from the useful-contact measure.
+The threshold is a diagnostic, and contact alone does not certify grasping.
+`approach_diagnostics.continuation` additionally checks the worst repeat so an
+improved mean cannot conceal one severely failing trial. These opt-in analysis
+helpers leave the learner, rewards, geometry and default recipes unchanged.

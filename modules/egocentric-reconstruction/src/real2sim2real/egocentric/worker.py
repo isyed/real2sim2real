@@ -281,15 +281,24 @@ def tracking(request, check=False):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--request", required=True)
-    parser.add_argument("--phase", choices=["segment", "mesh", "track", "hands"], required=True)
+    parser.add_argument(
+        "--phase",
+        choices=["segment", "mesh", "track", "hands", "refine-hands"],
+        required=True,
+    )
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
     request = json.loads(Path(args.request).read_text())
     from .hamer_worker import run as hands
+    from .hand_refinement import run as refine_hands
 
-    {"segment": segmentation, "mesh": mesh, "track": tracking, "hands": hands}[args.phase](
-        request, args.check
-    )
+    {
+        "segment": segmentation,
+        "mesh": mesh,
+        "track": tracking,
+        "hands": hands,
+        "refine-hands": refine_hands,
+    }[args.phase](request, args.check)
 
 
 if __name__ == "__main__":

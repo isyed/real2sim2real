@@ -135,9 +135,47 @@ def apply_fit(vertices, parameters):
     return np.asarray(vertices) * np.exp(parameters[6]) @ r.T + parameters[3:6]
 
 
-def reconstruct_hands(config):
+def hand_metrics(vertices, faces, joints, keypoints, validation, k):
+    """Shared image and held-out depth measurements for baseline and refinement."""
     import trimesh
 
+    error = np.linalg.norm(project(joints, k) - keypoints, axis=1)
+    mesh = trimesh.Trimesh(vertices, faces, process=False)
+    distance = (
+        trimesh.proximity.closest_point(mesh, validation)[1]
+        if len(validation)
+        else np.array([])
+    )
+    return dict(
+        reprojection_median_px=float(np.median(error)),
+        reprojection_p90_px=float(np.quantile(error, 0.9)),
+        validation_points=len(validation),
+        validation_surface_median_m=float(np.median(distance))
+        if len(distance)
+        else None,
+        validation_surface_p90_m=float(np.quantile(distance, 0.9))
+        if len(distance)
+        else None,
+    )
+
+
+def hand_rejections(row, limits):
+    failed = []
+    for name in (
+        "reprojection_median_px",
+        "reprojection_p90_px",
+        "validation_surface_median_m",
+        "validation_surface_p90_m",
+    ):
+        value = row[name]
+        if value is None or not np.isfinite(value) or value > limits["max_" + name]:
+            failed.append(name)
+    if row["validation_points"] < limits["min_validation_points"]:
+        failed.append("validation_coverage")
+    return failed
+
+
+def reconstruct_hands(config):
     source = Reconstruction(config["reconstruction"], config.get("frame_count"))
     root = Path(config["output"])
     support = json.loads((root / "support/support.json").read_text())
@@ -246,40 +284,20 @@ def reconstruct_hands(config):
                 apply_fit(raw["joints"][i, h], p),
             )
             proposed_vertices[i, h], proposed_joints[i, h] = v, j
-            reprojection = np.linalg.norm(
-                project(j, source.k) - observations["keypoints_px"][i, h], axis=1
-            )
-            mesh = trimesh.Trimesh(v, raw["faces"][h], process=False)
-            distances = (
-                trimesh.proximity.closest_point(mesh, validation)[1]
-                if len(validation)
-                else np.array([])
-            )
             row = dict(
                 frame=int(i),
                 hand=["left", "right"][h],
                 scale=scales[h],
-                reprojection_median_px=float(np.median(reprojection)),
-                reprojection_p90_px=float(np.quantile(reprojection, 0.9)),
-                validation_points=len(validation),
-                validation_surface_median_m=float(np.median(distances))
-                if len(distances)
-                else None,
-                validation_surface_p90_m=float(np.quantile(distances, 0.9))
-                if len(distances)
-                else None,
+                **hand_metrics(
+                    v,
+                    raw["faces"][h],
+                    j,
+                    observations["keypoints_px"][i, h],
+                    validation,
+                    source.k,
+                ),
             )
-            failed = []
-            for name in (
-                "reprojection_median_px",
-                "reprojection_p90_px",
-                "validation_surface_median_m",
-                "validation_surface_p90_m",
-            ):
-                if row[name] is None or row[name] > limits["max_" + name]:
-                    failed.append(name)
-            if len(validation) < limits["min_validation_points"]:
-                failed.append("validation_coverage")
+            failed = hand_rejections(row, limits)
             wrist = transform(j[:1], upright_from_camera[i])[0]
             if previous[h] is not None:
                 old_i, old_wrist = previous[h]

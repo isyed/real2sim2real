@@ -142,10 +142,15 @@ in this order, inspecting the prefix before extending the frame count:
    fingertip gaps and penetration. Signed penetration is available only for a
    closed, consistently wound object mesh. Geometry is not moved to manufacture
    contact. Contact diagnostics do not prove physical contact or control success.
-7. `review`: create an offline HTML slider with image projections and a rotatable
+7. `score`: save `quality_summary.json` with the full frame denominator, missing
+   detection/model counts, rejected-fit reasons, per-hand metric coverage and
+   contact statistics. Report fit errors both for accepted estimates and for all
+   scored candidates, so discarding failures does not hide their errors. These
+   are image/depth consistency scores, not ground-truth joint accuracy.
+8. `review`: create an offline HTML slider with image projections and a rotatable
    metric world view. With no 3D hands, `contacts-preview/` and `review-preview/`
    preserve a clearly labelled partial result without occupying final outputs.
-8. `publish`: verify shared timestamps and coordinate composition, then publish
+9. `publish`: verify shared timestamps and coordinate composition, then publish
    `metric-interaction-reconstruction`. Both hands need accepted estimates;
    per-frame gaps remain explicit and `complete=false`. The artifact is marked
    `control_ready=false`. It cannot be passed off as full-body reconstruction.
@@ -181,3 +186,31 @@ For a controlled prefix/full comparison, optionally set
 prefix in `read_only_inputs`. The longer sequence can fit one static support
 plane from more views, with disjoint validation frames; this may change the
 bundle's global upright transform but never the source camera-relative motion.
+
+### Reading the interaction review
+
+The coloured skeletons on the image are accepted **3D joints projected into the
+camera image**. Their finger bends show articulation. The world panel displays
+those same joints and hand surfaces beside the object and table in metres.
+Grey skeletons are **2D landmarks only**: image positions exist, but an accepted
+metric hand is missing. A missing frame is kept invalid rather than filled with
+the previous pose. Passing the checks means agreement with configured image,
+depth and motion limits; it does not establish ground-truth hand accuracy.
+
+A gap in the hand trajectory means an unavailable estimate at that time. A
+hand–object gap is a spatial distance between surfaces. Contact diagnostics use
+the latter: proximity suggests a contact candidate, while penetration indicates
+overlapping reconstructed geometry. They do not simulate forces or certify a
+grasp. A prefix is the short initial interval reviewed before the full sequence.
+
+Dense object meshes use bounded centroid/radius searches for exact point-to-face
+distances, with bounded projection batches. Tests compare this query with an
+exhaustive triangle search, including far-away points and unequal triangle sizes.
+CPU fitting and contact runs can use `OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1`
+to avoid oversubscribing small geometry operations.
+For dense meshes, the optional `contact-fast` extra adds the Embree CPU ray
+accelerator. Select `contacts.ray_backend` as `auto` (default), `triangle` or
+`embree`; the actual backend is recorded in the diagnostic report. An explicit
+`embree` request fails if its dependency is unavailable. The geometric distance
+query and contact thresholds are unchanged. See the
+[Trimesh ray backend documentation](https://trimesh.org/trimesh.ray.ray_pyembree.html).

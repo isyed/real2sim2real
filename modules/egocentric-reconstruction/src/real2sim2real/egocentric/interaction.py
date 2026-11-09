@@ -68,6 +68,10 @@ def execute(config, phase):
         from .contact_diagnostics import diagnose
 
         return diagnose(config)
+    if phase == "score":
+        from .interaction_summary import summarize
+
+        return summarize(config)
     if phase == "review":
         from .interaction_review import review
 
@@ -91,6 +95,7 @@ def main():
             "hands-check",
             "align-hands",
             "contacts",
+            "score",
             "review",
             "publish",
         ],

@@ -15,6 +15,7 @@ dependencies = ["real2sim2real==0.1.0", "numpy>=1.26,<3", "scipy>=1.11,<2", "ope
 r2s2r-ego = "real2sim2real.egocentric.cli:main"
 r2s2r-interaction = "real2sim2real.egocentric.interaction:main"
 r2s2r-hand-experiment = "real2sim2real.egocentric.hand_experiment:main"
+r2s2r-point-hand-experiment = "real2sim2real.egocentric.point_hand_experiment:main"
 
 [project.optional-dependencies]
 hands2d = ["mediapipe==0.10.32"]

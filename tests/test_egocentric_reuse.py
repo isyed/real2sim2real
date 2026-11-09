@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from real2sim2real.egocentric.reuse import reuse_mesh
+from real2sim2real.egocentric.reuse import reuse_mesh, fork_tracking_inputs
 
 
 def observations(root, *, count=2):
@@ -73,3 +73,40 @@ def test_phase_retries_preserve_existing_results(tmp_path, phase, sentinel):
     with pytest.raises(FileExistsError):
         execute({"output": str(tmp_path)}, phase)
     assert path.read_bytes() == b"previous result"
+
+
+def test_tracking_fork_excludes_predictions_and_does_not_share_writable_files(tmp_path):
+    source, target = tmp_path / "source", tmp_path / "target"
+    observations(source)
+    source_mesh(source)
+    for name in (
+        "camera.json",
+        "camera_motion.npz",
+        "camera_motion_quality.json",
+        "calibration.json",
+        "prompts.json",
+        "depth_quality.json",
+        "object_motion.npz",
+    ):
+        (source / name).write_bytes(b"original")
+    fork_tracking_inputs(source, target)
+    assert not (target / "object_motion.npz").exists()
+    (target / "mesh/metric.glb").write_bytes(b"new hypothesis")
+    assert (source / "mesh/metric.glb").read_bytes() == b"mesh"
+    receipt = json.loads((target / "tracking_inputs.json").read_text())
+    assert "mesh/metric.glb" in receipt["files"]
+
+
+def test_tracking_fork_checks_required_inputs_before_copying(tmp_path):
+    source = tmp_path / "source"
+    observations(source)
+    with pytest.raises(FileNotFoundError):
+        fork_tracking_inputs(source, tmp_path / "target")
+    assert not (tmp_path / "target").exists()
+
+
+def test_tracking_fork_rejects_recursive_copy_destination(tmp_path):
+    source = tmp_path / "source"
+    observations(source)
+    with pytest.raises(ValueError, match="overlap"):
+        fork_tracking_inputs(source, source / "rgb" / "nested")

@@ -7,6 +7,51 @@ import shutil
 from real2sim2real.artifacts import digest, write_json
 
 
+def fork_tracking_inputs(source, destination):
+    """Copy observed inputs and a fixed mesh into an isolated tracking hypothesis."""
+    source, destination = Path(source).resolve(), Path(destination).resolve()
+    if destination.is_relative_to(source) or source.is_relative_to(destination):
+        raise ValueError("Tracking source and destination must not overlap")
+    if destination.exists() and any(destination.iterdir()):
+        raise FileExistsError("Tracking hypotheses require an empty destination")
+    names = [
+        "rgb",
+        "depth",
+        "masks",
+        "mesh",
+        "timeline.json",
+        "camera.json",
+        "camera_motion.npz",
+        "camera_motion_quality.json",
+        "calibration.json",
+        "prompts.json",
+        "depth_quality.json",
+    ]
+    hashes = {}
+    for name in names:
+        path = source / name
+        if not path.exists():
+            raise FileNotFoundError(path)
+        files = list(path.rglob("*")) if path.is_dir() else [path]
+        if path.is_symlink() or any(p.is_symlink() for p in files):
+            raise ValueError("Tracking inputs must be real files, not symlinks")
+        for file in files:
+            if file.is_file():
+                hashes[str(file.relative_to(source))] = digest(file)
+    destination.mkdir(parents=True, exist_ok=True)
+    for name in names:
+        path = source / name
+        if path.is_dir():
+            shutil.copytree(path, destination / name)
+        else:
+            shutil.copy2(path, destination / name)
+    if any(digest(destination / name) != value for name, value in hashes.items()):
+        raise ValueError("Source inputs changed while copying; reject this hypothesis")
+    write_json(
+        destination / "tracking_inputs.json", dict(source=str(source), files=hashes)
+    )
+
+
 def reuse_mesh(source, destination, *, frame=0, object_id=1):
     source, destination = Path(source).resolve(), Path(destination).resolve()
     if (destination / "mesh").exists():

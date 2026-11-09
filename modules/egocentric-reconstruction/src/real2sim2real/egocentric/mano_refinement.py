@@ -73,6 +73,28 @@ def damped_parameters(fit, initial_local, details, fraction):
     return updated, cumulative
 
 
+def image_evidence(keypoints, joint_weights=None):
+    """Mask missing observations before tensor arithmetic; never fill a joint.
+
+    Zero-weight coordinates are ignored, including NaNs. At least four visible
+    joints are required; their geometric quality remains the caller's concern.
+    """
+    points = np.asarray(keypoints, float)
+    weights = (
+        np.isfinite(points).all(-1).astype(float)
+        if joint_weights is None
+        else np.asarray(joint_weights, float).copy()
+    )
+    if points.shape != (21, 2) or weights.shape != (21,):
+        raise ValueError("Require 21 image points and weights")
+    if not np.isfinite(weights).all() or not ((weights >= 0) & (weights <= 1)).all():
+        raise ValueError("Image weights must be finite and between zero and one")
+    visible = weights > 0
+    if visible.sum() < 4 or not np.isfinite(points[visible]).all():
+        raise ValueError("Require at least four finite weighted image observations")
+    return np.where(visible[:, None], points, 0), weights
+
+
 class ManoHand:
     def __init__(self, model_path):
         import torch
@@ -155,8 +177,9 @@ def refine(
         raise ValueError("MANO reconstruction differs from the retained hand prior")
     if not np.allclose(original_j.detach().numpy(), raw["joints"], atol=2e-5, rtol=0):
         raise ValueError("MANO joint order differs from the retained hand prior")
-    if len(points) < 80 or not np.isfinite(keypoints).all():
+    if len(points) < 80 or not np.isfinite(points).all():
         raise ValueError("Insufficient measured hand evidence")
+    keypoints, joint_weights = image_evidence(keypoints, joint_weights)
     joint_bound = np.deg2rad(options["max_joint_correction_deg"])
     rigid_bound = np.deg2rad(options["max_rigid_correction_deg"])
     translation_bound = options["max_translation_correction_m"]
@@ -164,22 +187,12 @@ def refine(
     camera_t = tensor(fit[3:6])
     scale = float(np.exp(fit[6]))
     intrinsic, target_uv = tensor(k), tensor(keypoints)
-    has_initial_local, has_joint_weights = (
-        initial_local is not None,
-        joint_weights is not None,
-    )
+    has_initial_local = initial_local is not None
     initial_local = (
         np.zeros((15, 3)) if initial_local is None else np.asarray(initial_local)
     )
-    joint_weights = np.ones(21) if joint_weights is None else np.asarray(joint_weights)
     if initial_local.shape != (15, 3) or not np.isfinite(initial_local).all():
         raise ValueError("Require finite local MANO corrections")
-    if (
-        joint_weights.shape != (21,)
-        or not np.isfinite(joint_weights).all()
-        or not ((joint_weights > 0) & (joint_weights <= 1)).all()
-    ):
-        raise ValueError("Require 21 positive image weights no greater than one")
     if not np.isfinite(temporal_weight) or not 0 <= temporal_weight <= 10:
         raise ValueError("Invalid temporal fitting weight")
     if temporal_target is not None:
@@ -240,10 +253,8 @@ def refine(
             uv = projected[:, :2] / projected[:, 2:].clamp(min=0.05)
             surface = (v[ids] * bary[..., None]).sum(1)
             image_residual = torch.sqrt(1 + ((uv - target_uv) / 5).square()) - 1
-            image_loss = (
-                (image_residual * image_weights).sum() / (2 * image_weights.sum())
-                if has_joint_weights
-                else image_residual.mean()
+            image_loss = (image_residual * image_weights).sum() / (
+                2 * image_weights.sum()
             )
             depth_loss = (
                 torch.sqrt(1 + ((surface - targets) / 0.006).square()) - 1

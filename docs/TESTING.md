@@ -71,3 +71,10 @@ of fitting pixels from held-out depth, evaluation image hashes, calibrated
 secondary-view projection and exclusion of visual annotations from worker mounts.
 These CPU tests do not establish checkpoint quality; the optional HaWoR runtime
 requires its own bounded image experiment.
+
+`tests/test_hand_point_tracks.py` checks that held-out detector labels cannot
+change tracker seeds, and that occlusion, re-query disagreement, physical hand
+identity and duplicate seed times reject unsupported observations. It also
+checks partial-landmark masking and the separation of inference/evaluation
+mounts. The full point-guided trial requires optional TAPIR/MANO runtimes and
+real-image checks; CPU tests alone do not establish anatomical accuracy.

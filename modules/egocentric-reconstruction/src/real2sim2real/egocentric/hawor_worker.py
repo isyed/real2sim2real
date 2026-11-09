@@ -178,6 +178,11 @@ def run(request, check=False):
             backend="HaWoR",
             upstream_commit="2c3fa0c06e54a1b192c1ff692eaa89d526cd6317",
             checkpoint_sha256=digest(checkpoint),
+            mano_sha256=digest(
+                Path(request["weights"]["hamer"]) / "_DATA/data/mano/MANO_RIGHT.pkl"
+            ),
+            geometry_shape_source="fixed_betas",
+            betas_field_contains="network_shape_predictions_not_used_for_geometry",
             hand_tracks_sha256=digest(request["hand_tracks"]),
             fixed_shape_sha256=digest(request["fixed_shape_from"]),
             hand_order=["left", "right"],

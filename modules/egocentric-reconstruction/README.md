@@ -394,3 +394,66 @@ contact, temporal measurements and visual-anchor errors. These are consistency
 diagnostics and sparse image evidence, not complete 3D ground truth. The command
 never promotes a candidate or declares control readiness. Use a new output or
 `review_directory` when repeating an evaluation; preserve prior hypotheses.
+## Point-guided articulation experiments
+
+`r2s2r-point-hand-experiment` adds optional BootsTAPIR observations to a completed
+hand-observation comparison. It retains the calibrated camera/object/table
+world and fixed MANO shape and scale. Configure a new output directory using
+[`examples/point-hand-experiment.json`](examples/point-hand-experiment.json).
+Frame IDs in the seed and held-out lists are **source IDs**, while `frame_start`
+is the reconstruction array index. The example assumes IDs start at zero.
+
+```bash
+r2s2r-point-hand-experiment --config /private/experiment.json --phase prepare
+r2s2r-point-hand-experiment --config /private/experiment.json --phase track --check
+r2s2r-point-hand-experiment --config /private/experiment.json --phase track
+r2s2r-point-hand-experiment --config /private/experiment.json --phase refine --check
+r2s2r-point-hand-experiment --config /private/experiment.json --phase refine
+r2s2r-point-hand-experiment --config /private/experiment.json --phase evaluate
+```
+
+Prepare the run output directory as the normal user before starting its GPU
+lease helper. `track` requires the configured GPU lease and thermal guard;
+`refine` uses a CPU-only container with a finite deadline. The other phases run
+under bounded CPU subprocesses. Check phases load dependencies/checkpoints on
+CPU without running image inference. Existing outputs are never overwritten.
+
+Build [`docker/tapir.Dockerfile`](docker/tapir.Dockerfile) with a separately
+downloaded `malik-group/tapnet` checkout at
+`f2f8888a803051ea42cd79c89cfca6c25dfeae77` as the Docker context. The original
+Apache notices remain in that checkout/image; no upstream code is vendored or
+imported from a neighbouring project. Put the official
+[`bootstapir_checkpoint_v2.pt`](https://storage.googleapis.com/dm-tapnet/bootstap/bootstapir_checkpoint_v2.pt)
+under `weights.tapir`; record its digest and download provenance privately.
+Build [`docker/hand-refinement.Dockerfile`](docker/hand-refinement.Dockerfile)
+for CPU MANO/Embree refinement, using the existing HaMeR image as the base.
+The licensed MANO model remains separately supplied under `weights.hamer`.
+
+The pipeline selects visible automatic 2D detector seeds from explicitly
+selected frames. Evaluation frames are excluded. Each hand uses one fixed
+image crop over the complete window. Tracks must pass visibility/uncertainty,
+physical hand masks, a return track re-queried at another time, and agreement
+between at least two distinct seed frames. Occluded/drifting observations stay
+missing. Raw tracks, return queries and rejection evidence remain available.
+
+The articulation fitter accepts partial landmarks with zero weights for missing
+joints. It makes a fresh rigid initialization from fitting depth and tracks,
+then fits bounded MANO rotations and a small wrist correction. It never loads
+held-out detector labels or visual annotations. `fixed_betas` reconstructs the
+HaWoR geometry; its per-frame `betas` field contains unused network shape
+predictions. MANO mesh/joint reconstruction is checked before optimization.
+
+Only rejected baseline intervals are eligible for candidate additions. Separate
+diagnostic fits at held-out frames allow checks where the baseline is already
+accepted; those fits never replace baseline anchors. The diagnostic artifact
+retains rejected geometry with explicit support masks. Evaluation verifies that
+all accepted baseline geometry and source files are unchanged, reports held-out
+2D detector errors, sparse visual annotations in calibrated views, reserved
+depth and contact diagnostics, and writes an HTML comparison.
+
+Tracker agreement is fitting evidence, not independent ground truth. Surface
+appearance tracks may not follow anatomical joint centres, and multiple seeds
+can share detector bias. Held-out detector labels remain correlated with the
+seed detector; stereo samples are spatially correlated too. Manual review and
+robot-specific replay remain separate acceptance steps. The experiment always
+reports `promoted: false` and `control_ready: false`.

@@ -61,7 +61,7 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="command", required=True)
     validate = sub.add_parser("validate", help="Verify schema, numeric conventions and every asset hash")
     validate.add_argument("bundle", type=Path)
-    config = sub.add_parser("default-config", help="Print the declared default repair policy")
+    sub.add_parser("default-config", help="Print the declared default repair policy")
     run = sub.add_parser("run", help="Repair and score; preserve parent for rejected proposals")
     run.add_argument("--input", required=True, type=Path)
     run.add_argument("--output", required=True, type=Path)

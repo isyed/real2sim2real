@@ -4,7 +4,7 @@ import sys
 
 import pytest
 
-from real2sim2real.artifacts import digest, load, publish, write_json
+from real2sim2real.artifacts import load, publish, write_json
 from real2sim2real.pipeline import STAGES, execute, plan
 
 

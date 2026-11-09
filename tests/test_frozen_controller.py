@@ -1,5 +1,3 @@
-from copy import deepcopy
-import json
 import shutil
 import pytest
 from real2sim2real.artifacts import publish
@@ -43,3 +41,17 @@ def test_bundle_remains_usable_after_source_removal_and_relocation(tmp_path):
     assert (moved/'assets/meshes/g1/body.obj').read_text()=='v 0 0 0\n'
     (moved/'assets/policies/sonic/encoder_batched.onnx').write_bytes(b'changed')
     with pytest.raises(ValueError,match='changed'):frozen.materialize(moved)
+
+
+def test_optional_collision_cache_is_copied_validated_and_independent(tmp_path):
+    import numpy as np
+    source=tmp_path/'cache';source.mkdir();target=tmp_path/'copied'
+    key='0123456789abcdef.npz';path=source/key
+    vertices=np.array([[0,0,0],[1,0,0],[0,1,0]],np.float32)
+    np.savez(path,n=np.int64(1),v0=vertices,f0=np.array([[0,1,2]],np.int32))
+    assert frozen.copy_collision_cache(source,target)==[key]
+    shutil.rmtree(source)
+    with np.load(target/key) as data:np.testing.assert_array_equal(data['v0'],vertices)
+    bad=tmp_path/'bad';bad.mkdir()
+    np.savez(bad/key,n=np.int64(1),v0=vertices,f0=np.array([[0,1,9]],np.int32))
+    with pytest.raises(ValueError,match='geometry'):frozen.copy_collision_cache(bad,tmp_path/'rejected')

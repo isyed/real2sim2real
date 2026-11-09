@@ -25,9 +25,18 @@ class Limits:
     max_recovery_frames: int = 180
 
 
-def configured_limits(recovery_frame_budget=None,*,source_frames=None):
-    """Change a finite work allowance, never an image/depth/motion threshold."""
+def configured_limits(recovery_frame_budget=None,*,source_frames=None,depth_error_m=None):
+    """Finite work allowance and an optional explicitly recorded depth tolerance.
+
+    Defaults preserve the original checks. A nondefault depth limit is a declared
+    experiment, never an automatic fallback when a candidate fails.
+    """
     limits=Limits()
+    if depth_error_m is not None:
+        if (isinstance(depth_error_m,bool) or not np.isfinite(depth_error_m)
+                or not .01 <= depth_error_m <= .20):
+            raise ValueError('Explicit depth-error limit must be within [0.01,0.20] metres')
+        limits=replace(limits,depth_error_m=float(depth_error_m))
     if recovery_frame_budget is None:return limits
     if (type(recovery_frame_budget) is not int or recovery_frame_budget<1
         or (source_frames is not None and (type(source_frames) is not int or source_frames<2
@@ -52,6 +61,24 @@ def sample_vertices(vertices, spacing=.0015):
     # Preserve coordinate extremes as well as voxel representatives.
     indices = np.unique(np.r_[indices, vertices.argmin(0), vertices.argmax(0)])
     return vertices[indices]
+
+
+def depth_residual_summary(signed_residuals_m):
+    """Describe residual spread without changing depth acceptance or direction.
+
+    A small signed median is not evidence of small absolute error. Report the
+    distribution so mixed signs cannot be mistaken for a reliable correction.
+    Residuals are observed minus rendered camera depth, in metres.
+    """
+    x=np.asarray(signed_residuals_m,float)
+    if x.ndim!=1 or not np.isfinite(x).all():
+        raise ValueError('Finite one-dimensional metre residuals required')
+    return dict(depth_points=int(len(x)),
+        depth_error_m=float(np.median(np.abs(x))) if len(x) else None,
+        depth_shift_m=float(np.median(x)) if len(x) else None,
+        depth_residual_quantiles_m=np.quantile(x,[.1,.25,.5,.75,.9]).tolist() if len(x) else None,
+        depth_positive_fraction=float(np.mean(x>0)) if len(x) else None,
+        depth_negative_fraction=float(np.mean(x<0)) if len(x) else None)
 
 
 def consistency(vertices, pose, K, depth, observed, support):
@@ -93,9 +120,7 @@ def consistency(vertices, pose, K, depth, observed, support):
     radial = delta-np.outer(delta@plane[:3], plane[:3])
     over_support = np.linalg.norm(radial, axis=1) <= support['radius_m']
     heights = camera@plane[:3]+plane[3]
-    return dict(depth_points=int(usable.sum()),
-        depth_error_m=float(np.median(np.abs(signed))) if len(signed) else None,
-        depth_shift_m=float(np.median(signed)) if len(signed) else None,
+    return dict(**depth_residual_summary(signed),
         centroid_shift_px=displacement,
         support_penetration_m=max(0., -float(heights[over_support].min())) if over_support.any() else 0.,
         behind_camera=bool(not positive.all()))
@@ -164,8 +189,27 @@ def local_proposals(previous, current, K, geometry):
     return np.stack(proposals)
 
 
-def protocol(*,recovery_frame_budget=None):
-    return dict(schema='real2sim2real.tracking-recovery/1', limits=asdict(configured_limits(recovery_frame_budget)),
+def pixel_translation_proposals(pose,K,*,radius_px=1.):
+    """At most25 unaccepted subpixel translations; preserve rotation and depth.
+
+    This searches around a camera pose, not around a temporal reference. The
+    consumer MUST recheck every result against the actual previous accepted pose
+    and the independent image/depth/support gates.
+    """
+    p=np.asarray(pose,float);K=np.asarray(K,float)
+    if (not rigid(p) or p[2,3]<=.01 or K.shape!=(3,3) or not np.isfinite(K).all()
+        or min(K[0,0],K[1,1])<=0 or not np.allclose(K[2],[0,0,1]) or abs(np.linalg.det(K))<1e-12
+        or isinstance(radius_px,bool) or not np.isfinite(radius_px) or not 0<radius_px<=2):
+        raise ValueError('Rigid positive-depth pose, calibrated camera and explicit pixel radius in(0,2] required')
+    out=[]
+    for y in np.linspace(-radius_px,radius_px,5):
+        for x in np.linspace(-radius_px,radius_px,5):
+            q=p.copy();q[:3,3]+=np.linalg.solve(K,np.array([x*p[2,3],y*p[2,3],0.]));out.append(q)
+    return np.asarray(out)
+
+
+def protocol(*,recovery_frame_budget=None,depth_error_m=None):
+    return dict(schema='real2sim2real.tracking-recovery/1', limits=asdict(configured_limits(recovery_frame_budget,depth_error_m=depth_error_m)),
         observed_depth='own monocular estimate, not ground truth',
         support='reject penetration only inside the reviewed support footprint; lifting is allowed',
         recovery='local hypotheses, then at most one depth and one RGB registration per failing frame',

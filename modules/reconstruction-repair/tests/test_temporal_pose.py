@@ -77,3 +77,50 @@ def test_invalid_evidence_stops(problem):
     if problem=='improper_rotation':d['poses_camera'][0,0,0]=-1
     if problem=='frame_gap':d['frame_ids'][5:]+=1
     with pytest.raises(ValueError):validate(d)
+
+
+def test_translation_only_refinement_preserves_every_input_rotation():
+    data=fixture()
+    from scipy.spatial.transform import Rotation
+    data['poses_camera'][:,:3,:3]=Rotation.from_euler('z',(np.sin(np.arange(21)*.7)*.3)[:,None],degrees=True).as_matrix()
+    original=data['poses_camera'].copy()
+    _,report=refine_window(data,replace(CFG,preserve_rotations=True))
+    candidate,_=refine_window(data,replace(CFG,preserve_rotations=True,max_function_calls=1))
+    assert report['rotations_preserved_exactly']
+    assert np.array_equal(candidate[:,:3,:3],original[:,:3,:3])
+    assert np.array_equal(data['poses_camera'],original)
+
+
+def test_rotation_preservation_option_requires_boolean():
+    with pytest.raises(ValueError,match='boolean'):
+        replace(CFG,preserve_rotations=1).validate()
+
+
+def test_smaller_translation_proposals_keep_every_noneditable_frame():
+    from real2sim2real.reconstruction_repair.localized_pose import backtrack_translation
+    data=fixture();proposal=data['poses_camera'].copy();proposal[:,2,3]-=.02
+    editable=np.zeros(21,bool);editable[8:13]=True
+    candidate,report=backtrack_translation(data,proposal,CFG,fractions=(.5,),editable=editable)
+    assert np.array_equal(candidate[~editable],data['poses_camera'][~editable])
+    assert np.array_equal(candidate[:,:3,:3],data['poses_camera'][:,:3,:3])
+    assert not report['approved_for_use']
+
+
+def test_backtracking_rejects_rotational_proposal_and_invalid_fractions():
+    from real2sim2real.reconstruction_repair.localized_pose import backtrack_translation
+    data=fixture();proposal=data['poses_camera'].copy();proposal[4,:3,:3]=np.diag([-1.,-1.,1.])
+    with pytest.raises(ValueError,match='rotations'):backtrack_translation(data,proposal,CFG)
+    with pytest.raises(ValueError,match='fractions'):backtrack_translation(data,data['poses_camera'],CFG,fractions=(.25,.5))
+
+
+def test_interaction_veto_cannot_be_overridden_by_geometric_backtracking():
+    from real2sim2real.reconstruction_repair.localized_pose import backtrack_translation
+    data=fixture();proposal=data['poses_camera'].copy();proposal[:,2,3]=2.
+    candidate,report=backtrack_translation(data,proposal,CFG,fractions=(.5,),extra_gate=lambda p:dict(passed=False))
+    assert not report['accepted'] and np.array_equal(candidate,data['poses_camera'])
+    assert 'extra_interaction_gate' in report['trials'][0]['decision']['reasons']
+
+
+def test_existing_positional_knot_stride_argument_keeps_its_meaning():
+    assert TemporalPoseConfig(7).knot_stride==7
+    assert TemporalPoseConfig(7).preserve_rotations is False

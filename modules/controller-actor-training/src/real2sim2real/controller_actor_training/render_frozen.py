@@ -10,7 +10,21 @@ import os
 import xml.etree.ElementTree as ET
 
 
-def visual_meshes(urdf,labels,prefix,*,object_mesh=False):
+def rollout_label(audit):
+    """Name recorded controller behavior, including explicit inference ablations."""
+    label='Learned actor + fixed hands' if audit.get('actor_loaded') else 'Frozen SONIC + fixed hands'
+    if audit.get('controller_override'):
+        label+=' + bounded joint correction'
+    if audit.get('reference_conditioning'):
+        label+=' + reference conditioning'
+    if audit.get('deterministic_body_guidance'):
+        label+=' + heading'
+        if audit['deterministic_body_guidance'].get('leg_pull_gain',0)>0:
+            label+=' + leg guidance'
+    return label+' (physics)'
+
+
+def visual_meshes(urdf,labels,prefix,*,object_mesh=False,display_audit=None):
     import numpy as np
     from scipy.spatial.transform import Rotation
     import trimesh
@@ -27,7 +41,11 @@ def visual_meshes(urdf,labels,prefix,*,object_mesh=False):
             mesh.merge_vertices(merge_tex=True,merge_norm=True)
             if not object_mesh:mesh=mesh.convex_hull
             budget=3000 if object_mesh else 120
-            if len(mesh.faces)>budget:mesh=mesh.simplify_quadric_decimation(face_count=budget)
+            if object_mesh:
+                from .display_mesh import simplify
+                mesh,proof=simplify(mesh,budget)
+                if display_audit is not None:display_audit.append(dict(body=name,**proof))
+            elif len(mesh.faces)>budget:mesh=mesh.simplify_quadric_decimation(face_count=budget)
             origin=visual.find('origin')
             xyz=np.fromstring(origin.get('xyz','0 0 0'),sep=' ') if origin is not None else np.zeros(3)
             rpy=np.fromstring(origin.get('rpy','0 0 0'),sep=' ') if origin is not None else np.zeros(3)
@@ -38,7 +56,33 @@ def visual_meshes(urdf,labels,prefix,*,object_mesh=False):
     return pieces
 
 
-def render(policy,rollout,output):
+def support_meshes(path, labels):
+    """Display the exact static triangle supports imported by the simulator.
+
+    Primitive supports require a separate display adapter; fail explicitly rather
+    than presenting a ground-only picture of a supported task.
+    """
+    from pxr import Usd
+    from flash_chord.scene.support import _mesh_geometry
+    stage=Usd.Stage.Open(str(path))
+    if stage is None:raise ValueError('Cannot open the recorded support asset')
+    if any(layer not in (stage.GetRootLayer(),stage.GetSessionLayer()) for layer in stage.GetUsedLayers()):
+        raise ValueError('Support review requires a self-contained USD stage')
+    pieces=[]
+    for prim in stage.Traverse():
+        if prim.GetTypeName() in ('Xform','Scope',''):
+            continue
+        if prim.GetAttribute('physics:collisionEnabled').Get() is False:
+            continue
+        if prim.GetTypeName()!='Mesh':
+            raise ValueError('CPU support display currently requires triangle Mesh colliders')
+        if 'support' not in labels:raise ValueError('Recorded support body is missing')
+        vertices,indices=_mesh_geometry(prim,stage)
+        pieces.append((labels.index('support'),vertices[indices.reshape(-1,3)],(153,125,91)))
+    return pieces
+
+
+def render(policy,rollout,output,*,baseline=None):
     if os.environ.get('CUDA_VISIBLE_DEVICES')!='':raise ValueError('Hide GPU for CPU rendering')
     import numpy as np
     from scipy.spatial.transform import Rotation
@@ -51,19 +95,30 @@ def render(policy,rollout,output):
     manifest,config=materialize(policy);os.environ['R2S2R_ASSETS']=str(policy/'assets')
     from flash_chord.data import load_reference
     reference=load_reference(config['task']['parquet'],control_fps=50.,motion_speed=1.,source_frame_playback=config['task']['source_frame_playback'])
-    if config['scene']['support']:
-        raise ValueError('This renderer currently supports ground-only scenes; add support rendering explicitly')
     audit=json.loads((rollout/'audit.json').read_text());labels=audit['body_labels']
     records=[]
-    for name,label in [('kinematic','Retargeted reference (no physics)'),('physical','Frozen SONIC + fixed hands (physics)')]:
-        with np.load(rollout/(name+'_states.npz')) as z:poses=z['body_q'].copy()
+    baseline_audit=json.loads((Path(baseline)/'audit.json').read_text()) if baseline is not None else None
+    for name,label in [('kinematic','Retargeted reference (no physics)' if baseline is None else rollout_label(baseline_audit)),('physical',rollout_label(audit))]:
+        source=Path(baseline)/'physical_states.npz' if name=='kinematic' and baseline is not None else rollout/(name+'_states.npz')
+        if baseline is not None:
+            other=json.loads((Path(baseline)/'audit.json').read_text())
+            if other['body_labels']!=labels or other.get('control_frames')!=audit.get('control_frames') or other['reference_sha256']!=audit['reference_sha256']:
+                raise ValueError('Before/after rollouts require identical reference, body layout and control clock')
+        with np.load(source) as z:poses=z['body_q'].copy()
         if poses.shape!=(audit.get('control_frames',audit['source_frames']),len(labels),7) or not np.isfinite(poses).all():
             raise ValueError('Incomplete or incompatible recorded states')
         records.append(dict(label=label,poses=poses))
+    display_audit=[]
     pieces=visual_meshes(policy/'assets/urdfs/g1/main_with_hand.urdf',labels,'g1/')
     for asset in reference.object_assets():
         urdf=Path(asset.urdf_path);prefix=ET.parse(urdf).getroot().attrib['name']+'/'
-        pieces+=visual_meshes(urdf,labels,prefix,object_mesh=True)
+        pieces+=visual_meshes(urdf,labels,prefix,object_mesh=True,display_audit=display_audit)
+    support=None
+    if config['scene']['support']:
+        from flash_chord.assets.registry import support_usda_for_reference
+        support=support_usda_for_reference(reference)
+        if support is None:raise ValueError('Enabled support asset is missing')
+        pieces+=support_meshes(support,labels)
     ids=np.concatenate([np.full(len(tri),body,int) for body,tri,_ in pieces])
     local=np.concatenate([tri for _,tri,_ in pieces])
     palette=np.concatenate([np.tile(color,(len(tri),1)) for _,tri,color in pieces])
@@ -77,6 +132,7 @@ def render(policy,rollout,output):
     lo,hi=sample[:,:2].min(0),sample[:,:2].max(0);center=(lo+hi)*.5
     scale=min(580/max(hi[0]-lo[0],1.),470/max(hi[1]-lo[1],1.))*.94
     output.mkdir(parents=True)
+    write_json(output/'display_geometry.json',dict(objects=display_audit,physics_geometry_changed=False))
     font=ImageFont.load_default(size=18)
     writer=imageio_ffmpeg.write_frames(str(output/'reference_vs_physics.partial.mp4'),(1280,640),fps=fps,
         codec='libx264',quality=7,macro_block_size=1,
@@ -99,7 +155,7 @@ def render(policy,rollout,output):
                 for i in np.argsort(projected[:,:,2].mean(1)):d.polygon(polygons[i],fill=rgb[i])
                 canvas.paste(panel,(10+640*col,85));draw.text((20+640*col,20),record['label'],font=font,fill=(23,32,51))
             draw.text((20,590),f'Frame {frame}/{count-1} | control time {frame/fps:.2f}s | same camera and scale',font=font,fill=(23,32,51))
-            draw.text((20,615),'No actor training or object assistance. Simplified display meshes; saved states only.',font=font,fill=(71,85,105))
+            draw.text((20,615),'Unassisted execution. Simplified display meshes; saved states only.',font=font,fill=(71,85,105))
             writer.send(np.asarray(canvas))
             if frame%100==0:write_json(output/'progress.json',dict(rendered=frame+1,total=count))
     finally:writer.close()
@@ -108,13 +164,19 @@ def render(policy,rollout,output):
     decoded=sum(1 for _ in decoder);decoder.close()
     if decoded!=count:raise ValueError('Video frame count differs from recorded states')
     write_json(output/'video_verification.json',dict(frames=decoded,fps=fps,size=meta['size'],sha256=digest(video),
-        same_camera=True,no_physics_rerun=True,no_actor_training=True,
-        reference_states_sha256=digest(rollout/'kinematic_states.npz'),physical_states_sha256=digest(rollout/'physical_states.npz'),
-        policy_manifest_sha256=digest(policy/'manifest.json')))
+        same_camera=True,no_physics_rerun=True,no_actor_training=True,actor_present_in_rollout=bool(audit.get('actor_loaded')),comparison='matched_physics' if baseline is not None else 'reference_vs_physics',
+        panel_labels=[record['label'] for record in records],
+        controller_override=audit.get('controller_override'),
+        deterministic_body_guidance=audit.get('deterministic_body_guidance'),
+        reference_states_sha256=digest(Path(baseline)/'physical_states.npz' if baseline is not None else rollout/'kinematic_states.npz'),physical_states_sha256=digest(rollout/'physical_states.npz'),
+        policy_manifest_sha256=digest(policy/'manifest.json'),
+        support_sha256=digest(support) if support is not None else None,
+        support_display='Exact recorded triangle colliders' if support is not None else 'Ground only'))
     return video
 
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     for name in ['policy','rollout','output']:parser.add_argument('--'+name,type=Path,required=True)
-    args=parser.parse_args();print(render(args.policy,args.rollout,args.output))
+    parser.add_argument('--baseline',type=Path,help='Matched frozen rollout for before/after actor comparison')
+    args=parser.parse_args();print(render(args.policy,args.rollout,args.output,baseline=args.baseline))

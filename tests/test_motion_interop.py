@@ -1,17 +1,14 @@
 import shutil
 
 import numpy as np
+import pytest
 
 from flash_chord.data.parquet import read_parquet_row
 from flash_chord.assets.registry import resolve_asset_path
 
 
 def test_motion_roundtrip_and_moved_object_paths(tmp_path):
-    try:
-        import torch
-    except ImportError:
-        import pytest
-        pytest.skip('Motion schema decoding requires the retargeting Torch environment')
+    pytest.importorskip("torch", reason="Motion schema decoding requires the retargeting Torch environment")
     from real2sim2real.retargeting.motion_schema import (
         MotionData, load_motion_data_parquet, save_motion_parquet,
     )

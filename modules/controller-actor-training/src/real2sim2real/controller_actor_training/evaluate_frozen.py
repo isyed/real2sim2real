@@ -40,15 +40,11 @@ def evaluate(policy,output,*,record_reference=True):
         if Path(path)!=policy/'manifest.json':
             raise ValueError('Unexpected frozen policy identity')
         return dict(resolved_config_json=json.dumps(config),environment_steps='0')
-    def provenance(**kwargs):
-        value=harness.evaluation_provenance(**kwargs)
-        import hashlib
-        value['eval_code_sha256']=hashlib.sha256((value['eval_code_sha256']+
-            digest(Path(__file__))+digest(Path(__file__).with_name('frozen.py'))+
-            digest(Path(__file__).with_name('source_clock.py'))).encode()).hexdigest()
-        return value
+    from .evaluation_build import provenance
     def record(env,jax_env,policy_action,actor_state,key,observation,**kwargs):
         bodies,joints,velocities,actions,contacts=[],[],[],[],[]
+        guidance,leg_deltas=[],[]
+        controller=getattr(env.action,'approach_controller',None)
         step=jax_env.step
         def observed(action):
             result=step(action)
@@ -56,6 +52,11 @@ def evaluate(policy,output,*,record_reference=True):
             joints.append(env.state_0.joint_q.numpy().copy())
             velocities.append(env.state_0.joint_qd.numpy().copy())
             actions.append(np.asarray(jax.device_get(action)).copy())
+            if controller is not None:
+                guidance.append(controller.telemetry.numpy().copy())
+                leg_deltas.append(controller.deltas.numpy().copy())
+            if len(bodies)==1 or len(bodies)%100==0:
+                print(f'evaluation progress: {len(bodies)}/{kwargs["step_count"]} control frames',flush=True)
             if env.contact is not None:
                 contacts.append(env.contact.raw_contact_count.numpy().copy())
             return result
@@ -67,10 +68,13 @@ def evaluate(policy,output,*,record_reference=True):
         correction=np.asarray(actions)
         if not len(correction) or np.max(np.abs(correction))!=0:
             raise ValueError('Nonzero or missing correction actions in frozen rollout')
+        extra={}
+        if controller is not None:
+            extra=dict(approach_heading=np.asarray(guidance),leg_target_delta_rad=np.asarray(leg_deltas))
         np.savez_compressed(output/'physical_states.npz',body_q=np.asarray(bodies),
             joint_q=np.asarray(joints),joint_qd=np.asarray(velocities),
             correction_actions=correction,contact_counts=np.asarray(contacts),
-            contact_slot_hand_ids=env.contact.slot_hand_ids.numpy() if env.contact is not None else np.array([]))
+            contact_slot_hand_ids=env.contact.slot_hand_ids.numpy() if env.contact is not None else np.array([]),**extra)
         audit=dict(actor_loaded=False,actor_trained=False,training_steps=0,
             correction_max_abs=0.,object_assistance_scale=0.,
             hand_closing_enabled=getattr(env.action,'hand_controller',None) is not None,
@@ -82,6 +86,19 @@ def evaluate(policy,output,*,record_reference=True):
             reference_sha256=digest(config['task']['parquet']),reset_mode='explicit',start_frame=0)
         if not audit['hand_closing_enabled']:
             raise ValueError('Fixed hand controller was not instantiated')
+        if controller is not None:
+            from dataclasses import asdict
+            audit['deterministic_body_guidance']=asdict(controller.config)
+            audit['guidance_telemetry_columns']=['window_fraction','heading_error_rad','applied_yaw_rad','root_xy_error_m']
+            audit['controller_description']='Frozen SONIC weights with deterministic early body guidance and fixed hands'
+        if config['action'].get('reference_denoising') is not None:
+            import hashlib
+            encoded=env.action.encoder_reference.numpy()
+            if not np.isfinite(encoded).all():
+                raise ValueError('Nonfinite conditioned encoder reference')
+            audit['reference_conditioning']=config['action']['reference_denoising']
+            audit['encoder_reference_sha256']=hashlib.sha256(encoded.tobytes()).hexdigest()
+            audit['controller_description']='Frozen SONIC with bounded reference conditioning and fixed hands'
         if record_reference:
             target=[]
             for frame in range(kwargs['step_count']):
@@ -95,7 +112,7 @@ def evaluate(policy,output,*,record_reference=True):
         reset_mode='explicit',metadata_reader=metadata,policy_loader=zero_policy,
         rollout_recorder=record,parquet_resolver=lambda c,r:config['task']['parquet'],
         provenance_builder=provenance,object_trajectories_output=output/'trajectory.parquet',
-        eval_script=Path(__file__))
+        eval_script=Path(__file__).with_name("evaluation_build.py"))
     from .source_clock import export_source_clock
     export_source_clock(output/'trajectory.parquet', native)
     harness.write_evaluation_report(output/'metrics.json',outcome)

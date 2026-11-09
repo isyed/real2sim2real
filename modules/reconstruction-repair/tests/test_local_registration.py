@@ -49,3 +49,45 @@ def test_native_grid_mismatch_and_invalid_deadline_fail():
     v,f,p,K,obj,h,z,s=example()
     with pytest.raises(ValueError,match='native'):propose(v,f,p,p,K,obj,h,z[:-1],s)
     with pytest.raises(ValueError):LocalRegistrationConfig(max_seconds=float('inf')).validate()
+    for weight in (-1., float('nan'), True, 6.):
+        with pytest.raises(ValueError):LocalRegistrationConfig(depth_violation_weight=weight).validate()
+
+
+def test_fresh_pose_refinement_does_not_invent_a_previous_accepted_state():
+    from real2sim2real.reconstruction_repair.local_registration import propose_initial
+    v,f,p,K,obj,h,z,s=example()
+    result=propose_initial(v,f,p,K,obj,h,z,s,config=LocalRegistrationConfig(max_evaluations=1))
+    assert result['initial_pose_gates_passed']
+    assert not result['previous_accepted_pose_used']
+    assert not result['proposal_valid_for_tracking']
+    assert result['requires_gpu_revalidation']
+    assert not result['temporal_continuity_validated']
+    assert not result['full_reference_accepted'] and not result['thresholds_relaxed']
+    import json
+    json.dumps(result, allow_nan=False)
+
+
+def test_fresh_pose_refinement_does_not_accept_a_depth_invalid_fit():
+    from real2sim2real.reconstruction_repair.local_registration import propose_initial
+    v,f,p,K,obj,h,z,s=example()
+    result=propose_initial(v,f,p,K,obj,h,z+.3,s,config=LocalRegistrationConfig(max_evaluations=1))
+    assert not result['initial_pose_gates_passed'] and 'depth' in result['rejected_for']
+
+
+def test_translation_only_fit_improves_alignment_and_preserves_rotation_exactly():
+    v,f,p,K,obj,h,z,s=example();seed=p.copy();seed[0,3]+=.06
+    result=propose(v,f,p,seed,K,obj,h,z,s,
+        config=LocalRegistrationConfig(max_evaluations=100,preserve_rotation=True))
+    assert result['proposal_valid_for_tracking'] and result['metrics']['iou']>.9
+    assert np.array_equal(np.asarray(result['pose_camera'])[:3,:3],p[:3,:3])
+    assert result['rotation_preserved_exactly'] and not result['thresholds_relaxed']
+    assert result['limits']['step_translation_m']==.08
+    seed[:3,:3]=np.array([[0.,-1.,0.],[1.,0.,0.],[0.,0.,1.]])
+    with pytest.raises(ValueError,match='same seed/reference rotation'):
+        propose(v,f,p,seed,K,obj,h,z,s,config=LocalRegistrationConfig(preserve_rotation=True))
+
+
+@pytest.mark.parametrize('value',[1,None,'true'])
+def test_translation_only_requires_explicit_opt_in(value):
+    with pytest.raises(ValueError,match='boolean'):
+        LocalRegistrationConfig(preserve_rotation=value).validate()

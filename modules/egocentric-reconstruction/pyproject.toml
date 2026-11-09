@@ -7,6 +7,8 @@ name = "real2sim2real-egocentric-reconstruction"
 version = "0.1.0"
 description = "Calibrated moving-camera rigid-object reconstruction"
 requires-python = ">=3.11,<3.13"
+license = {file = "LICENSE"}
+classifiers = ["License :: OSI Approved :: Apache Software License"]
 dependencies = ["real2sim2real==0.1.0", "numpy>=1.26,<3", "scipy>=1.11,<2", "opencv-python-headless>=4.10,<6", "av>=14", "Pillow>=10,<14", "trimesh>=4"]
 
 [project.scripts]
@@ -27,4 +29,4 @@ where = ["src"]
 namespaces = true
 
 [tool.setuptools]
-license-files = ["LICENSE"]
+license-files = ["LICENSE", "NOTICE", "licenses/*"]

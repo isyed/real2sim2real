@@ -7,6 +7,8 @@ name = "real2sim2real-reconstruction-evaluation"
 version = "0.1.0"
 description = "Offline metric geometry and trajectory evaluation"
 requires-python = ">=3.11,<3.13"
+license = {file = "LICENSE"}
+classifiers = ["License :: OSI Approved :: Apache Software License"]
 dependencies = ["real2sim2real==0.1.0", "numpy>=1.26,<3", "scipy>=1.11,<2", "trimesh>=4", "pyarrow>=16"]
 
 [project.scripts]
@@ -21,4 +23,4 @@ where = ["src"]
 namespaces = true
 
 [tool.setuptools]
-license-files = ["LICENSE"]
+license-files = ["LICENSE", "NOTICE", "licenses/*"]

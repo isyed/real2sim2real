@@ -5,6 +5,10 @@ repairing that reconstruction, retargeting it to a robot, and training a
 correction controller in simulation. Dataset-specific experiments and private
 configuration belong in downstream repositories.
 
+Original project contributions are licensed under [Apache License 2.0](LICENSE).
+Bundled third-party components and upstream documentation retain their own
+terms; see [NOTICE](NOTICE) and [component licenses](docs/THIRD_PARTY.md).
+
 | Module | Input | Output |
 | --- | --- | --- |
 | [reconstruction](modules/reconstruction/README.md) | RGB video, segmentation prompts, local pretrained models | Human motion, object mesh and poses, shared metric depth/camera, diagnostics |

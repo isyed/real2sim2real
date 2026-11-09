@@ -16,6 +16,7 @@ def run(request):
         "hands",
         "align-hands",
         "contacts",
+        "score",
         "review",
         "publish",
     ):

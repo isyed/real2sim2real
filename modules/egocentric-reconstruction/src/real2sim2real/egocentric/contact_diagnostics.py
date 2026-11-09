@@ -27,12 +27,22 @@ def support_clearance(vertices, boundary):
 
 
 def surface_contact(
-    mesh, points, *, contact_distance_m=0.01, penetration_tolerance_m=0.003
+    mesh,
+    points,
+    *,
+    contact_distance_m=0.01,
+    penetration_tolerance_m=0.003,
+    proximity=None,
+    intersector=None,
 ):
     """Unsigned distances always; inside/outside only for closed oriented meshes."""
     import trimesh
 
-    _, distances, _ = trimesh.proximity.closest_point(mesh, points)
+    _, distances, _ = (
+        proximity.closest(points)
+        if proximity is not None
+        else trimesh.proximity.closest_point(mesh, points)
+    )
     result = dict(
         minimum_distance_m=float(distances.min()),
         p10_distance_m=float(np.quantile(distances, 0.1)),
@@ -45,13 +55,29 @@ def surface_contact(
         penetration_depth_m=None,
     )
     if result["signed_distance_available"]:
-        inside = mesh.contains(points)
+        inside = (
+            intersector.contains_points(points)
+            if intersector is not None
+            else mesh.contains(points)
+        )
         penetrates = inside & (distances > penetration_tolerance_m)
         result.update(
             penetrating_vertices=int(penetrates.sum()),
             penetration_depth_m=float(distances[inside].max()) if inside.any() else 0.0,
         )
     return result
+
+
+def ray_intersector(mesh, backend="auto"):
+    if backend == "auto":
+        return mesh.ray
+    if backend == "triangle":
+        from trimesh.ray.ray_triangle import RayMeshIntersector
+    elif backend == "embree":
+        from trimesh.ray.ray_pyembree import RayMeshIntersector
+    else:
+        raise ValueError("Ray backend must be auto, triangle or embree")
+    return RayMeshIntersector(mesh)
 
 
 def diagnose(config):
@@ -71,7 +97,11 @@ def diagnose(config):
         root / ("contacts" if hands is not None else "contacts-preview")
     )
     object_mesh = trimesh.load(source.path("mesh/metric.glb"), force="mesh")
+    from .mesh_surface import MeshSurfaceQuery
+
+    proximity = MeshSurfaceQuery(object_mesh)
     options = config.get("contacts", {})
+    intersector = ray_intersector(object_mesh, options.get("ray_backend", "auto"))
     records = []
     for i in range(source.count):
         pose = scene["world_from_object"][i]
@@ -96,6 +126,8 @@ def diagnose(config):
                     object=surface_contact(
                         object_mesh,
                         local,
+                        proximity=proximity,
+                        intersector=intersector,
                         contact_distance_m=options.get("contact_distance_m", 0.01),
                         penetration_tolerance_m=options.get(
                             "penetration_tolerance_m", 0.003
@@ -103,9 +135,7 @@ def diagnose(config):
                     ),
                 )
                 tips = hands["world_joints"][i, h, [4, 8, 12, 16, 20]]
-                distances = trimesh.proximity.closest_point(
-                    object_mesh, transform(tips, np.linalg.inv(pose))
-                )[1]
+                distances = proximity.closest(transform(tips, np.linalg.inv(pose)))[1]
                 record["fingertip_distance_m"] = distances.tolist()
             row["hands"].append(record)
         records.append(row)
@@ -126,6 +156,7 @@ def diagnose(config):
         else [0, 0],
         object_table_max_penetration_m=max(depths) if depths else None,
         object_mesh_watertight=bool(object_mesh.is_watertight),
+        ray_backend=type(intersector).__module__,
         contact_distance_m=options.get("contact_distance_m", 0.01),
         penetration_tolerance_m=options.get("penetration_tolerance_m", 0.003),
         interpretation="proximity candidates and geometry consistency; no physical contact ground truth",

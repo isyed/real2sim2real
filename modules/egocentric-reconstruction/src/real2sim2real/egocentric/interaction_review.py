@@ -29,7 +29,15 @@ def review(config):
         / "diagnostics.json"
     )
     contacts = json.loads(contacts_path.read_text()) if contacts_path.exists() else None
+    metrics_path = root / "quality_summary.json"
+    metrics = json.loads(metrics_path.read_text()) if metrics_path.exists() else None
     hands = np.load(hand_path) if hand_path.exists() else None
+    hand_quality_path = root / "hands_metric/quality.json"
+    hand_quality = (
+        json.loads(hand_quality_path.read_text())
+        if hand_quality_path.exists()
+        else None
+    )
     observations_path = root / "hands2d/landmarks.npz"
     observations = np.load(observations_path) if observations_path.exists() else None
     mesh = trimesh.load(source.path("mesh/metric.glb"), force="mesh")
@@ -83,6 +91,7 @@ def review(config):
                 hands=hand_joints,
                 hand_vertices=hand_vertices,
                 contacts=contacts["records"][i] if contacts else None,
+                fit_quality=hand_quality["records"][i] if hand_quality else None,
             )
         )
     data = dict(
@@ -93,6 +102,8 @@ def review(config):
         support=support,
         has_hands=hands is not None,
         summary=contacts["summary"] if contacts else None,
+        metrics=metrics,
+        fit_limits=hand_quality["limits"] if hand_quality else None,
     )
     write_json(
         out / "summary.json",
@@ -130,7 +141,7 @@ pre{white-space:pre-wrap;background:#192331;padding:16px;border-radius:8px;font-
 const DATA=__DATA__;
 const slider=document.getElementById('frame'), canvas=document.getElementById('scene'), ctx=canvas.getContext('2d');
 slider.max=DATA.frames.length-1;let yaw=-.3,pitch=.7,zoom=850,drag=null,playing=false,timer;
-document.getElementById('status').textContent=DATA.has_hands?'Accepted metric hand estimates are shown; inspect coverage and contact errors below.':'PARTIAL REVIEW: tabletop and object are reconstructed. Articulated metric 3D hands are not yet available.';
+document.getElementById('status').textContent=DATA.has_hands?(DATA.metrics?`Accepted metric frames: left ${DATA.metrics.hands.left.accepted_metric_frames}/${DATA.frames.length}, right ${DATA.metrics.hands.right.accepted_metric_frames}/${DATA.frames.length}. Missing estimates remain invalid.`:'Accepted metric hand estimates are shown; inspect coverage and contact errors below.'):'PARTIAL REVIEW: tabletop and object are reconstructed. Articulated metric 3D hands are not yet available.';
 function projected(p){const x=p[0],y=p[1]-.12,z=p[2]-.10,a=Math.cos(yaw)*x-Math.sin(yaw)*y,b=Math.sin(yaw)*x+Math.cos(yaw)*y;return [507+zoom*a,380-zoom*(Math.cos(pitch)*z-Math.sin(pitch)*b),Math.sin(pitch)*z+Math.cos(pitch)*b];}
 function line(a,b,color,width=2){a=projected(a);b=projected(b);ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();}
 function pose(p,t){return [0,1,2].map(i=>t[i][0]*p[0]+t[i][1]*p[1]+t[i][2]*p[2]+t[i][3]);}
@@ -145,7 +156,7 @@ f.hands.forEach((j,h)=>{if(j)DATA.edges.forEach(e=>line(j[e[0]],j[e[1]],h?'#ffc1
 const camera=projected(f.camera);ctx.fillStyle='#bd97ed';ctx.beginPath();ctx.arc(camera[0],camera[1],6,0,Math.PI*2);ctx.fill();
 document.getElementById('rgb').src='overlays/'+String(+slider.value).padStart(6,'0')+'.jpg';
 document.getElementById('label').textContent='Frame '+f.id+' · '+f.time.toFixed(2)+' s';
-document.getElementById('diagnostic').textContent=JSON.stringify({frame:f.id,units:'metres',metric_hands:f.hands.map(Boolean),diagnostics:f.contacts},null,2);}
+document.getElementById('diagnostic').textContent=JSON.stringify({frame:f.id,units:'metres; reprojection errors in pixels',metric_hands:f.hands.map(Boolean),fit_quality:f.fit_quality,fit_limits:DATA.fit_limits,diagnostics:f.contacts},null,2);}
 slider.oninput=draw;canvas.onpointerdown=e=>{drag=[e.clientX,e.clientY];canvas.setPointerCapture(e.pointerId);};canvas.onpointerup=()=>drag=null;
 canvas.onpointermove=e=>{if(drag){yaw+=(e.clientX-drag[0])*.007;pitch=Math.max(-1.5,Math.min(1.5,pitch+(e.clientY-drag[1])*.007));drag=[e.clientX,e.clientY];draw();}};
 canvas.onwheel=e=>{e.preventDefault();zoom=Math.max(200,Math.min(2500,zoom*Math.exp(-e.deltaY*.001)));draw();};

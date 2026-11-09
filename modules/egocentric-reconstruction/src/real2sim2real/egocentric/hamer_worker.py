@@ -14,6 +14,14 @@ from real2sim2real.artifacts import digest, write_json
 from .interaction_io import Reconstruction, fresh_directory
 
 
+def load_fixed_shape(path):
+    """JSON numbers must match the float32 MANO model's tensor dtype."""
+    betas = np.asarray(json.loads(Path(path).read_text())["betas"], dtype=np.float32)
+    if betas.shape != (2, 10) or not np.isfinite(betas).all():
+        raise ValueError("Expected two finite ten-coefficient hand shapes")
+    return betas
+
+
 def load_model(weights):
     import torch
 
@@ -117,9 +125,7 @@ def run(request, check=False):
         [np.median(betas[accepted[:, h], h], axis=0) for h in range(2)]
     )
     if request.get("fixed_shape_from"):
-        fixed_betas = np.asarray(
-            json.loads(Path(request["fixed_shape_from"]).read_text())["betas"]
-        )
+        fixed_betas = load_fixed_shape(request["fixed_shape_from"])
     for i, h in np.argwhere(accepted):
         with torch.inference_mode():
             output = model.mano(
@@ -161,6 +167,9 @@ def run(request, check=False):
             checkpoint_sha256=digest(checkpoint),
             mano_sha256=digest(mano_asset),
             observations_sha256=digest(root / "hands2d/landmarks.npz"),
+            fixed_shape_sha256=digest(request["fixed_shape_from"])
+            if request.get("fixed_shape_from")
+            else None,
             coordinate_frame="wrist_relative_camera_axes",
             metric_translation_estimated=False,
             hand_order=["left", "right"],

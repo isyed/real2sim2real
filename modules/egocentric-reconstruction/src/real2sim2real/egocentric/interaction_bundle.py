@@ -88,6 +88,8 @@ def publish_scene(config):
             config=config,
         )
     files.update(object_mesh=target, inputs=root / "inputs.json")
+    if (root / "quality_summary.json").exists():
+        files["quality_summary"] = root / "quality_summary.json"
     return publish(
         root,
         "metric-interaction-reconstruction",

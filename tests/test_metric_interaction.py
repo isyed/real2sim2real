@@ -8,6 +8,7 @@ from real2sim2real.egocentric.support import fit_plane, upright_transform, prism
 from real2sim2real.egocentric.contact_diagnostics import (
     support_clearance,
     surface_contact,
+    ray_intersector,
 )
 from real2sim2real.egocentric.metric_hands import (
     fit_hand,
@@ -17,6 +18,9 @@ from real2sim2real.egocentric.metric_hands import (
 )
 from real2sim2real.egocentric.runtime import docker_command
 from real2sim2real.egocentric.interaction_bundle import validate_hands
+from real2sim2real.egocentric.mesh_surface import MeshSurfaceQuery
+from real2sim2real.egocentric.hamer_worker import load_fixed_shape
+from real2sim2real.egocentric.interaction_summary import summarize_hands
 
 
 def test_upright_transform_preserves_metric_scene_and_projection():
@@ -175,3 +179,123 @@ def test_bundle_rejects_fake_missing_hands_and_wrong_world():
     hands["timestamps_s"] = np.array([0.0, 0.051])
     with pytest.raises(ValueError, match="timelines"):
         validate_hands(hands, scene)
+
+
+@pytest.mark.parametrize("shape", ["sphere", "unequal_triangles"])
+def test_accelerated_surface_distances_match_exhaustive_triangle_search(shape):
+    rng = np.random.default_rng(42)
+    if shape == "sphere":
+        mesh = trimesh.creation.icosphere(subdivisions=2, radius=0.1)
+    else:
+        triangles = rng.normal(size=(80, 3, 3))
+        triangles *= np.geomspace(0.0001, 2, 80)[:, None, None]
+        triangles += rng.uniform(-1, 1, (80, 1, 3))
+        mesh = trimesh.Trimesh(
+            triangles.reshape(-1, 3), np.arange(240).reshape(-1, 3), process=False
+        )
+    points = np.concatenate(
+        [rng.normal(0, 0.08, (30, 3)), rng.normal(0, 3, (30, 3)), mesh.vertices[:8]]
+    )
+    expected = trimesh.proximity.closest_point_naive(mesh, points)
+    actual = MeshSurfaceQuery(mesh).closest(points)
+    np.testing.assert_allclose(actual[1], expected[1], atol=1e-10, rtol=0)
+    np.testing.assert_allclose(
+        np.linalg.norm(actual[0] - points, axis=1), actual[1], atol=1e-10, rtol=0
+    )
+
+
+def test_saved_shape_roundtrip_preserves_mano_float32(tmp_path):
+    import json
+
+    betas = np.linspace(-0.2, 0.2, 20, dtype=np.float32).reshape(2, 10)
+    path = tmp_path / "shape.json"
+    path.write_text(json.dumps({"betas": betas.tolist()}))
+    loaded = load_fixed_shape(path)
+    assert loaded.dtype == np.float32
+    np.testing.assert_array_equal(loaded, betas)
+
+
+@pytest.mark.parametrize("betas", [[[0.0] * 10], [[float("nan")] * 10] * 2])
+def test_saved_shape_rejects_invalid_values(tmp_path, betas):
+    import json
+
+    path = tmp_path / "shape.json"
+    path.write_text(json.dumps({"betas": betas}))
+    with pytest.raises(ValueError, match="finite ten-coefficient"):
+        load_fixed_shape(path)
+
+
+def test_summary_keeps_missing_frames_and_exposes_rejected_errors():
+    observed = np.array([[True, True], [True, False], [False, True]])
+    accepted = np.array([[True, False], [False, False], [False, True]])
+    quality, contacts = [], []
+    for i in range(3):
+        quality.append(
+            [
+                dict(
+                    accepted=bool(accepted[i, h]),
+                    reprojection_median_px=(3.0 if accepted[i, h] else 100.0)
+                    if observed[i, h]
+                    else None,
+                    reason="missing_observation" if not observed[i, h] else "image_fit",
+                )
+                for h in range(2)
+            ]
+        )
+        contacts.append(
+            dict(
+                hands=[
+                    dict(
+                        accepted=bool(accepted[i, h]),
+                        object=dict(
+                            contact_candidate=True,
+                            minimum_distance_m=0.005,
+                            penetration_depth_m=None,
+                        ),
+                        table=dict(penetration_depth_m=0.0),
+                    )
+                    for h in range(2)
+                ]
+            )
+        )
+    report = summarize_hands(observed, observed, accepted, quality, contacts)
+    for row in report.values():
+        assert row["total_frames"] == 3
+        assert row["metric_coverage"] == pytest.approx(1 / 3)
+        assert row["missing_2d_frames"] == 1
+        assert row["rejected_metric_frames"] == 1
+        assert (
+            row["fit_metrics"]["reprojection_median_px"]["accepted_only"]["maximum"]
+            == 3
+        )
+        assert (
+            row["fit_metrics"]["reprojection_median_px"]["all_scored_candidates"][
+                "maximum"
+            ]
+            == 100
+        )
+        assert row["object_penetration_m"]["maximum"] is None
+    contacts[0]["hands"][1]["accepted"] = True
+    contacts[2]["hands"][1]["accepted"] = False
+    with pytest.raises(ValueError, match="Contact records"):
+        summarize_hands(observed, observed, accepted, quality, contacts)
+
+
+def test_summary_rejects_hands_without_model_observations():
+    empty = np.zeros((3, 2), bool)
+    with pytest.raises(ValueError, match="upstream observations"):
+        summarize_hands(empty, empty, np.ones((3, 2), bool), [], [])
+
+
+def test_optional_ray_backend_preserves_clear_inside_outside_classification():
+    pytest.importorskip("embreex")
+    pytest.importorskip("rtree")
+    mesh = trimesh.creation.box(extents=[0.2, 0.2, 0.2])
+    points = np.array([[0, 0, 0], [0.09, 0.02, 0.03], [0.11, 0, 0], [0.5, 0.5, 0.5]])
+    for backend in ("triangle", "embree"):
+        np.testing.assert_array_equal(
+            ray_intersector(mesh, backend).contains_points(points),
+            [True, True, False, False],
+        )
+    with pytest.raises(ValueError, match="Ray backend"):
+        ray_intersector(mesh, "unknown")

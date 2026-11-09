@@ -5,7 +5,6 @@ import json
 from importlib.metadata import entry_points
 import os
 from pathlib import Path
-import subprocess
 import sys
 
 from .artifacts import digest, load, write_json

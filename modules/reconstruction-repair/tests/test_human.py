@@ -7,11 +7,11 @@ import numpy as np
 import pytest
 
 from real2sim2real.reconstruction_repair import BundleData, RepairConfig
-from real2sim2real.reconstruction_repair.bundle import bundle_create, bundle_read, file_sha256, json_atomic
+from real2sim2real.reconstruction_repair.bundle import bundle_create, bundle_read, file_sha256
 from real2sim2real.reconstruction_repair.geometry import mesh_silhouette
 from real2sim2real.reconstruction_repair.human_contract import DecodedHuman, REPAIR_CONTROLS, human_parameters
 from real2sim2real.reconstruction_repair.human_runner import human_preflight
-from real2sim2real.reconstruction_repair.human_proposals import human_motion_proposal, human_segments
+from real2sim2real.reconstruction_repair.human_proposals import human_motion_proposal
 from conftest import diagnostic_repair_run as repair_run
 from conftest import box_geometry, metadata, only
 
@@ -141,7 +141,7 @@ def test_human_locked_contact_boundary_and_finger_preservation(tmp_path):
 
 def test_human_stage_resume_and_corruption(tmp_path):
     b, decoder = human_fixture(tmp_path)
-    r = repair_run(b.root, tmp_path/"run", human_config(), human_decoder=decoder)
+    repair_run(b.root, tmp_path/"run", human_config(), human_decoder=decoder)
     cp = tmp_path/"run/human/outliers.npz"; stamp = cp.stat().st_mtime_ns
     repair_run(b.root, tmp_path/"run", human_config(), human_decoder=decoder, resume=True)
     assert cp.stat().st_mtime_ns == stamp

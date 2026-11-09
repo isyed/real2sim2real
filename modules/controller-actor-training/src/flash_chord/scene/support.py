@@ -20,6 +20,14 @@ from flash_chord.scene.collision import ShapeSpan
 
 
 @dataclass(frozen=True)
+class StaticSupportBinding:
+    """World collision geometry with no body, free joint or simulated DOFs."""
+
+    shapes: ShapeSpan
+    body_id: int = -1
+
+
+@dataclass(frozen=True)
 class SupportBinding:
     """Resolved body, free-root coordinates, and shapes owned by one support component."""
 
@@ -85,11 +93,17 @@ def _mesh_geometry(prim, stage):
     return vertices.astype(np.float32), faces.reshape(-1).astype(np.int32)
 
 
-def add_support_surfaces(builder: newton.ModelBuilder, support_usda_path) -> SupportBinding | None:
+def add_support_surfaces(builder: newton.ModelBuilder, support_usda_path, *,
+                         static_world: bool = False) -> SupportBinding | StaticSupportBinding | None:
     """Add the support USDA's prims as kinematic collision shapes on one static body.
 
+    ``static_world=True`` attaches shapes directly to the world, with no free
+    support joint. This suits isolated settling tests that have no reset loop
+    to pin a kinematic support. The default preserves the runtime reset API.
     Returns the exact component topology. An explicitly requested missing/invalid file fails.
     """
+    if type(static_world) is not bool:
+        raise ValueError('static_world must be an explicit boolean')
     path = Path(support_usda_path)
     if not path.is_file():
         raise FileNotFoundError(f"support surface does not exist: {path}")
@@ -144,7 +158,7 @@ def add_support_surfaces(builder: newton.ModelBuilder, support_usda_path) -> Sup
     q_start = builder.joint_coord_count
     dof_start = builder.joint_dof_count
     shape_start = builder.shape_count
-    body = builder.add_body(
+    body = -1 if static_world else builder.add_body(
         xform=wp.transform(wp.vec3(0.0, 0.0, 0.0), wp.quat_identity()),
         is_kinematic=True,
         label="support",
@@ -168,6 +182,11 @@ def add_support_surfaces(builder: newton.ModelBuilder, support_usda_path) -> Sup
         else:  # Cube: USD `size * xformOp:scale` gives the full dimensions
             hx, hy, hz = (0.5 * value for value in dimensions)
             builder.add_shape_box(body, xform=xform, hx=hx, hy=hy, hz=hz, label=name)
+    if static_world:
+        if (builder.body_count != body_start or builder.joint_count != joint_start
+                or builder.joint_coord_count != q_start or builder.joint_dof_count != dof_start):
+            raise RuntimeError('World-static supports must not add bodies or joint coordinates')
+        return StaticSupportBinding(shapes=ShapeSpan(shape_start,builder.shape_count))
     if (
         body != body_start
         or builder.body_count != body_start + 1

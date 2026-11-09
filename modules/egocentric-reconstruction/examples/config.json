@@ -1,0 +1,16 @@
+{
+  "source_root": "/path/to/real2sim2real",
+  "capture": "/data/capture/capture.json",
+  "output": "/data/predictions/experiment-001",
+  "frame_count": 100,
+  "image_scale": 0.5,
+  "calibration": {"fit_frames": [0, 10, 20], "validation_frames": [5, 15, 25]},
+  "images": {"segment": "your-sam2-image:version", "mesh": "your-sam3d-image:version", "track": "your-foundationpose-image:version"},
+  "weights": {"sam2": "/models/sam2", "sam3d": "/models/sam3d", "foundationpose": "/models/foundationpose/nvlabs_pytorch"},
+  "native_python_paths": {"track": ["/opt/FoundationPose"]},
+  "gpu_session": "/data/gpu-session",
+  "timeouts": {"segment": 1800, "mesh": 2400, "track": 3600},
+  "model_options": {"object_id": 1, "mesh_frame": 0, "occluder_ids": [2, 3]},
+  "odometry": {"feature_roi": [0, 0, 1, 1], "exclusion_ids": [1, 2, 3]},
+  "prompts": {"prompts": [{"frame_index": 0, "object_id": 1, "points": [{"x": 200, "y": 200}], "point_labels": [1]}]}
+}

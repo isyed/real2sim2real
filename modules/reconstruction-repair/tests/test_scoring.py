@@ -1,6 +1,5 @@
 import numpy as np
 import pytest
-from scipy.spatial.transform import Rotation
 
 from real2sim2real.reconstruction_repair.cli import main
 from real2sim2real.reconstruction_repair.scoring import geometry_scores, reference_scores, scores_compare

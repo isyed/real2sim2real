@@ -1,0 +1,72 @@
+{
+  "reconstruction": "/data/object-reconstruction",
+  "output": "/data/metric-interaction",
+  "source_root": "/code/real2sim2real",
+  "frame_count": 100,
+  "support": {
+    "fit_frames": [
+      0,
+      20,
+      40,
+      60,
+      80
+    ],
+    "validation_frames": [
+      10,
+      30,
+      50,
+      70,
+      90
+    ],
+    "roi_normalized": [
+      0.2,
+      0.4,
+      0.8,
+      0.95
+    ],
+    "exclude_mask_ids": [
+      1,
+      2,
+      3
+    ],
+    "inlier_threshold_m": 0.008,
+    "max_validation_median_m": 0.01,
+    "minimum_validation_consensus": 0.8,
+    "collision_thickness_m": 0.03
+  },
+  "hand_landmarks": {
+    "model": "/models/hand_landmarker.task",
+    "mask_ids": [
+      2,
+      3
+    ],
+    "detection_confidence": 0.4,
+    "presence_confidence": 0.4,
+    "minimum_mask_overlap": 0.65
+  },
+  "weights": {
+    "hamer": "/models/hamer"
+  },
+  "images": {
+    "hands": "r2s2r-hamer:3a01849"
+  },
+  "gpu_session": "/data/gpu-session",
+  "timeouts": {
+    "hands": 2400
+  },
+  "read_only_inputs": [
+    "/data/object-reconstruction"
+  ],
+  "model_options": {
+    "reconstruction": "/data/object-reconstruction",
+    "frame_count": 100,
+    "hand_crop_factor": 2.0
+  },
+  "metric_hands": {
+    "minimum_scale_frames": 10
+  },
+  "contacts": {
+    "contact_distance_m": 0.01,
+    "penetration_tolerance_m": 0.003
+  }
+}

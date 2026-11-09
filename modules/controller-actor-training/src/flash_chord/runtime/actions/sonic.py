@@ -18,6 +18,8 @@ from flash_chord.assets import ASSETS_DIR
 from flash_chord.embodiments.g1_dex3 import G1_BODY_JOINT_NAMES, G1_DEX3_JOINT_NAMES
 from flash_chord.runtime.delay import TargetDelayBuffer, TargetDelayConfig
 from flash_chord.runtime.actions.hand_closing import HandClosingConfig, HandClosingController
+from flash_chord.runtime.actions.approach_heading import ApproachHeadingConfig, ApproachHeadingController
+from flash_chord.runtime.actions.reference_denoising import ReferenceDenoisingConfig, condition_reference
 
 if TYPE_CHECKING:
     from flash_chord.scene.builder import Scene
@@ -145,8 +147,20 @@ class SonicJointResidualActionConfig:
     hand_closing: HandClosingConfig | None = None
     reference_pull_gain: float = 0.0
     reference_pull_max_rad: float = 0.15
+    reference_pull_joint_names: tuple[str, ...] | None = None
+    approach_heading: ApproachHeadingConfig | None = None
+    reference_denoising: ReferenceDenoisingConfig | None = None
 
     def __post_init__(self) -> None:
+        if self.reference_denoising is not None:
+            if not isinstance(self.reference_denoising, ReferenceDenoisingConfig):
+                raise ValueError("reference_denoising requires an explicit ReferenceDenoisingConfig")
+            if self.approach_heading is not None or self.reference_pull_gain != 0:
+                raise ValueError("Test reference conditioning separately from body guidance")
+        if self.approach_heading is not None and not isinstance(self.approach_heading, ApproachHeadingConfig):
+            raise ValueError("approach_heading must be an explicitly constructed ApproachHeadingConfig")
+        if self.approach_heading is not None and self.reference_pull_gain != 0:
+            raise ValueError("Do not combine early leg anchoring with a second reference pull")
         object.__setattr__(self, "policy_dir", Path(self.policy_dir))
         object.__setattr__(self, "residual_joint_names", tuple(self.residual_joint_names))
         expected = SONIC_POLICY_JOINT_NAMES
@@ -167,6 +181,11 @@ class SonicJointResidualActionConfig:
         if (isinstance(self.reference_pull_max_rad, bool) or not np.isfinite(self.reference_pull_max_rad)
                 or not 0 < self.reference_pull_max_rad <= .3):
             raise ValueError("reference pull bound must be finite and in (0, 0.3] radians")
+        if self.reference_pull_joint_names is not None:
+            names = tuple(self.reference_pull_joint_names)
+            if not names or len(set(names)) != len(names) or any(n not in SONIC_POLICY_JOINT_NAMES for n in names):
+                raise ValueError("Reference pull selection must contain unique known body joints")
+            object.__setattr__(self, "reference_pull_joint_names", names)
 
     def build(self, scene: Scene, device=None) -> SonicJointResidualAction:
         return SonicJointResidualAction.build(scene, config=self, device=device)
@@ -215,7 +234,7 @@ def _quat_to_six_dimensional_xyzw(quaternion: np.ndarray) -> np.ndarray:
     return matrix[..., :2].reshape(quaternion.shape[:-1] + (6,))
 
 
-def build_sonic_encoder_reference(scene: Scene) -> np.ndarray:
+def build_sonic_encoder_reference(scene: Scene, denoising: ReferenceDenoisingConfig | None = None) -> np.ndarray:
     """Precompute the immutable 1762-float tokenizer input for every reference frame."""
     reference = scene.robot_reference
     scalar = scene.layout.scalar_joints
@@ -236,6 +255,9 @@ def build_sonic_encoder_reference(scene: Scene) -> np.ndarray:
     future = np.minimum(frames + offsets[None, :], reference.num_frames - 1)
 
     joint_position = np.asarray(reference.joint_q[:, sonic_q_ids], dtype=np.float32)
+    if denoising is not None:
+        joint_position = condition_reference(joint_position, SONIC_POLICY_JOINT_NAMES,
+                                             fps=reference.fps, config=denoising)
     joint_velocity = np.zeros_like(joint_position)
     joint_velocity[:-1] = (joint_position[1:] - joint_position[:-1]) * np.float32(reference.fps)
     future_position = joint_position[future].reshape(reference.num_frames, -1)
@@ -286,6 +308,7 @@ def pull_reference_body_targets(
     q_ids: wp.array(dtype=wp.int32),
     dof_ids: wp.array(dtype=wp.int32),
     scalar_slots: wp.array(dtype=wp.int32),
+    enabled: wp.array(dtype=wp.int32),
     frames: int, q_per_world: int, dof_per_world: int, processed_dim: int,
     gain: float, max_rad: float,
     joint_target: wp.array(dtype=wp.float32),
@@ -294,6 +317,8 @@ def pull_reference_body_targets(
 ):
     """Opt-in bounded joint-reference correction; no root force or teleport."""
     world, joint = wp.tid()
+    if enabled[joint] == 0:
+        return
     frame = wp.clamp(timestep[world], 0, frames - 1)
     dof = world * dof_per_world + dof_ids[joint]
     current = joint_target[dof]
@@ -652,6 +677,7 @@ class SonicJointResidualAction:
     use_tanh: bool
     reference_pull_gain: float
     reference_pull_max_rad: float
+    reference_pull_enabled: wp.array
     encoder_reference: wp.array
     reference_joint_target: wp.array
     reference_joint_q_offset: wp.array
@@ -674,6 +700,7 @@ class SonicJointResidualAction:
     encoder_session: _OrtBoundSession
     decoder_session: _OrtBoundSession
     hand_controller: HandClosingController | None = None
+    approach_controller: ApproachHeadingController | None = None
 
     @classmethod
     def build(
@@ -802,7 +829,10 @@ class SonicJointResidualAction:
             use_tanh=config.use_tanh,
             reference_pull_gain=config.reference_pull_gain,
             reference_pull_max_rad=config.reference_pull_max_rad,
-            encoder_reference=wp.array(build_sonic_encoder_reference(scene), dtype=wp.float32, device=device),
+            reference_pull_enabled=wp.array(
+                [int(config.reference_pull_joint_names is None or n in config.reference_pull_joint_names)
+                 for n in SONIC_POLICY_JOINT_NAMES], dtype=wp.int32, device=device),
+            encoder_reference=wp.array(build_sonic_encoder_reference(scene, config.reference_denoising), dtype=wp.float32, device=device),
             reference_joint_target=wp.array(scene.robot_reference.joint_target, dtype=wp.float32, device=device),
             reference_joint_q_offset=wp.zeros(
                 world_count * q_per_world,
@@ -838,6 +868,8 @@ class SonicJointResidualAction:
         )
         if config.hand_closing is not None:
             result.hand_controller = HandClosingController(scene, result, config.hand_closing, device)
+        if config.approach_heading is not None:
+            result.approach_controller = ApproachHeadingController(scene, result, config.approach_heading, device)
         return result
 
     @property
@@ -899,6 +931,8 @@ class SonicJointResidualAction:
             ],
             outputs=[self.encoder_input],
         )
+        if self.approach_controller is not None:
+            self.approach_controller.condition(self, timestep, state)
         self.encoder_session.run()
         wp.launch(
             compute_sonic_current_observation,
@@ -975,10 +1009,13 @@ class SonicJointResidualAction:
             wp.launch(pull_reference_body_targets, dim=(self.world_count, SONIC_JOINT_DIM),
                 inputs=[timestep, self.reference_joint_target, self.reference_joint_q_offset,
                     self.sonic_q_ids, self.sonic_dof_ids, self.sonic_scalar_slots,
+                    self.reference_pull_enabled,
                     self.reference_num_frames, self.q_per_world, self.dof_per_world, self.processed_dim,
                     self.reference_pull_gain, self.reference_pull_max_rad],
                 outputs=[self.joint_target, self.processed_target, self.actor_action_history])
 
+        if self.approach_controller is not None:
+            self.approach_controller.process(self, timestep)
         if self.hand_controller is not None:
             self.hand_controller.process(action, timestep, state, self)
 
@@ -1000,6 +1037,8 @@ class SonicJointResidualAction:
             delay.advance_into(self.joint_target, control.joint_target_pos)
 
     def reset(self, reset_mask: wp.array) -> None:
+        if self.approach_controller is not None:
+            self.approach_controller.reset(reset_mask)
         if self.hand_controller is not None:
             self.hand_controller.reset(reset_mask)
         wp.launch(

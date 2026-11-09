@@ -44,7 +44,9 @@ def measure(depth_m,object_mask,human_mask,*,frame_id,config=ForegroundConfig())
 
 def audit(measurements,timestamps_s,*,config=ForegroundConfig()):
     config.validate();rows=[dict(row) for row in measurements];times=np.asarray(timestamps_s,float)
-    if (not rows or [r['frame_id'] for r in rows]!=list(range(len(rows))) or times.shape!=(len(rows),)
+    ids=[r['frame_id'] for r in rows]
+    if (not rows or any(type(i) is not int or i<0 for i in ids)
+        or ids!=list(range(ids[0],ids[0]+len(rows))) or times.shape!=(len(rows),)
         or not np.isfinite(times).all() or np.any(np.diff(times)<=0)):
         raise ValueError('Complete consecutive source frames and increasing timestamps required')
     for r in rows:
@@ -63,20 +65,21 @@ def audit(measurements,timestamps_s,*,config=ForegroundConfig()):
                 limit=config.max_surface_depth_rate_m_s*(times[i]-times[previous])+config.surface_sampling_slack_m
                 row.update(surface_depth_change_m=float(delta),surface_depth_warning_bound_m=float(limit))
                 if delta>limit:
-                    row['temporal_depth_warning']=True;warnings.append(i)
+                    row['temporal_depth_warning']=True;warnings.append(ids[i])
             previous=i
     gaps=[];i=0
     while i<len(rows):
         if rows[i]['observation_available']:i+=1;continue
         start=i
         while i<len(rows) and not rows[i]['observation_available']:i+=1
-        gaps.append(dict(first_frame=start,last_frame=i-1,frames=i-start,
+        gaps.append(dict(first_frame=ids[start],last_frame=ids[i-1],frames=i-start,
             duration_s=float(times[i-1]-times[start]),
             reasons=sorted({reason for row in rows[start:i] for reason in row['reasons']}),
-            last_observed_frame=start-1 if start else None,reacquisition_frame=i if i<len(rows) else None,
+            last_observed_frame=ids[start-1] if start else None,reacquisition_frame=ids[i] if i<len(rows) else None,
             hidden_object_motion_inferred=False))
     return dict(schema='real2sim2real.foreground-visibility-audit/1',config=asdict(config),rows=rows,
-        source_frames=len(rows),unavailable_observation_spans=gaps,temporal_depth_warning_frames=warnings,
+        source_frames=len(rows),source_frame_indices=ids,
+        unavailable_observation_spans=gaps,temporal_depth_warning_frames=warnings,
         full_observation_workflow_ready=not gaps and not warnings,
         observed_frames=sum(row['observation_available'] for row in rows),
         fresh_registration_needed_after_gaps=[gap['reacquisition_frame'] for gap in gaps if gap['reacquisition_frame'] is not None],
@@ -96,7 +99,7 @@ def depth_origin(raw_measurements,aligned_measurements,timestamps_s,*,alignment_
     """
     raw=audit(raw_measurements,timestamps_s,config=config)
     aligned=audit(aligned_measurements,timestamps_s,config=config)
-    if raw['source_frames']!=aligned['source_frames']:
+    if raw['source_frame_indices']!=aligned['source_frame_indices']:
         raise ValueError('Raw and aligned source coverage differs')
     scales=None
     if alignment_scales is not None:

@@ -41,9 +41,17 @@ class TemporalPoseConfig:
     max_step_m: float = .08
     max_rotation_step_deg: float = 30.
     minimum_motion_improvement: float = .20
+    preserve_rotations: bool = False
+    benefit_mode: str = 'temporal'
 
     def validate(self):
+        if not isinstance(self.preserve_rotations, bool):
+            raise ValueError('preserve_rotations must be a boolean')
+        if self.benefit_mode not in ('temporal','observation'):
+            raise ValueError('Benefit mode must be temporal or observation')
         for key,value in asdict(self).items():
+            if key in ('preserve_rotations','benefit_mode'):
+                continue
             if isinstance(value,bool) or not isinstance(value,(int,float,np.number)) or not np.isfinite(value) or value<=0:
                 raise ValueError('Invalid positive bound: '+key)
         for key in ('knot_stride','max_function_calls','contour_samples','mesh_samples','depth_samples','min_depth_points'):
@@ -143,30 +151,71 @@ def measurements(data,poses,config):
     return rows
 
 
-def acceptance(data,before,after,original,candidate,config):
+def assessment_masks(data,config,unobserved_image_ids=(),unobserved_depth_ids=()):
+    """Missing evidence is explicit input, never inferred from a failed fit."""
+    ids=np.asarray(data['frame_ids']);n=len(ids)
+    def declared(values):
+        values=np.asarray(values)
+        if values.ndim!=1:raise ValueError('Unavailable measurements must be a source-frame list')
+        if not len(values):return np.zeros(n,bool)
+        if values.ndim!=1 or values.dtype.kind not in 'iu' or not np.isin(values,ids).all():
+            raise ValueError('Unavailable measurements must name original source frames')
+        return np.isin(ids,values)
+    image=declared(unobserved_image_ids);depth=declared(unobserved_depth_ids)|image
+    if image.any() or depth.any() or config.benefit_mode=='observation':
+        if not (data['locked'][0] and data['locked'][-1]):
+            raise ValueError('Recovery with missing measurements requires locked endpoint anchors')
+    visible=data['object_mask'].astype(bool)&~data['occluder_mask'].astype(bool)
+    visible_count=visible.sum(axis=(1,2))
+    depth_count=(visible&(data['depth_m']>0)).sum(axis=(1,2))
+    if np.any(image&(visible_count>=config.min_depth_points)):
+        raise ValueError('Visible image evidence cannot be declared missing')
+    if np.any(depth&(depth_count>=config.min_depth_points)):
+        raise ValueError('Available depth cannot be silently declared missing')
+    if np.any(image&data['fit'].astype(bool)) or np.any((image|depth)&data['locked'].astype(bool)):
+        raise ValueError('Unavailable observations cannot fit an image or define an anchor')
+    if ((data['fit'].astype(bool)&~image).sum()<3
+            or (~data['fit'].astype(bool)&~image).sum()<2):
+        raise ValueError('Require three observed fit frames and two observed held-out frames')
+    return ~image,~depth
+
+
+def acceptance(data,before,after,original,candidate,config,*,unobserved_image_ids=(),unobserved_depth_ids=()):
+    image_ok,depth_ok=assessment_masks(data,config,unobserved_image_ids,unobserved_depth_ids)
     reasons=[]
-    for a,b in zip(before,after):
-        if b['iou']<config.min_iou or b['precision']<config.min_precision or b['recall']<config.min_recall:reasons.append('image_gate')
-        if a['iou']>=config.min_iou and b['iou']<a['iou']-config.max_frame_iou_drop:reasons.append('previous_good_image_regressed')
-        if b['depth_points']<config.min_depth_points or b['depth_error_m'] is None or b['depth_error_m']>config.max_depth_error_m:reasons.append('depth_gate')
+    for i,(a,b) in enumerate(zip(before,after)):
+        if image_ok[i] and (b['iou']<config.min_iou or b['precision']<config.min_precision or b['recall']<config.min_recall):reasons.append('image_gate')
+        if image_ok[i] and a['iou']>=config.min_iou and b['iou']<a['iou']-config.max_frame_iou_drop:reasons.append('previous_good_image_regressed')
+        if depth_ok[i] and (b['depth_points']<config.min_depth_points or b['depth_error_m'] is None or b['depth_error_m']>config.max_depth_error_m):reasons.append('depth_gate')
         if b['support_penetration_m']>config.max_support_penetration_m:reasons.append('support_gate')
         if b['behind_camera']:reasons.append('camera_gate')
     a=motion(original,data['timestamps_s']);b=motion(candidate,data['timestamps_s'])
     if b['step_max_m']>config.max_step_m or b['rotation_step_max_deg']>config.max_rotation_step_deg:reasons.append('motion_step_gate')
     benefit=(a['step_p95_m']>1e-4 and b['step_p95_m']<=a['step_p95_m']*(1-config.minimum_motion_improvement)
         or a['acceleration_p95_m_s2']>1e-3 and b['acceleration_p95_m_s2']<=a['acceleration_p95_m_s2']*(1-config.minimum_motion_improvement))
-    if not benefit:reasons.append('no_temporal_benefit')
+    held=[i for i,r in enumerate(before) if not r['fit'] and image_ok[i]]
+    held_before=float(np.mean([before[i]['iou'] for i in held]));held_after=float(np.mean([after[i]['iou'] for i in held]))
+    if config.benefit_mode=='temporal':
+        if not benefit:reasons.append('no_temporal_benefit')
+    else:
+        paired=[i for i in range(len(before)) if depth_ok[i] and before[i]['depth_error_m'] is not None and after[i]['depth_error_m'] is not None]
+        depth_gain=float(np.mean([before[i]['depth_error_m']-after[i]['depth_error_m'] for i in paired])) if paired else 0.
+        if not (held_after>=held_before+.05 or (depth_gain>=.02 and held_after>=held_before-config.max_frame_iou_drop)):
+            reasons.append('no_observation_benefit')
     if np.linalg.norm(candidate[:,:3,3]-original[:,:3,3],axis=1).max()>config.maximum_frame_change_m:reasons.append('frame_displacement_bound')
     rotation=np.rad2deg((Rotation.from_matrix(candidate[:,:3,:3])*Rotation.from_matrix(original[:,:3,:3]).inv()).magnitude())
     if rotation.max()>config.rotation_bound_deg+1e-5:reasons.append('frame_rotation_bound')
     if not np.array_equal(candidate[data['locked'].astype(bool)],original[data['locked'].astype(bool)]):reasons.append('locked_anchor_changed')
     return dict(accepted=not reasons,reasons=sorted(set(reasons)),motion_before=a,motion_after=b,
-        heldout_mean_iou_before=float(np.mean([r['iou'] for r in before if not r['fit']])),
-        heldout_mean_iou_after=float(np.mean([r['iou'] for r in after if not r['fit']])))
+        heldout_mean_iou_before=held_before,heldout_mean_iou_after=held_after,
+        unobserved_image_frame_ids=data['frame_ids'][~image_ok].tolist(),
+        unobserved_depth_frame_ids=data['frame_ids'][~depth_ok].tolist(),inferred_frames_verified_by_observation=False)
 
 
-def refine_window(data,config=TemporalPoseConfig()):
-    config.validate();validate(data);started=time.monotonic();original=data['poses_camera'];n=len(original);times=data['timestamps_s']
+def refine_window(data,config=TemporalPoseConfig(),*,unobserved_image_ids=(),unobserved_depth_ids=()):
+    config.validate();validate(data)
+    image_ok,depth_ok=assessment_masks(data,config,unobserved_image_ids,unobserved_depth_ids)
+    started=time.monotonic();original=data['poses_camera'];n=len(original);times=data['timestamps_s']
     locked=data['locked'].astype(bool);knots=np.unique(np.r_[np.arange(0,n,config.knot_stride),n-1,np.flatnonzero(locked)])
     editable=np.flatnonzero(~locked[knots]);base_t=median_filter(original[:,:3,3],size=(5,1),mode='nearest')[knots]
     base_t[locked[knots]]=original[knots[locked[knots]],:3,3];base_r=Rotation.from_matrix(original[knots,:3,:3])
@@ -186,16 +235,21 @@ def refine_window(data,config=TemporalPoseConfig()):
         if len(ids):
             flat=pixels[ids,1]*w+pixels[ids,0];order=np.lexsort((xyz[ids,2],flat));ids=ids[order];flat=flat[order]
             ids=ids[np.r_[True,np.diff(flat)!=0]]
-        if not len(ids):raise ValueError('No visible depth correspondences in fit frame')
-        selected=depth_surface[ids[np.linspace(0,len(ids)-1,config.depth_samples).astype(int)]]
+        if not len(ids):
+            if depth_ok[i]:raise ValueError('No visible depth correspondences in fit frame')
+            selected=depth_surface[np.linspace(0,len(depth_surface)-1,config.depth_samples).astype(int)]
+        else:selected=depth_surface[ids[np.linspace(0,len(ids)-1,config.depth_samples).astype(int)]]
         prepared.append((i,distance_transform_edt(~mask),occ,contour,selected))
+    dimensions = 3 if config.preserve_rotations else 6
     def decode(x):
-        change=np.zeros((len(knots),6));change[editable]=x.reshape(-1,6)
+        change=np.zeros((len(knots),6));change[editable,:dimensions]=x.reshape(-1,dimensions)
         t=base_t+change[:,:3];r=Rotation.from_rotvec(change[:,3:])*base_r
         poses=np.tile(np.eye(4),(n,1,1));poses[:,:3,3]=np.stack([np.interp(times,times[knots],t[:,j]) for j in range(3)],axis=1)
-        poses[:,:3,:3]=Slerp(times[knots],r)(times).as_matrix();poses[locked]=original[locked]
+        poses[:,:3,:3]=(original[:,:3,:3] if config.preserve_rotations
+                           else Slerp(times[knots],r)(times).as_matrix())
+        poses[locked]=original[locked]
         return poses
-    calls=0;best_x=np.zeros(len(editable)*6);best_cost=float('inf');budget_hit=False
+    calls=0;best_x=np.zeros(len(editable)*dimensions);best_cost=float('inf');budget_hit=False
     class Budget(Exception):pass
     def residual(x):
         nonlocal calls,best_x,best_cost
@@ -222,19 +276,26 @@ def refine_window(data,config=TemporalPoseConfig()):
         result.append((np.diff(velocity,axis=0)/((dt[1:]+dt[:-1])*.5)[:,None]/config.acceleration_sigma_m_s2).ravel())
         omega=(Rotation.from_matrix(poses[1:,:3,:3])*Rotation.from_matrix(poses[:-1,:3,:3]).inv()).as_rotvec()/dt[:,None]
         result.append((np.diff(omega,axis=0)/((dt[1:]+dt[:-1])*.5)[:,None]/np.deg2rad(config.angular_acceleration_sigma_deg_s2)).ravel())
-        result.append(x.reshape(-1,6)[:,:3].ravel()/.10)
+        result.append(x.reshape(-1,dimensions)[:,:3].ravel()/.10)
         out=np.concatenate(result);cost=float(np.sum(2*(np.sqrt(1+out*out)-1)))
         if cost<best_cost:best_cost=cost;best_x=x.copy()
         return out
     if len(editable):
-        bounds=np.tile([config.translation_bound_m]*3+[np.deg2rad(config.rotation_bound_deg)]*3,len(editable))
+        component_bounds = ([config.translation_bound_m]*3 if config.preserve_rotations else
+                            [config.translation_bound_m]*3+[np.deg2rad(config.rotation_bound_deg)]*3)
+        bounds=np.tile(component_bounds,len(editable))
         try:least_squares(residual,best_x,bounds=(-bounds,bounds),loss='soft_l1',diff_step=1e-3,max_nfev=config.max_function_calls)
         except Budget:budget_hit=True
     candidate=decode(best_x);before=measurements(data,original,config);after=measurements(data,candidate,config)
-    decision=acceptance(data,before,after,original,candidate,config)
+    decision=acceptance(data,before,after,original,candidate,config,
+        unobserved_image_ids=unobserved_image_ids,unobserved_depth_ids=unobserved_depth_ids)
     report=dict(schema='r2s2r_engines.temporal-object-window-result/1',config=asdict(config),function_calls=calls,budget_hit=budget_hit,
         seconds=time.monotonic()-started,decision=decision,before=before,after=after,human_changed=False,
         full_trajectory_accepted=False,interaction_validated=False,physics_validated=False,approved_for_use=False,
+        rotations_preserved_exactly=bool(np.array_equal(candidate[:,:3,:3],original[:,:3,:3])),
+        unobserved_image_frame_ids=data['frame_ids'][~image_ok].tolist(),
+        unobserved_depth_frame_ids=data['frame_ids'][~depth_ok].tolist(),
+        inferred_frames_verified_by_observation=False,
         limitation='Contour proxy used only for fitting; full-triangle masks and dense depth for window checks. Depth/support are predictions, not truth. Whole-clip and interaction/physics checks remain required.')
     return candidate,report
 

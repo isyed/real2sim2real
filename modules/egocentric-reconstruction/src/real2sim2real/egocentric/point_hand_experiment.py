@@ -127,6 +127,26 @@ def runtime_config(config, phase):
             str(root / "tracking/point_tracks"),
         ]
         weights = {"hamer": config["weights"]["hamer"]}
+    if phase == "sequence":
+        name = "sequence-point-hands"
+        directory = config.get("candidate_directory", "sequence")
+        if (
+            not directory
+            or Path(directory).name != directory
+            or directory
+            in (".", "..", "refined", "tracking", "fit_inputs", "point_inputs")
+        ):
+            raise ValueError("Use a fresh sequence candidate directory name")
+        out = root / directory
+        out.mkdir(parents=True, exist_ok=True)
+        options.update(
+            sequence_parent=str(root / "refined/hands_metric"),
+            anchor_priors=str(
+                Path(config["parent"]) / "baseline/hands_raw/predictions.npz"
+            ),
+            sequence_optimizer=config.get("sequence_optimizer", {}),
+        )
+        read_only.extend([options["sequence_parent"], options["anchor_priors"]])
     return dict(
         config,
         output=str(out),
@@ -140,15 +160,17 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument(
-        "--phase", choices=["prepare", "track", "refine", "evaluate"], required=True
+        "--phase",
+        choices=["prepare", "track", "refine", "sequence", "evaluate"],
+        required=True,
     )
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--cpu-worker", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
     config = json.loads(args.config.read_text())
-    if args.check and args.phase not in ("track", "refine"):
+    if args.check and args.phase not in ("track", "refine", "sequence"):
         parser.error("Checks apply only to model workers")
-    if args.phase in ("track", "refine"):
+    if args.phase in ("track", "refine", "sequence"):
         from .runtime import run_model
 
         settings, phase = runtime_config(config, args.phase)

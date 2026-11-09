@@ -78,3 +78,11 @@ identity and duplicate seed times reject unsupported observations. It also
 checks partial-landmark masking and the separation of inference/evaluation
 mounts. The full point-guided trial requires optional TAPIR/MANO runtimes and
 real-image checks; CPU tests alone do not establish anatomical accuracy.
+
+`tests/test_hand_sequence.py` checks derivatives at nonuniform capture times,
+component/anchor selection across missing observations, detection of finger
+jumps with stationary wrists, protected boundary velocity targets and isolation
+of sequence-worker mounts. It also checks that rejected context proposals are
+not displayed as accepted merely because their baseline frame was accepted.
+Optional MANO batching and fitted-pose export require a licensed-model runtime
+check; synthetic tests do not validate anatomical reconstruction.

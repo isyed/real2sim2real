@@ -47,6 +47,13 @@ def boundary_diagnostics(joints, baseline, supported, frame_ids, times):
     return result
 
 
+def diagnostic_support(candidate, baseline):
+    tested = candidate.get("sequence_selected", candidate["refinement_attempted"])
+    return np.where(
+        tested, candidate["diagnostic_geometry_supported"], baseline["accepted"]
+    )
+
+
 def evaluate(config):
     root, parent = Path(config["output"]), Path(config["parent"])
     source = Reconstruction(
@@ -57,10 +64,14 @@ def evaluate(config):
         if digest(name) != sha:
             raise ValueError("Baseline source changed: " + name)
     baseline = dict(np.load(root / "fit_inputs/baseline.npz"))
-    candidate = dict(np.load(root / "refined/hands_metric/hypotheses.npz"))
+    candidate_dir = root / config.get("candidate_directory", "refined") / "hands_metric"
+    candidate = dict(np.load(candidate_dir / "hypotheses.npz"))
     previous = dict(np.load(parent / "hawor/hands_metric/hypotheses.npz"))
     observations = dict(np.load(root / "tracking/point_tracks/observations.npz"))
-    quality = json.loads((root / "refined/hands_metric/quality.json").read_text())
+    quality = json.loads((candidate_dir / "quality.json").read_text())
+    immutable = baseline["accepted"] & ~candidate.get(
+        "sequence_admitted", np.zeros_like(baseline["accepted"])
+    )
     for name in [
         "camera_vertices",
         "camera_joints",
@@ -69,8 +80,8 @@ def evaluate(config):
         "fits",
     ]:
         if not np.array_equal(
-            candidate[name][baseline["accepted"]],
-            baseline[name][baseline["accepted"]],
+            candidate[name][immutable],
+            baseline[name][immutable],
             equal_nan=True,
         ):
             raise ValueError("An accepted baseline pose was modified")
@@ -101,8 +112,7 @@ def evaluate(config):
         "point_refined": (
             candidate["diagnostic_camera_vertices"],
             candidate["diagnostic_camera_joints"],
-            candidate["diagnostic_geometry_supported"]
-            | (baseline["accepted"] & ~candidate["refinement_attempted"]),
+            diagnostic_support(candidate, baseline),
         ),
         "tracked_rigid_prior": (
             candidate["prior_camera_vertices"],
@@ -138,7 +148,10 @@ def evaluate(config):
                             joint=int(joint),
                             error_px=float(errors[joint]),
                             refinement_attempted=bool(
-                                candidate["refinement_attempted"][i, h]
+                                candidate.get(
+                                    "sequence_selected",
+                                    candidate["refinement_attempted"],
+                                )[i, h]
                             ),
                         )
                     )
@@ -211,6 +224,20 @@ def evaluate(config):
         heldout_automatic_errors=automatic,
         temporal=temporal,
         temporal_coverage_differs=True,
+        sequence_components=quality.get("components", []),
+        sequence_admitted_per_hand=quality.get("sequence_admitted_per_hand"),
+        accepted_baseline_changes_per_hand=quality.get(
+            "accepted_baseline_changes_per_hand", [0, 0]
+        ),
+        proposed_baseline_recovery_boundaries=boundary_diagnostics(
+            candidate.get("proposed_world_joints", candidate["world_joints"]),
+            baseline["accepted"],
+            np.isfinite(
+                candidate.get("proposed_world_joints", candidate["world_joints"])
+            ).all((2, 3)),
+            source.frame_ids,
+            source.times,
+        ),
         baseline_recovery_boundaries=boundaries,
         promotion_requires=[
             "review_baseline_recovery_finger_transitions",
@@ -219,11 +246,14 @@ def evaluate(config):
         ],
         visible_tracked_points_per_frame=(observations["weights"] > 0).sum(-1).tolist(),
         fit_track_agreement_is_not_independent_evaluation=True,
+        detector_check_may_overlap_baseline_initialization=bool(
+            quality.get("sequence_fitting")
+        ),
         independent_3d_ground_truth_available=False,
         baseline_unchanged=True,
         promoted=False,
         control_ready=False,
-        hypothesis_sha256=digest(root / "refined/hands_metric/hypotheses.npz"),
+        hypothesis_sha256=digest(candidate_dir / "hypotheses.npz"),
         annotations_sha256=digest(annotations_file)
         if annotations_file.exists()
         else None,
@@ -303,13 +333,16 @@ def evaluate(config):
             "baseline_unchanged",
             "promoted",
             "control_ready",
+            "sequence_admitted_per_hand",
+            "accepted_baseline_changes_per_hand",
+            "sequence_components",
         )
     }
     (out / "review.html").write_text(
         '<!doctype html><meta charset="utf-8"><title>Point-guided hand refinement</title>'
         "<style>body{font:16px system-ui;margin:25px;background:#17202b;color:#eee}img{width:100%}summary{padding:12px;cursor:pointer}a{color:#8cf}pre{white-space:pre-wrap}</style>"
         "<h1>Point-guided hand refinement</h1><p>Baseline · original HaWoR · point-guided diagnostic. Green circles: retained image tracks. Red mesh: rejected hypothesis. Magenta crosses: evaluation annotations. Images include rejected hypotheses, not a control trajectory.</p>"
-        "<p>Accepted baseline poses remain unchanged in the combined candidate. Held-out-frame diagnostic fits shown here are evaluated separately. Track agreement is fitting evidence; sparse visual labels remain assistant-reviewed unless explicitly human-verified.</p>"
+        "<p>The source baseline remains unchanged. Proposed fits shown here may be rejected as a complete interval; the saved result then retains its parent. Changes to previously accepted poses are counted below. Track agreement is fitting evidence; sparse visual labels remain assistant-reviewed unless explicitly human-verified.</p>"
         "<p>Promotion is withheld. Inspect finger transitions and held-out joint-error tails; geometry support does not establish continuous accurate motion.</p>"
         '<p><a href="comparison.json">Metrics and paired errors</a></p><pre>'
         + html.escape(json.dumps(page_summary, indent=2))

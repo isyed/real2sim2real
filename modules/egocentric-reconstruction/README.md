@@ -457,3 +457,40 @@ can share detector bias. Held-out detector labels remain correlated with the
 seed detector; stereo samples are spatially correlated too. Manual review and
 robot-specific replay remain separate acceptance steps. The experiment always
 reports `promoted: false` and `control_ready: false`.
+
+### Sequence continuity candidates
+
+After pointwise fitting, copy the experiment configuration, set a fresh
+`candidate_directory` and `review_directory`, and add `sequence-point-hands`
+to `images` and `timeouts` (the CPU refinement image can be reused). Then run
+`--phase sequence`, followed by `--phase evaluate`. `--check` checks the CPU
+MANO/contact dependencies. Every sequence candidate starts from the retained
+pointwise `refined/hands_metric` result; candidates cannot be chained silently.
+
+`sequence_optimizer.context_frames: 0` changes recovered frames only, using
+fixed measured neighbors. A positive value also proposes changes to that many
+surrounding frames in a separate candidate. The source baseline is immutable.
+Missing observations and capture-time gaps split components. Shared temporal
+triples join neighboring components so boundary constraints remain consistent.
+
+The CPU optimizer batches MANO poses and minimizes image/depth residuals with
+velocity/acceleration penalties at actual capture times. Joint, rigid rotation
+and translation corrections are bounded relative to the retained poses; shape,
+metric scale, cameras, object motion and tabletop remain fixed. Default bounds
+are 30 degrees, 10 degrees and 15 mm respectively. `anchor_data_weight` can
+increase fitting evidence at surrounding baseline frames. A positive
+`boundary_velocity_weight` constrains previously observed baseline/baseline
+edges, never the recovered/baseline jumps being repaired.
+
+An interval is admitted atomically only after geometry, contact and motion
+checks. Validation depth and evaluation labels never enter the objective.
+Detector-based checks can still be correlated with the baseline used for
+initialization/anchors; they must not be presented as independent ground truth.
+Rejected interval hypotheses remain in `diagnostic_*` / `proposed_world_*` arrays;
+the primary arrays retain their parent. Reviews distinguish those hypotheses
+from the admitted result. Complete MANO poses are exported and checked against
+retained meshes; old pointwise deltas are renamed `parent_local_delta_rad`.
+
+Sequence admission establishes relative consistency improvement, not readiness
+for control. Inspect absolute finger motion at joins, conflicting observations
+and held-out image checks before retargeting or physical replay.

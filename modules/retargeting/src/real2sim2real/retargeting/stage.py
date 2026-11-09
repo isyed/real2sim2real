@@ -1,6 +1,5 @@
 """Convert a reconstructed human/object sequence into a robot reference."""
 
-import json
 import os
 from pathlib import Path
 import shutil
@@ -94,6 +93,8 @@ def run(request):
         "--device",
         options.get("device", "cpu"),
     ]
+    if options.get("inertia_geometry"):
+        args.extend(["--inertia-geometry", options["inertia_geometry"]])
     write_json(out / "command.json", args)
     subprocess.run(args, check=True)
     references = list((out / "motion").rglob("*.parquet"))

@@ -65,7 +65,42 @@ def copy_tree(source,target,*,hardlink):
             shutil.copy2(path,destination)
 
 
-def package(reference,assets,output,*,hardlink=False):
+def copy_collision_cache(source,target,*,hardlink=False):
+    """Pin explicitly supplied content-keyed CoACD results without recomputation.
+
+    Cache names remain the runtime's geometry/parameter keys. The caller owns
+    their provenance; array validation and artifact hashes make reuse auditable.
+    """
+    import re
+    import numpy as np
+    source=Path(source)
+    if not source.is_dir() or source.is_symlink():raise ValueError('Expected a real collision-cache directory')
+    names=[]
+    for path in sorted(source.glob('*.npz')):
+        if not re.fullmatch(r'[0-9a-f]{16}\.npz',path.name):continue
+        if path.is_symlink():raise ValueError('Collision caches cannot contain symlinks')
+        with np.load(path,allow_pickle=False) as data:
+            n=np.asarray(data['n'])
+            if n.shape!=() or not np.issubdtype(n.dtype,np.integer) or int(n)<1:
+                raise ValueError('Invalid collision-cache hull count')
+            count=int(n)
+            if set(data.files)!={'n',*[f'{key}{i}' for i in range(count) for key in ('v','f')]}:
+                raise ValueError('Unexpected collision-cache members')
+            for i in range(count):
+                vertices,faces=np.asarray(data[f'v{i}']),np.asarray(data[f'f{i}'])
+                if (vertices.ndim!=2 or vertices.shape[1]!=3 or len(vertices)<3 or not np.isfinite(vertices).all()
+                        or faces.ndim!=2 or faces.shape[1]!=3 or not len(faces)
+                        or not np.issubdtype(faces.dtype,np.integer) or faces.min()<0 or faces.max()>=len(vertices)):
+                    raise ValueError('Invalid collision-cache geometry')
+        target.mkdir(parents=True,exist_ok=True)
+        if hardlink:os.link(path,target/path.name)
+        else:shutil.copy2(path,target/path.name)
+        names.append(path.name)
+    if not names:raise ValueError('No complete content-keyed collision caches found')
+    return names
+
+
+def package(reference,assets,output,*,hardlink=False,collision_cache=None):
     reference,assets,output=map(lambda x:Path(x).resolve(),[reference,assets,output])
     record=load(reference,kinds={'robot-reference'})
     if record['metadata'].get('robot')!='g1':
@@ -96,6 +131,7 @@ def package(reference,assets,output,*,hardlink=False):
             path=(urdf.parent/mesh.attrib['filename']).resolve()
             if not path.is_relative_to(output) or not path.is_file():
                 raise ValueError('URDF mesh is missing or outside the portable bundle: '+str(path))
+    cached=copy_collision_cache(collision_cache,output/'assets/.cache/convex',hardlink=hardlink) if collision_cache is not None else []
     native_reference='reference/'+record['files']['reference']['path']
     playback_reference=native_reference
     if not config['task']['source_frame_playback']:
@@ -110,7 +146,8 @@ def package(reference,assets,output,*,hardlink=False):
         reference_artifact_sha256=digest(reference/'artifact.json'),
         source_fps=record['metadata'].get('fps'),
         actor_present=False,training_steps=0,correction='deterministic_zeros',
-        object_assistance_scale=0.,physical_deployment_approved=False)
+        object_assistance_scale=0.,physical_deployment_approved=False,
+        collision_cache_files=cached)
     manifest['config']['task']['parquet']=manifest['reference']
     write_json(output/'manifest.json',manifest)
     files={'manifest':output/'manifest.json'}
@@ -148,5 +185,6 @@ if __name__=='__main__':
     for name in ['reference','assets','output']:
         parser.add_argument('--'+name,type=Path,required=True)
     parser.add_argument('--hardlink',action='store_true',help='Same-filesystem bundles; no symlinks')
+    parser.add_argument('--collision-cache',type=Path,help='Optional provenance-checked CoACD cache directory to pin in the bundle')
     args=parser.parse_args()
-    print(package(args.reference,args.assets,args.output,hardlink=args.hardlink))
+    print(package(args.reference,args.assets,args.output,hardlink=args.hardlink,collision_cache=args.collision_cache))

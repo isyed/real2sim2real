@@ -56,6 +56,11 @@ def run(request, phase, *, check_backend=False):
     quality_limits = QualityLimits(**options.get("quality_limits", {}))
     quality_limits.validate()
     prompts = option_path(request, "prompts")
+    from .mask_acceptance import enforce
+    enforce(request, phase, check_backend=check_backend)
+    if not check_backend and phase in ('metric_mesh', 'object_motion'):
+        from .mask_features import enforce as enforce_features
+        enforce_features(request)
     weights = option_path(request, "weights")
     sam2_weights = option_path(request, "sam2_weights")
     sam3d_weights = option_path(request, "sam3d_weights")
@@ -171,6 +176,9 @@ def run(request, phase, *, check_backend=False):
             frame_count=json.loads((output/"timeline.json").read_text())["frames"],
             source_video_sha256=request["input_sha256"],prompts=prompts,
             frame_ids=options.get("mask_review_frames"))
+        if options.get('mask_feature_checks') is not None:
+            from .mask_features import check as check_features
+            check_features(output,options['mask_feature_checks'],source_video_sha256=request['input_sha256'])
         return
 
     if phase == "depth":
@@ -266,19 +274,37 @@ def run(request, phase, *, check_backend=False):
 
     if phase == "metric_inputs":
         import h5py
+        from .mesh_frame import extract_rgb, mask_path, select_mesh_frame
 
         camera = "front_stereo_camera_left"
+        frame_count = json.loads((output / "timeline.json").read_text())["frames"]
+        mesh_frame = select_mesh_frame(options.get("mesh_frame_index", 0), frame_count)
         metadata = json.loads((export / "wild_export.json").read_text())
         K = np.asarray(metadata["intrinsics"])
         with h5py.File(depth / "aligned.h5") as d:
+            frames = d[f"aligned/{camera}"]
+            if len(frames) != frame_count:
+                raise ValueError("Aligned depth differs from the source timeline")
             z = (
                 np.asarray(
-                    Image.open(io.BytesIO(d[f"aligned/{camera}"][0].tobytes())),
+                    Image.open(io.BytesIO(frames[mesh_frame].tobytes())),
                     dtype=np.float32,
                 )
                 / 1000
             )
-        mask = output / "masks/1/000000.png"
+        mask = mask_path(output, mesh_frame)
+        if not mask.is_file():
+            raise FileNotFoundError(mask)
+        rgb = output / ("first_rgb.png" if mesh_frame == 0 else "mesh_input_rgb.png")
+        if mesh_frame:
+            size = extract_rgb(local, mesh_frame, rgb)
+        else:
+            with Image.open(rgb) as image:
+                size = image.size
+        with Image.open(mask) as mask_image:
+            mask_size = mask_image.size
+        if size != (z.shape[1], z.shape[0]) or mask_size != size:
+            raise ValueError("Selected RGB, mask and depth have different native grids")
         xyz = pointmap(z, K)
         check = check_pointmap(xyz, K, np.asarray(Image.open(mask)) != 0)
         np.save(output / "pointmap.npy", xyz)
@@ -291,13 +317,37 @@ def run(request, phase, *, check_backend=False):
             height=z.shape[0],
         )
         write_json(output / "camera.json", camera_record)
-        write_json(output / "metric_input_check.json", check)
+        write_json(output / "metric_input_check.json", dict(
+            **check, mesh_frame_index=mesh_frame, source_video_sha256=request["input_sha256"],
+            rgb_sha256=digest(rgb), mask_sha256=digest(mask),
+            pointmap_sha256=digest(output / "pointmap.npy"),
+            camera_sha256=digest(output / "camera.json"),
+            aligned_depth_sha256=digest(depth / "aligned.h5")))
         return
 
     if phase == "metric_mesh":
+        from .mesh_frame import mask_path, select_mesh_frame
+
         mesh_dir = output / "mesh"
         if not check_backend:
             mesh_dir.mkdir()
+        if not check_backend:
+            frame_count = json.loads((output / "timeline.json").read_text())["frames"]
+            mesh_frame = select_mesh_frame(options.get("mesh_frame_index", 0), frame_count)
+            check = json.loads((output / "metric_input_check.json").read_text())
+            if check.get("mesh_frame_index") != mesh_frame:
+                raise ValueError("Metric inputs were generated for a different mesh frame")
+        else:
+            mesh_frame = select_mesh_frame(options.get("mesh_frame_index", 0), 2**31)
+        rgb = output / ("first_rgb.png" if mesh_frame == 0 else "mesh_input_rgb.png")
+        mask = mask_path(output, mesh_frame)
+        if not check_backend:
+            for path, key in ((rgb, "rgb_sha256"), (mask, "mask_sha256"),
+                              (output / "pointmap.npy", "pointmap_sha256"),
+                              (output / "camera.json", "camera_sha256"),
+                              (depth / "aligned.h5", "aligned_depth_sha256")):
+                if digest(path) != check.get(key):
+                    raise ValueError("Selected mesh input changed: " + str(path))
         # Separate process avoids keeping SAM3D and tracking models resident together.
         step(
             "metric_mesh",
@@ -305,7 +355,7 @@ def run(request, phase, *, check_backend=False):
                 "-m",
                 "r2s2r_engines.sam3d.lib.image_to_mesh",
                 "--image_path",
-                output / "first_rgb.png",
+                rgb,
                 "--mask_path",
                 mask,
                 "--mesh_path",
@@ -490,8 +540,9 @@ if __name__ == "__main__":
         help="Check the full model CLI imports with CUDA hidden, without inference",
     )
     args = parser.parse_args()
-    run(
-        json.loads(args.request.read_text()),
-        args.phase,
-        check_backend=args.check_backend,
-    )
+    from .mask_acceptance import MaskReviewRequired
+    try:
+        run(json.loads(args.request.read_text()),args.phase,check_backend=args.check_backend)
+    except MaskReviewRequired as error:
+        print('MASK REVIEW REQUIRED: '+str(error),file=sys.stderr)
+        raise SystemExit(78)

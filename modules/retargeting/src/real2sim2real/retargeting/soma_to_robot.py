@@ -69,10 +69,10 @@ def _convert_glb_to_obj(glb_path: Path, dst_dir: Path) -> Path:
     return obj_path
 
 
-def _build_object_urdf(mesh_path: str, urdf_path: Path) -> str:
+def _build_object_urdf(mesh_path: str, urdf_path: Path, *, inertia_geometry: str = 'mesh') -> str:
     """Preserve the link/mesh frame and derive inertials at nominal 1 kg mass."""
     from .object_inertia import write_urdf
-    return write_urdf(mesh_path, urdf_path, mass_kg=1.)
+    return write_urdf(mesh_path, urdf_path, mass_kg=1., inertia_geometry=inertia_geometry)
 
 
 def _compute_mesh_radius(mesh_path: str) -> float:
@@ -121,6 +121,10 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--robot-config-root", type=Path, required=True)
     parser.add_argument("--device", default="cpu")
+    parser.add_argument(
+        "--inertia-geometry", choices=("mesh", "convex_hull_if_open"), default="mesh",
+        help="Use an explicitly recorded convex inertial proxy for an open object mesh; retain the original visual/collision mesh.",
+    )
     parser.add_argument("--visualize", action="store_true", help="Enable visualization")
     parser.add_argument("--save", action="store_true", help="Save retargeted data")
     parser.add_argument(
@@ -570,7 +574,8 @@ def main() -> None:
                 continue
             shutil.copy2(src, dst)
         urdf_dst = mesh_dst_dir / "textured_mesh.urdf"
-        _build_object_urdf(mesh_path="textured_mesh.obj", urdf_path=urdf_dst)
+        _build_object_urdf(mesh_path="textured_mesh.obj", urdf_path=urdf_dst,
+                           inertia_geometry=args.inertia_geometry)
 
         copied_mesh_abs = (mesh_dst_dir / "textured_mesh.obj").resolve()
         try:

@@ -30,8 +30,14 @@ class ConvexHull:
 
 
 def default_cache_dir() -> Path:
-    """On-disk cache location (override with ``FLASH_CHORD_CACHE_DIR``)."""
-    return Path(os.environ.get("FLASH_CHORD_CACHE_DIR", str(ASSETS_DIR / ".cache"))) / "convex"
+    """Resolve the active policy's assets at use time, with explicit cache override.
+
+    Portable policy loaders can set R2S2R_ASSETS after importing this module.
+    Using only the import-time ASSETS_DIR would miss the verified policy cache
+    and unnecessarily regenerate collision hulls in an unrelated directory.
+    """
+    assets = Path(os.environ.get("R2S2R_ASSETS", str(ASSETS_DIR)))
+    return Path(os.environ.get("FLASH_CHORD_CACHE_DIR", str(assets / ".cache"))) / "convex"
 
 
 def _cache_key(vertices: np.ndarray, faces: np.ndarray, params: dict) -> str:

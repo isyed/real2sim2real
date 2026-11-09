@@ -5,7 +5,6 @@ optimizer and replay start fresh unless matching resume files are explicit.
 """
 from copy import deepcopy
 from pathlib import Path
-import json
 
 
 def configuration(policy, output, *, environment_steps, worlds=256,

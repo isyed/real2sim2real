@@ -353,6 +353,7 @@ def invert_mhr_to_soma(
         rotations.append(result["rotations"].detach().cpu())
         translations.append(result["root_translation"].detach().cpu())
         errors.append(result["per_vertex_error"].detach().cpu())
+        print(f"SOMA conversion: {stop}/{count} frames", flush=True)
     rotations, translations = torch.cat(rotations), torch.cat(translations)
     error = torch.cat(errors).numpy()
     if not np.isfinite(error).all():

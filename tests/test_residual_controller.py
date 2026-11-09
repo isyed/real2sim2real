@@ -12,6 +12,7 @@ def portable(monkeypatch,tmp_path):
 
 
 def test_training_preserves_controller_but_restores_learning_and_assistance(portable):
+    pytest.importorskip("newton", reason="Instantiates optional simulator configuration")
     path,base=portable;c=residual.configuration(path,path/'train',environment_steps=10000000)
     checks=residual.validate(c)
     assert c['action']==base['action'] and c['task']==base['task']
@@ -60,3 +61,16 @@ def test_invalid_custom_assistance_thresholds_rejected(portable,thresholds):
 def test_invalid_or_partial_resume_fails_closed(portable,kwargs):
     path,_=portable
     with pytest.raises(ValueError):residual.configuration(path,path/'train',**kwargs)
+
+
+def test_explicit_nonhand_profile_has_zero_grasp_weight_in_all_runtime_stages(portable):
+    pytest.importorskip("newton", reason="Instantiates optional simulator configuration")
+    from real2sim2real.controller_actor_training.reward_alignment import without_hand_grasp_reward
+    path,_=portable
+    original=residual.configuration(path,path/'train',environment_steps=5000000)
+    changed=without_hand_grasp_reward(original,expected_effectors=['left_foot'])
+    checks=residual.validate(changed)
+    assert all(stage['force_closure']==0 for stage in checks['stage_weights'])
+    assert changed['action']==original['action']
+    assert changed['task']==original['task']
+    assert changed['objective']['palm_position_weight']==original['objective']['palm_position_weight']

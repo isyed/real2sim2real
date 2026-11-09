@@ -1,4 +1,3 @@
-import numpy as np
 from real2sim2real.reconstruction_repair.tracking_plan import plan,assess_replacement
 
 

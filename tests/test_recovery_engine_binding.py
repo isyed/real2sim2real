@@ -1,5 +1,4 @@
 from types import SimpleNamespace
-from pathlib import Path
 import sys
 import pytest
 from real2sim2real.reconstruction import tracking_recovery,backend

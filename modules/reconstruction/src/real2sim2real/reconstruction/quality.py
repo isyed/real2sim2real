@@ -89,11 +89,16 @@ def quality_report(
         flags.append("rotation_discontinuities")
     if tracker_reliable is None:
         reliable_count = None
+        reliability_conflicts = []
     else:
         reliable = np.asarray(tracker_reliable).reshape(-1)
         if reliable.shape != (n,) or not np.isin(reliable, [0, 1]).all():
             raise ValueError("Invalid tracker reliability timeline")
         reliable_count = int(reliable.sum())
+        reliability_conflicts = np.flatnonzero(reliable.astype(bool) & finite
+                                               & (score < limits.min_image_iou)).tolist()
+        if reliability_conflicts:
+            flags.append('tracker_reliability_conflicts_with_image')
     return dict(
         schema="real2sim2real.reconstruction-quality/1",
         frames=n,
@@ -101,10 +106,12 @@ def quality_report(
         flags=flags,
         limits=asdict(limits),
         tracker_reliable_frames=reliable_count,
+        tracker_reliability_scope='Producer-reported flag; not independent image, depth or physical validation',
         image_agreement=dict(
             mean_iou=float(score[finite].mean()) if finite.any() else None,
             missing_frames=missing.tolist(),
             low_iou_frames=low.tolist(),
+            producer_reliable_but_low_iou_frames=reliability_conflicts,
             scope="producer-reported full-image mask IoU",
         ),
         continuity=dict(

@@ -13,10 +13,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-import newton
-import warp as wp
-
-
 @dataclass
 class SimConfig:
     """Physics timing + MuJoCo-Warp (``SolverMuJoCo``) settings."""
@@ -36,6 +32,11 @@ class SimConfig:
     ls_iterations: int = 50
     use_mujoco_contacts: bool = True  # True: MuJoCo native contacts (geom solref/solimp apply, needed for
     # grasping). False: Newton's Warp collision pipeline, which ignores the MuJoCo geom contact params.
+    enable_multiccd: bool = False  # Explicit opt-in: multiple contacts for flat mesh pairs.
+
+    def __post_init__(self) -> None:
+        if type(self.enable_multiccd) is not bool:
+            raise ValueError('enable_multiccd must be an explicit boolean')
 
     @property
     def frame_dt(self) -> float:
@@ -55,6 +56,8 @@ class SimConfig:
 
 def build_solver(model, cfg: SimConfig):
     """Construct the MuJoCo-Warp solver (Newton ``SolverMuJoCo``) for ``model`` from ``cfg``."""
+    import newton
+
     return newton.solvers.SolverMuJoCo(
         model,
         solver=cfg.solver,
@@ -66,12 +69,16 @@ def build_solver(model, cfg: SimConfig):
         iterations=cfg.iterations,
         ls_iterations=cfg.ls_iterations,
         use_mujoco_contacts=cfg.use_mujoco_contacts,
+        enable_multiccd=cfg.enable_multiccd,
     )
 
 
 def build_force_contacts(model, solver, cfg: SimConfig, device=None):
     """Allocate the force-capable contact buffer required by one solver configuration."""
     if cfg.use_mujoco_contacts:
+        import newton
+        import warp as wp
+
         contacts = newton.Contacts(
             rigid_contact_max=solver.get_max_contact_count(),
             soft_contact_max=0,

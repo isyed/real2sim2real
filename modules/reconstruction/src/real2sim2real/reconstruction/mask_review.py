@@ -5,8 +5,36 @@ review deliberately records semantics as unverified; area alone is no approval.
 """
 from pathlib import Path
 import json
+import hashlib
 import numpy as np
 from real2sim2real.artifacts import digest,write_json
+
+
+def mask_set_digest(masks_root,frame_count):
+    """Bind every mask in the exact source timeline, including unsampled frames."""
+    root=Path(masks_root);catalog=[]
+    if type(frame_count) is not int or frame_count<1:raise ValueError('Expected positive source frame count')
+    for identity in (0,1):
+        files=sorted((root/str(identity)).glob('*.png'))
+        if [p.name for p in files]!=[f'{i:06d}.png' for i in range(frame_count)]:raise ValueError('Masks do not cover the complete source timeline')
+        catalog.extend([str(p.relative_to(root)),digest(p)] for p in files)
+    return hashlib.sha256(json.dumps(catalog,separators=(',',':')).encode()).hexdigest()
+
+
+def object_visibility_warnings(counts,*,shrink_ratio=.5):
+    """Review hints only: real occlusion and foreshortening can shrink a valid mask."""
+    values=np.asarray(counts)
+    if values.ndim!=1 or not len(values) or not np.isfinite(values).all() or (values<0).any() or not np.equal(values,np.floor(values)).all():raise ValueError('Expected nonnegative integer foreground counts')
+    if not np.isfinite(shrink_ratio) or not 0<shrink_ratio<1:raise ValueError('Invalid shrink ratio')
+    nonzero=np.flatnonzero(values>0);first=int(values[nonzero[0]]) if len(nonzero) else 0
+    missing=np.flatnonzero(values==0).tolist();small=np.flatnonzero((values>0)&(values<first*shrink_ratio)).tolist()
+    codes=[]
+    if missing:codes.append('object_mask_missing')
+    if small:codes.append('object_mask_shrinks')
+    if not len(nonzero):codes.append('object_mask_empty_clip')
+    return dict(warning_codes=codes,missing_object_frames=missing,small_object_frames=small,
+        first_visible_foreground_pixels=first,shrink_ratio=shrink_ratio,semantic_identity_verified=False,
+        limitations=['Size changes can be correct during occlusion, motion or view changes; these are review hints, not automatic subject verification.'])
 
 
 def audit_mask_timelines(masks_root,frame_count):
@@ -30,7 +58,8 @@ def audit_mask_timelines(masks_root,frame_count):
     return dict(foreground_counts=counts,native_mask_shape=list(grid),
         required_human_foreground_pixels=20,sparse_human_frames=sparse,
         model_prompt_inputs_valid=not sparse,
-        source='Existing SAM 3D Body raw prompt-mask minimum; not a semantic quality threshold')
+        source='Existing SAM 3D Body raw prompt-mask minimum; not a semantic quality threshold',
+        mask_set_sha256=mask_set_digest(root,frame_count),object_visibility=object_visibility_warnings(counts['object']))
 
 
 def sample_overlay(rgb,masks,roles):

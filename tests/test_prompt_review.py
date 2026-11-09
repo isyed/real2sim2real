@@ -42,3 +42,22 @@ def test_frame_outside_timeline_is_rejected(tmp_path):
     with pytest.raises(ValueError):
         run(tmp_path, dict(frame_index=3, object_id=0,
             box=dict(x0=0, y0=0, x1=50, y1=70)))
+
+
+def test_every_annotated_frame_has_its_own_rgb_preview(tmp_path):
+ from PIL import Image
+ from real2sim2real.reconstruction.prompt_review import review_prompt_frames
+ for i in (0,2):Image.new('RGB',(32,24),(0,i*30,0)).save(tmp_path/f'{i}.png')
+ prompts=tmp_path/'prompts.json';prompts.write_text(json.dumps(dict(prompts=[dict(frame_index=i,object_id=0,box=dict(x0=2+i,y0=3,x1=14+i,y1=20)) for i in (0,2)])))
+ result=review_prompt_frames({0:tmp_path/'0.png',2:tmp_path/'2.png'},prompts,tmp_path/'review',frame_count=3,source_video_sha256='a'*64)
+ assert result['all_prompt_frames_previewed'] and not result['semantics_verified']
+ assert result['prompt_frames']==[0,2]
+ assert (tmp_path/'review/frame_000002/frame_000002_prompts.png').exists()
+ assert result['frames'][0]['rgb_sha256']!=result['frames'][1]['rgb_sha256']
+
+
+def test_multi_frame_review_rejects_a_missing_later_source_image(tmp_path):
+ from real2sim2real.reconstruction.prompt_review import review_prompt_frames
+ prompts=tmp_path/'prompts.json';prompts.write_text(json.dumps(dict(prompts=[dict(frame_index=2,object_id=0,box=dict(x0=2,y0=3,x1=14,y1=20))])))
+ with pytest.raises(ValueError,match='every prompt frame'):
+  review_prompt_frames({},prompts,tmp_path/'review',frame_count=3,source_video_sha256='a'*64)

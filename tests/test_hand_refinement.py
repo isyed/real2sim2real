@@ -129,8 +129,9 @@ def test_audit_uses_original_frame_ids_and_does_not_join_separate_gaps():
 
 
 @pytest.mark.parametrize("timeout", [False, True])
+@pytest.mark.parametrize("phase", ["refine-hands", "temporal-hands"])
 def test_cpu_refinement_has_no_gpu_and_cleans_its_container(
-    tmp_path, monkeypatch, timeout
+    tmp_path, monkeypatch, timeout, phase
 ):
     root = tmp_path / "source"
     root.mkdir()
@@ -147,14 +148,14 @@ def test_cpu_refinement_has_no_gpu_and_cleans_its_container(
     config = dict(
         source_root=str(root),
         weights={"hamer": str(tmp_path / "model")},
-        images={"refine-hands": "local-test-image"},
-        timeouts={"refine-hands": 60},
+        images={phase: "local-test-image"},
+        timeouts={phase: 60},
     )
     if timeout:
         with pytest.raises(subprocess.TimeoutExpired):
-            run_model(config, out, "refine-hands")
+            run_model(config, out, phase)
     else:
-        run_model(config, out, "refine-hands")
+        run_model(config, out, phase)
     command = calls[0]
     assert "--gpus" not in command and "CUDA_VISIBLE_DEVICES=" in command
     assert "NVIDIA_VISIBLE_DEVICES=void" in command and "runc" in command

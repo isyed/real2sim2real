@@ -283,7 +283,7 @@ def main():
     parser.add_argument("--request", required=True)
     parser.add_argument(
         "--phase",
-        choices=["segment", "mesh", "track", "hands", "refine-hands"],
+        choices=["segment", "mesh", "track", "hands", "refine-hands", "temporal-hands"],
         required=True,
     )
     parser.add_argument("--check", action="store_true")
@@ -291,6 +291,7 @@ def main():
     request = json.loads(Path(args.request).read_text())
     from .hamer_worker import run as hands
     from .hand_refinement import run as refine_hands
+    from .temporal_hand_worker import run as temporal_hands
 
     {
         "segment": segmentation,
@@ -298,6 +299,7 @@ def main():
         "track": tracking,
         "hands": hands,
         "refine-hands": refine_hands,
+        "temporal-hands": temporal_hands,
     }[args.phase](request, args.check)
 
 

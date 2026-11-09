@@ -111,6 +111,7 @@ def run_model(config, output, phase, *, check=False):
         "track": "object_motion.npz",
         "hands": "hands_raw/predictions.npz",
         "refine-hands": "hands_metric/hands.npz",
+        "temporal-hands": "hands_metric/hands.npz",
     }[phase]
     if not check and (out / result).exists():
         raise FileExistsError(
@@ -122,7 +123,7 @@ def run_model(config, output, phase, *, check=False):
         output=str(out), weights=config["weights"], **config.get("model_options", {})
     )
     write_json(attempt / "request.json", request)
-    cpu_only = phase == "refine-hands"
+    cpu_only = phase in ("refine-hands", "temporal-hands")
     cmd, name = docker_command(
         config,
         out,

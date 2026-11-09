@@ -30,3 +30,48 @@ stage creates its output directory and refuses existing retargeting results.
 paired mesh and trajectory without scaling or changing their world surface.
 OBJ export omits vertex colors/textures for predictable collision import while
 preserving geometry; this does not simplify the simulation mesh.
+
+`retargeting.segmented_support.component_hull` builds one explicitly masked,
+seeded depth component at a time. It rejects disconnected background and
+enforces caller-supplied depth, height and metric-span bounds. Package separate
+support parts separately; a single hull over a broad rectangular scene selection
+can fill floor/background space and gaps below a table.
+
+For a planar support, `planar_component_hull` fits a robust top with a declared
+normal/tilt prior. Closed-slab thickness comes from observed lower-side points;
+without sufficient side evidence it fails rather than adding arbitrary padding.
+This is a collision approximation of predicted depth. Validate image agreement,
+initial object placement and robot clearance, then evaluate physics before
+claiming task improvement. Numerical routines require no private dataset or
+neighbouring checkout.
+
+Support extraction now defaults to `static_geometry(..., mode="surface")`.
+It fits an above-floor horizontal surface from the caller's RGB selection and
+predicted depth, excludes human/object pixels, follows a seeded connected plane,
+and measures thickness from adjacent observed side points. It rejects a flat
+surface without thickness evidence rather than adding padding. The automatic
+result recovers the observed surface only; it does not invent legs or a base.
+Use `segmented_support` for separately selected visible structural parts and
+`surface_support.validate_components` before policy packaging. Keep reviewed
+scene-specific masks/seeds in the downstream project. The historical filled
+whole-region hull is available only through explicit `mode="legacy_convex"`;
+it can join unrelated background points and must not be silently reused.
+
+Before training a hand-closing controller, use
+`retargeting.reference_contact.audit(vertices, faces, object_poses, hand_points)`
+to check whether the reconstructed hands can approach the represented surface.
+Pass object-to-world rigid poses `[T,4,4]`, world-space hand samples `[T,H,P,3]`,
+explicit side names and a threshold in metres. The function performs exact
+triangle-distance tests near the threshold; sparse mesh vertices alone cannot
+establish lack of surface proximity. It reports per-hand frame IDs and distance
+bounds without changing geometry, motion or labels. No proximity can indicate
+missing handles or other thin grasp features, human/object misalignment, or a
+task without hand contact. Inspect source evidence before changing labels or
+thresholds. Geometric proximity does not establish physical contact or readiness
+for actor training. A bounded search fails explicitly if its budget is exceeded.
+
+The same audit accepts foot or other task-specific samples through explicit
+`sides` labels such as `("left_foot", "right_foot")`. Returned `effectors` are
+independent of the legacy `hands` field. Inspect the demonstrated interaction
+first: a successful foot push does not require hand-contact phases, and missing
+hand proximity alone is not a reason to reject its reference.

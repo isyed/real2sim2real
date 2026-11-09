@@ -76,3 +76,23 @@ the source reference and external controller/robot assets for inference.
 Resume training through the trainer's explicit checkpoint/replay options;
 pipeline `--resume` skips completed stages and does not restart a partial
 training stage automatically.
+
+Initial RGB registration probes emit a frame-zero seed only after independent
+image, predicted-depth, camera and support checks pass; the report records all
+inspected candidates and unchanged limits. Seed provenance pins the report hash.
+A rejected probe is not a partial reconstruction to promote. Complete reference,
+retargeting, physics and competition acceptance remain separate stages.
+
+Comparison-video partial prefixes require explicit `allow_partial=True`. Their
+original frame IDs must be consecutive from zero and their timestamps match the
+source FPS. Full human surfaces retain the source timeline; uncovered candidate
+panels show source RGB with an unavailable-pose notice, with no stale geometry.
+Coverage counts and the opt-in are retained in the video receipt. This option
+supports honest review of failures; it does not authorize incomplete submissions.
+
+
+`reconstruction.prompt_review.review_prompt_frames` requires a source RGB image
+for every annotated source-frame index, valid native-pixel bounds and a pinned
+source-video hash. Per-frame previews contain only that frame's prompts; the
+combined report hashes each RGB/preview/report and never asserts semantic identity.
+`review_first_frame` remains the compatible frame-zero entry point.

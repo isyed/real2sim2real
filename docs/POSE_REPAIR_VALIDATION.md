@@ -38,4 +38,3 @@ that one frame, and applies normal step checks from frame one onward. A later
 window must provide its actual adjacent previous pose and source ID. Do not
 invent a negative-frame predecessor to validate a new initial resting pose.
 The focused boundary/provenance suite covers both cases.
-

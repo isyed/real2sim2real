@@ -31,5 +31,3 @@ def test_invalid_baseline_fails():
 def test_bounded_process_timeout():
  import subprocess
  with pytest.raises(subprocess.TimeoutExpired):run([sys.executable,'-c','import time;time.sleep(5)'],timeout=.03)
-
-

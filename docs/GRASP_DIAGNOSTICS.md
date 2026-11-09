@@ -61,4 +61,3 @@ phase; a gap in the reference phase ends that interval even if physical contact
 continues. `longest_physical_contact_s` and `physical_contact_intervals` measure
 the actual uninterrupted contact timeline regardless of phase. Use both: phase
 fragmentation must not be mistaken for a physical loss of grasp.
-

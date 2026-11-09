@@ -208,4 +208,3 @@ def import_poses(bundle, edited_poses, output):
         human_coordinate_frame=receipt["metadata"]["human_coordinate_frame"],
         physical_validation=False, source_validation=False, selected=False))
     return output
-

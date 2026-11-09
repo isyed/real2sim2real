@@ -1,0 +1,19 @@
+{
+  "source_root": "/workspace/real2sim2real",
+  "reconstruction": "/work/object-reconstruction",
+  "output": "/work/interaction-refined",
+  "hand_landmarks": {"mask_ids": [2, 3]},
+  "hand_refinement": {
+    "parent": "/work/interaction-baseline",
+    "optimizer": {
+      "max_joint_correction_deg": 30.0,
+      "max_rigid_correction_deg": 15.0,
+      "max_translation_correction_m": 0.03,
+      "correspondence_iterations": 5
+    }
+  },
+  "weights": {"hamer": "/models/hamer"},
+  "images": {"refine-hands": "r2s2r-hamer:3a01849"},
+  "timeouts": {"refine-hands": 2400},
+  "contacts": {"ray_backend": "auto"}
+}

@@ -11,9 +11,15 @@ dependencies = ["real2sim2real==0.1.0", "numpy>=1.26,<3", "scipy>=1.11,<2", "ope
 
 [project.scripts]
 r2s2r-ego = "real2sim2real.egocentric.cli:main"
+r2s2r-interaction = "real2sim2real.egocentric.interaction:main"
+
+[project.optional-dependencies]
+hands2d = ["mediapipe==0.10.32"]
+contact = ["rtree>=1.3,<2"]
 
 [project.entry-points."real2sim2real.stages"]
 egocentric-reconstruction = "real2sim2real.egocentric:descriptor"
+metric-interaction = "real2sim2real.egocentric:interaction_descriptor"
 
 [tool.setuptools.packages.find]
 where = ["src"]

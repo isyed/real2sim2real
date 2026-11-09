@@ -49,3 +49,13 @@ owned container itself. A separate privileged `temporary_gpu_clock.py` helper
 enforces the bounded lease and restores clocks. Source, model stores and one
 prediction directory are explicit mounts. Do not mount a project root containing
 ground truth as the prediction directory. CPU-only import checks precede GPU runs.
+
+The optional `metric-interaction` stage consumes the object artifact and its
+observations. It adds a finite tabletop collider, a fixed upright transform,
+stereo-aligned articulated hands, and contact diagnostics. The table-level
+assumption supplies up; camera, object and accepted hand coordinates use the
+same fixed world. Hand validity is per frame and per side, with NaN for missing
+estimates. A partial observation cannot become a complete hand trajectory.
+The `metric-interaction-reconstruction` artifact remains distinct from full-body
+motion and is not certified for control. See the module README for phase order,
+model-asset prerequisites, contracts and diagnostic limitations.

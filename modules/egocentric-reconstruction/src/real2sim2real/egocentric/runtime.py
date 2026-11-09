@@ -82,6 +82,7 @@ def docker_command(config, output, phase, *, check=False, request_path=None):
         (root, True),
         (out, False),
         *[(Path(v).resolve(), True) for v in weights.values()],
+        *[(Path(v).resolve(), True) for v in config.get("read_only_inputs", [])],
     ]:
         cmd += ["-v", str(path) + ":" + str(path) + (":ro" if ro else "")]
     cmd += [
@@ -106,6 +107,7 @@ def run_model(config, output, phase, *, check=False):
         "segment": "masks",
         "mesh": "mesh/metric.glb",
         "track": "object_motion.npz",
+        "hands": "hands_raw/predictions.npz",
     }[phase]
     if not check and (out / result).exists():
         raise FileExistsError(

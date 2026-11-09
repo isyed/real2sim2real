@@ -40,6 +40,28 @@ def execute(config, phase):
         from .hand_landmarks import detect
 
         return detect(config)
+    if phase == "audit-hands":
+        from .hand_audit import audit
+
+        return audit(config["hand_refinement"]["parent"], root / "hand_audit.json")
+    if phase == "refine-hands":
+        from .runtime import run_model
+
+        config = dict(config)
+        config["model_options"] = dict(
+            reconstruction=str(Path(config["reconstruction"]).resolve()),
+            frame_count=config.get("frame_count"),
+            hand_refinement=dict(
+                config["hand_refinement"],
+                parent=str(Path(config["hand_refinement"]["parent"]).resolve()),
+            ),
+            hand_landmarks=config["hand_landmarks"],
+        )
+        config["read_only_inputs"] = [
+            str(Path(config["reconstruction"]).resolve()),
+            str(Path(config["hand_refinement"]["parent"]).resolve()),
+        ]
+        return run_model(config, config["output"], "refine-hands")
     if phase in ("hands", "hands-check"):
         from .runtime import run_model
 
@@ -72,6 +94,10 @@ def execute(config, phase):
         from .interaction_summary import summarize
 
         return summarize(config)
+    if phase == "compare-hands":
+        from .hand_comparison import compare
+
+        return compare(config["hand_refinement"]["parent"], root)
     if phase == "review":
         from .interaction_review import review
 
@@ -94,8 +120,11 @@ def main():
             "hands",
             "hands-check",
             "align-hands",
+            "audit-hands",
+            "refine-hands",
             "contacts",
             "score",
+            "compare-hands",
             "review",
             "publish",
         ],

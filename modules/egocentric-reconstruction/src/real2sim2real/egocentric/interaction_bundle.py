@@ -90,6 +90,14 @@ def publish_scene(config):
     files.update(object_mesh=target, inputs=root / "inputs.json")
     if (root / "quality_summary.json").exists():
         files["quality_summary"] = root / "quality_summary.json"
+    for role, name in (
+        ("hand_comparison", "hand_comparison.json"),
+        ("hand_audit", "hand_audit.json"),
+        ("baseline_hand_quality", "baseline_hand_quality.json"),
+        ("hand_refinement_attempts", "hands_metric/refinement_attempts.json"),
+    ):
+        if (root / name).exists():
+            files[role] = root / name
     return publish(
         root,
         "metric-interaction-reconstruction",

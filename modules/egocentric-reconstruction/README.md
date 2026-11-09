@@ -214,3 +214,48 @@ accelerator. Select `contacts.ray_backend` as `auto` (default), `triangle` or
 `embree` request fails if its dependency is unavailable. The geometric distance
 query and contact thresholds are unchanged. See the
 [Trimesh ray backend documentation](https://trimesh.org/trimesh.ray.ray_pyembree.html).
+
+### Refining rejected hand intervals on CPU
+
+Use [the refinement example](examples/hand-refinement.json) with a verified
+`metric-interaction-reconstruction` parent and a new output directory. The parent
+and candidate must have exactly the same frame IDs and timestamps. Inspect the
+short prefix before extending the same optimizer settings to a longer parent.
+
+Run these phases sequentially with `r2s2r-interaction --config CONFIG --phase PHASE`:
+`audit-hands`, `refine-hands`, `contacts`, `score`, `compare-hands`, `review`,
+`publish`. The audit locates rejected/missing intervals and per-joint image
+disagreement. Refinement uses the existing local HaMeR container to load only the
+licensed MANO model, with networking and GPU access disabled. It has a finite
+CPU deadline and removes its owned container on completion or timeout. It does
+not reload the image encoder or require a GPU clock lease.
+
+The optimizer fits local joint rotations and a small rigid correction using 2D
+landmarks and the fit half of stereo surface points. Defaults bound each local
+joint correction to 30 degrees, the camera-space rotation correction to 15
+degrees, and translation to 3 cm. Shape coefficients and metric scale stay
+fixed. The model must reproduce the retained raw vertices/joint convention before
+optimization. Missing detections stay missing, and accepted parent geometry is
+copied exactly. Optional `hand_refinement.frame_ids` limits the attempted frames.
+
+Admission preserves the parent's image, held-out depth and wrist-speed limits.
+It additionally requires at least 10% improvement in median or p90 image error,
+no image metric worsening by more than 0.5 px, no held-out median depth regression
+over 1 mm, and no held-out p90 regression over 3 mm. New proposals with object or
+table penetration over 3 mm are rejected; signed object penetration is available
+only for a closed, consistently wound mesh. Contacts are checked after fitting;
+they do not pull fingers onto the object. Temporal admission examines newly
+introduced transitions and never replaces an accepted parent anchor.
+
+`hand_comparison.json` reports paired residuals for recovered frames, remaining
+gaps, new temporal edges and contact consistency. These image errors are **fit
+residuals against the input detector**, not an independent hand accuracy score.
+Held-out depth is spatially disjoint but still comes from the same stereo capture.
+Occluded fingers and erroneous 2D landmarks remain limitations, and the artifact
+stays `control_ready=false`.
+
+Refinement preserves source hashes, failed proposals and the baseline quality
+report. `hands.npz` adds `articulation_delta_rad` and `refinement_accepted`.
+For admitted refinements, `fits` contains the updated rigid transform; interpreting
+it with the raw model also requires the saved local articulation delta. Downstream
+consumers should use the explicit accepted camera/world vertices and joints.

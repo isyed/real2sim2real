@@ -5,6 +5,7 @@ are used only to retain image-space predictions, not as calibrated metric pose.
 """
 
 import inspect
+import hashlib
 import json
 from pathlib import Path
 
@@ -77,9 +78,20 @@ def run(request, check=False):
     if check:
         print("HaMeR checkpoint and MANO loaded on CPU", flush=True)
         return
-    source = Reconstruction(request["reconstruction"], request.get("frame_count"))
+    source = Reconstruction(
+        request["reconstruction"],
+        request.get("frame_count"),
+        start=request.get("frame_start", 0),
+    )
     root = Path(request["output"])
-    observations = np.load(root / "hands2d/landmarks.npz")
+    observation_path = Path(request.get("hand_tracks", root / "hands2d/landmarks.npz"))
+    if request.get("hand_tracks"):
+        from .hand_tracks import load_tracks
+
+        observations = load_tracks(observation_path, source)
+        observations = dict(observations, accepted=observations["crop_valid"])
+    else:
+        observations = np.load(observation_path)
     if not np.array_equal(observations["frame_ids"], source.frame_ids):
         raise ValueError("Hand observations do not match reconstruction frames")
     out = fresh_directory(root / "hands_raw")
@@ -91,6 +103,7 @@ def run(request, check=False):
     predicted_uv = np.full((n, 2, 21, 2), np.nan, np.float32)
     model_joints = np.full((n, 2, 21, 3), np.nan, np.float32)
     model_vertices = np.full((n, 2, 778, 3), np.nan, np.float32)
+    crop_hashes = np.full((n, 2), "", dtype="U64")
     accepted = observations["accepted"].copy()
     torch.manual_seed(0)
     for i in range(n):
@@ -107,6 +120,10 @@ def run(request, check=False):
         for batch in torch.utils.data.DataLoader(
             dataset, batch_size=2, shuffle=False, num_workers=0
         ):
+            for j, h in enumerate(ids):
+                crop_hashes[i, h] = hashlib.sha256(
+                    batch["img"][j].numpy().tobytes()
+                ).hexdigest()
             batch = {k: v.cuda() if torch.is_tensor(v) else v for k, v in batch.items()}
             with torch.inference_mode():
                 prediction = model(batch)
@@ -159,6 +176,8 @@ def run(request, check=False):
         faces=np.stack([faces_right[:, ::-1], faces_right]),
         frame_ids=source.frame_ids,
         timestamps_s=source.times,
+        crop_sha256=crop_hashes,
+        pose_infilled=np.zeros_like(accepted),
     )
     write_json(
         out / "shape.json", dict(betas=fixed_betas.tolist(), shared_over_sequence=True)
@@ -170,7 +189,11 @@ def run(request, check=False):
             upstream_commit="3a01849f4148352e9260b69bf28b65d1671a4905",
             checkpoint_sha256=digest(checkpoint),
             mano_sha256=digest(mano_asset),
-            observations_sha256=digest(root / "hands2d/landmarks.npz"),
+            observations_sha256=digest(observation_path),
+            observation_gate="crop_valid"
+            if request.get("hand_tracks")
+            else "mediapipe_accepted",
+            raw_accepted_means="image_inference_available_not_metric_validated",
             fixed_shape_sha256=digest(request["fixed_shape_from"])
             if request.get("fixed_shape_from")
             else None,

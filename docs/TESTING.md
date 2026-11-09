@@ -63,3 +63,11 @@ sample boundaries, transaction rejection, geodesic backtracking, rotated image
 coordinates, augmentation consensus and the separation of 2D candidates from
 metric/control coverage. Visibility tests change every held-out depth pixel to
 ensure those pixels cannot affect fitting weights.
+
+`tests/test_video_hand_observations.py` checks crop assignment independent of
+MediaPipe, physical hand identity, crop provenance, nonzero frame-window origins,
+left-hand principal-point reflection, temporal padding boundaries, independence
+of fitting pixels from held-out depth, evaluation image hashes, calibrated
+secondary-view projection and exclusion of visual annotations from worker mounts.
+These CPU tests do not establish checkpoint quality; the optional HaWoR runtime
+requires its own bounded image experiment.

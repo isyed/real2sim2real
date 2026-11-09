@@ -87,6 +87,7 @@ def tracking(request, check=False):
         DepthImage,
         Mask,
         Image as RGBImage,
+        Transform3d,
     )
     from Utils import nvdiffrast_render, mycpp
 
@@ -97,6 +98,11 @@ def tracking(request, check=False):
     import torch
     import cv2
     from scipy.spatial.transform import Rotation
+    from .tracking import refine_with_retries, refinement_schedule
+
+    iterations = request.get("tracking_iterations", 5)
+    retry_iterations = request.get("retry_iterations", [])
+    refinement_schedule(iterations, retry_iterations)
 
     if check:
         return
@@ -135,82 +141,102 @@ def tracking(request, check=False):
             )
             > 0
         )
-        if i == 0:
-            pose = tracker.register(
-                RGBImage(rgb), DepthImage(depth), Mask(mask), camera, iteration=5
-            ).to_matrix()
-        else:
-            pose = tracker.track_one(
-                RGBImage(rgb), DepthImage(depth), camera, iteration=5
-            ).to_matrix()
-        raw[i] = pose
-        est = tracker._est
-        centred = torch.as_tensor(
-            pose, device="cuda", dtype=torch.float32
-        ) @ torch.linalg.inv(est.get_tf_to_centered_mesh())
-        _, rendered_depth, _ = nvdiffrast_render(
-            K=k,
-            H=rgb.shape[0],
-            W=rgb.shape[1],
-            ob_in_cams=centred[None],
-            glctx=tracker._glctx,
-            mesh_tensors=est.mesh_tensors,
-        )
-        rd = rendered_depth[0].detach().cpu().numpy()
-        rendered = rd > 0
         ignored = np.zeros_like(mask)
         for hand_id in request.get("occluder_ids", []):
             path = out / "masks" / str(hand_id) / f"{i:06d}.png"
             if path.exists():
                 ignored |= np.asarray(Image.open(path)) > 0
         visible = ~ignored
-        intersection = rendered & mask & visible
-        union = (rendered | mask) & visible
-        iou = float(intersection.sum() / max(union.sum(), 1))
-        measured = intersection & (depth > 0)
-        depth_error = (
-            float(np.median(np.abs(rd[measured] - depth[measured])))
-            if measured.any()
-            else None
-        )
-        rejected = []
-        if iou < limits["min_iou"]:
-            rejected.append("silhouette")
-        if (
-            measured.sum() < limits["min_depth_pixels"]
-            or depth_error is None
-            or depth_error > limits["max_depth_error_m"]
-        ):
-            rejected.append("depth")
-        speed = angular_speed = None
-        if i:
-            dt = timeline["timestamps_s"][i] - timeline["timestamps_s"][i - 1]
-            a = world_from_camera[i - 1] @ poses[i - 1]
-            b = world_from_camera[i] @ pose
-            speed = float(np.linalg.norm(b[:3, 3] - a[:3, 3]) / dt)
-            angular_speed = float(
-                np.rad2deg(Rotation.from_matrix(a[:3, :3].T @ b[:3, :3]).magnitude())
-                / dt
+        rendered = None
+
+        def assess(pose):
+            nonlocal rendered
+            est = tracker._est
+            centred = torch.as_tensor(
+                pose, device="cuda", dtype=torch.float32
+            ) @ torch.linalg.inv(est.get_tf_to_centered_mesh())
+            _, rendered_depth, _ = nvdiffrast_render(
+                K=k,
+                H=rgb.shape[0],
+                W=rgb.shape[1],
+                ob_in_cams=centred[None],
+                glctx=tracker._glctx,
+                mesh_tensors=est.mesh_tensors,
             )
+            rd = rendered_depth[0].detach().cpu().numpy()
+            rendered = rd > 0
+            intersection = rendered & mask & visible
+            union = (rendered | mask) & visible
+            iou = float(intersection.sum() / max(union.sum(), 1))
+            measured = intersection & (depth > 0)
+            depth_error = (
+                float(np.median(np.abs(rd[measured] - depth[measured])))
+                if measured.any()
+                else None
+            )
+            rejected = []
+            if iou < limits["min_iou"]:
+                rejected.append("silhouette")
             if (
-                speed > limits["max_speed_m_s"]
-                or angular_speed > limits["max_angular_speed_deg_s"]
+                measured.sum() < limits["min_depth_pixels"]
+                or depth_error is None
+                or depth_error > limits["max_depth_error_m"]
             ):
-                rejected.append("motion")
-        passed = not rejected
+                rejected.append("depth")
+            speed = angular_speed = None
+            if i:
+                dt = timeline["timestamps_s"][i] - timeline["timestamps_s"][i - 1]
+                a = world_from_camera[i - 1] @ poses[i - 1]
+                b = world_from_camera[i] @ pose
+                speed = float(np.linalg.norm(b[:3, 3] - a[:3, 3]) / dt)
+                angular_speed = float(
+                    np.rad2deg(
+                        Rotation.from_matrix(a[:3, :3].T @ b[:3, :3]).magnitude()
+                    )
+                    / dt
+                )
+                if (
+                    speed > limits["max_speed_m_s"]
+                    or angular_speed > limits["max_angular_speed_deg_s"]
+                ):
+                    rejected.append("motion")
+            return dict(
+                frame=i,
+                accepted=not rejected,
+                iou=iou,
+                depth_error_m=depth_error,
+                depth_pixels=int(measured.sum()),
+                speed_m_s=speed,
+                angular_speed_deg_s=angular_speed,
+                rejected_for=rejected,
+            )
+
+        if i == 0:
+            pose = tracker.register(
+                RGBImage(rgb), DepthImage(depth), Mask(mask), camera, iteration=5
+            ).to_matrix()
+            record = assess(pose)
+            attempts = [dict(iterations=5, pose=pose.tolist(), quality=record.copy())]
+        else:
+            pose, record, attempts = refine_with_retries(
+                poses[i - 1],
+                lambda steps: tracker.track_one(
+                    RGBImage(rgb), DepthImage(depth), camera, iteration=steps
+                ).to_matrix(),
+                assess,
+                lambda seed: tracker.reset_to_pose(Transform3d.from_matrix(seed)),
+                primary=iterations,
+                retries=retry_iterations,
+            )
+        raw[i] = np.asarray(attempts[0]["pose"])
+        passed = record["accepted"]
+        iou = record["iou"]
+        rejected = record["rejected_for"]
         if passed:
             poses[i] = pose
             accepted[i] = True
-        record = dict(
-            frame=i,
-            accepted=passed,
-            iou=iou,
-            depth_error_m=depth_error,
-            depth_pixels=int(measured.sum()),
-            speed_m_s=speed,
-            angular_speed_deg_s=angular_speed,
-            rejected_for=rejected,
-        )
+        record["attempts"] = attempts
+        record["recovered"] = passed and len(attempts) > 1
         records.append(record)
         preview = rgb.copy()
         preview[rendered] = (
@@ -241,6 +267,7 @@ def tracking(request, check=False):
                 total_frames=count,
                 records=records,
                 limits=limits,
+                refinement_schedule=[iterations, *retry_iterations],
                 ground_truth_used=False,
                 complete=bool(accepted.all()),
             ),

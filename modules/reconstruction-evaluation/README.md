@@ -42,3 +42,6 @@ The report contains exportable SVG/PNG error plots and an HTML frame slider for
 rendered object overlays. Keep the prediction directory alongside the report;
 overlay links are relative. Use `--comparison /data/scores/fixed-camera` to plot
 the diagnostic camera ablation as a second trace.
+Set `--label` and `--comparison-label` to identify other tracking ablations.
+Plots retain the full declared time axis when a failed reconstruction has missing
+predictions, rather than shortening the displayed episode to its accepted prefix.

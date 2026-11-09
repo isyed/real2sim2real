@@ -9,7 +9,15 @@ from pathlib import Path
 import numpy as np
 
 
-def create_report(run, scores, output, *, comparison=None):
+def create_report(
+    run,
+    scores,
+    output,
+    *,
+    comparison=None,
+    label="Reconstruction",
+    comparison_label="Comparison",
+):
     import matplotlib
 
     matplotlib.use("Agg")
@@ -24,11 +32,9 @@ def create_report(run, scores, output, *, comparison=None):
     figure, axes = plt.subplots(
         3, 1, figsize=(10, 8), sharex=True, constrained_layout=True
     )
-    inputs = [("Estimated camera", errors)]
+    inputs = [(label, errors)]
     if comparison:
-        inputs.append(
-            ("Fixed-camera diagnostic", np.load(Path(comparison) / "errors.npz"))
-        )
+        inputs.append((comparison_label, np.load(Path(comparison) / "errors.npz")))
     for label, arrays in inputs:
         times = arrays["timestamps_s"][arrays["frame_mask"]]
         axes[0].plot(times, arrays["position_error_m"] * 100, label=label)
@@ -41,6 +47,7 @@ def create_report(run, scores, output, *, comparison=None):
         axis.grid(alpha=0.25)
     axes[0].legend()
     axes[-1].set_xlabel("Capture time (seconds)")
+    axes[-1].set_xlim(errors["timestamps_s"][0], errors["timestamps_s"][-1])
     figure.suptitle("Reconstruction versus reference — one initial rigid alignment")
     figure.savefig(output / "errors.svg")
     figure.savefig(output / "errors.png", dpi=150)
@@ -103,8 +110,19 @@ def main():
     parser.add_argument(
         "--comparison", help="Optional score directory for a diagnostic ablation"
     )
+    parser.add_argument("--label", default="Reconstruction")
+    parser.add_argument("--comparison-label", default="Comparison")
     args = parser.parse_args()
-    print(create_report(args.run, args.scores, args.output, comparison=args.comparison))
+    print(
+        create_report(
+            args.run,
+            args.scores,
+            args.output,
+            comparison=args.comparison,
+            label=args.label,
+            comparison_label=args.comparison_label,
+        )
+    )
 
 
 if __name__ == "__main__":

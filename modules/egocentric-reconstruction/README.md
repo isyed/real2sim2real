@@ -71,6 +71,22 @@ directory for another hypothesis. To extend a validated prefix, set
 and segmenting the extension. It copies the mesh only if capture, image grid,
 conditioning RGB/depth/mask and conditioning frame match, and records their hashes.
 
+Tracking defaults to five refinement iterations with no retries. Set
+`model_options.tracking_iterations` and `model_options.retry_iterations` for a
+bounded refinement experiment, for example `5` and `[1, 2]`. Every retry starts
+from the last accepted pose and passes the same silhouette, depth and world-motion
+gates. A failed candidate never seeds a retry or the next frame. All candidates
+are retained in `tracking_quality.json`; `raw_camera_from_object` preserves the
+first proposal and `camera_from_object` contains only accepted results. Complete
+coverage does not establish geometric accuracy: reference scoring and image
+review remain necessary, especially for thin or weakly textured objects.
+
+`real2sim2real.egocentric.reuse.fork_tracking_inputs(source, destination)` copies
+only observations, camera motion and the fixed mesh into an empty hypothesis
+directory, with hashes. It excludes predicted object poses and copies real files
+instead of sharing writable files with the parent. Use it to compare tracking
+settings without regenerating meshes or changing the original experiment.
+
 Run the clock helper from a terminal with permission to manage the GPU:
 
 ```bash

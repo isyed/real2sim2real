@@ -80,12 +80,8 @@ def _resolve_foundationpose_debug_dir(out_file: str | Path, debug_dir: str | Pat
 def load_export_object_mesh(export_seq: str | Path) -> trimesh.Trimesh:
     path = resolve_object_mesh_path(export_seq)
     mesh = concatenate_object_mesh_parts(load_object_mesh_parts(path))
-    try:
-        mesh.visual = mesh.visual.to_color()
-    except Exception:
-        colors = np.tile(np.array([[180, 180, 180, 255]], dtype=np.uint8), (len(mesh.vertices), 1))
-        mesh.visual = trimesh.visual.color.ColorVisuals(vertex_colors=colors)
-    return mesh
+    from real2sim2real.reconstruction.mesh_appearance import foundationpose_visual
+    return foundationpose_visual(mesh)
 
 
 def _centered_symmetry_tfs(mesh: trimesh.Trimesh, symmetry_tfs: np.ndarray) -> np.ndarray:

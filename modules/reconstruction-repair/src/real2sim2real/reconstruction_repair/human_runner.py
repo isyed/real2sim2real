@@ -9,7 +9,7 @@ import numpy as np
 
 from .bundle import arrays_atomic, arrays_read, asset_path, file_sha256, json_atomic, _rigid_rotations
 from .human_contract import human_parameters, human_select, human_with_pose
-from .human_proposals import human_motion_proposal, human_segments
+from .human_proposals import human_motion_proposal
 from .human_scoring import human_scores, human_validate, human_comparison
 
 

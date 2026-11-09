@@ -1,6 +1,7 @@
 """Check the environment boundary without loading model libraries."""
 
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -71,7 +72,10 @@ def test_input_mutation_rejected_before_any_model(tmp_path):
 
 def test_dispatcher_imports_without_scientific_dependencies():
     code = 'import sys; from real2sim2real.reconstruction import stage; assert not ({"torch","numpy","av","trimesh"} & sys.modules.keys())'
-    subprocess.run([sys.executable, "-c", code], check=True)
+    root = Path(__file__).resolve().parents[1]
+    env = dict(os.environ, PYTHONPATH=os.pathsep.join(
+        str(root / path) for path in ("src", "modules/reconstruction/src")))
+    subprocess.run([sys.executable, "-c", code], env=env, check=True, timeout=30)
 
 
 @pytest.mark.parametrize("phase", sorted(stage.GPU_PHASES))
@@ -131,3 +135,15 @@ def test_object_and_human_model_caches_are_separate(tmp_path):
         else:
             assert Path(env["TORCH_HOME"]) == human / "sam3d_body/torch_home"
             assert Path(env["HF_HOME"]) == human / "hf_home"
+
+
+def test_mask_review_pause_is_distinct_from_model_failure(tmp_path,monkeypatch):
+    r=request(tmp_path);calls=[]
+    def fake(argv,**kwargs):
+        phase=argv[argv.index('--phase')+1];calls.append(phase)
+        if phase=='export_human':raise subprocess.CalledProcessError(78,argv)
+    monkeypatch.setattr(stage.subprocess,'run',fake)
+    with pytest.raises(subprocess.CalledProcessError):stage.run(r)
+    status=json.loads((Path(r['output'])/'phase_status.json').read_text())
+    assert status['state']=='review_required' and status['phase']=='export_human'
+    assert 'human' not in calls and 'metric_mesh' not in calls

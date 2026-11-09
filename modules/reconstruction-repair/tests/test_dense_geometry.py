@@ -1,6 +1,5 @@
 """Dense initialization performance must preserve existing geometric decisions."""
 import numpy as np
-from PIL import Image, ImageDraw
 
 from real2sim2real.reconstruction_repair.geometry import points_mesh_distance, mesh_silhouette
 

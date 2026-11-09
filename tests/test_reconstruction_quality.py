@@ -14,6 +14,8 @@ def test_tracker_success_does_not_hide_image_and_motion_failure():
     )
     assert report["tracker_reliable_frames"] == 4
     assert report["image_agreement"]["low_iou_frames"] == [1, 2]
+    assert report['image_agreement']['producer_reliable_but_low_iou_frames'] == [1, 2]
+    assert 'tracker_reliability_conflicts_with_image' in report['flags']
     assert report["continuity"]["translation_warning_frames"] == [2]
     assert report["status"] == "review_required"
     assert (

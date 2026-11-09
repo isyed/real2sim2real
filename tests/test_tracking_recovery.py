@@ -1,4 +1,3 @@
-import importlib.util
 import json
 from types import SimpleNamespace
 
@@ -138,7 +137,8 @@ def test_continuous_cpu_hypothesis_requires_independent_gpu_revalidation(monkeyp
         _atomic_pickle_dump=lambda *a:None,_tensor_to_numpy=lambda value:value.numpy(),
         _render_candidate_masks=render,measure_visible_silhouettes=lambda a,*rest:a,
         _selected_metric_values=lambda measured,i:dict(iou=float(measured[i]),precision=.9,recall=.9))
-    adapter.install_recovery(upstream,table,tmp_path/'poses.pkl',continuous_recovery=continuous)
+    adapter.install_recovery(upstream,table,tmp_path/'poses.pkl',continuous_recovery=continuous,
+                             max_continuous_calls=4 if gpu_accepts else 1)
     model=upstream.FoundationPose();frames=upstream._foundationpose_frame_iterator();next(frames);frame=next(frames)
     if gpu_accepts:
         result=model.track_one(frame[1],frame[2],frame[-1],5)
@@ -154,8 +154,48 @@ def test_continuous_cpu_hypothesis_requires_independent_gpu_revalidation(monkeyp
     assert len(calls)==1 and model.continuous_calls==1
 
 
+def test_continuous_recovery_tries_previous_accepted_seed_after_bad_local_seed(monkeypatch,tmp_path):
+    class Tensor(np.ndarray):
+        def numpy(self):return np.asarray(self)
+        def cpu(self):return self
+    torch=SimpleNamespace(as_tensor=lambda x,**kw:np.asarray(x,dtype=kw.get('dtype')).view(Tensor),
+        eye=lambda n:np.eye(n,dtype=np.float32).view(Tensor),float32=np.float32,no_grad=lambda:lambda f:f)
+    monkeypatch.setitem(__import__('sys').modules,'torch',torch)
+    from real2sim2real.reconstruction import tracking_recovery as adapter
+    vertices,initial,K,depth,observed,table=scene();calls=[]
+    class FakePose:
+        def __init__(self):
+            self.mesh_ori=SimpleNamespace(vertices=vertices,faces=np.array([[0,1,2]]))
+            self.pose_last=torch.as_tensor(initial,dtype=np.float32)
+        def get_tf_to_centered_mesh(self):return torch.eye(4)
+        def track_one(self,*a,**kw):
+            p=initial.copy();p[0,3]=.15;return p
+        def register(self,**kw):raise AssertionError('Accepted second CPU seed should avoid global registration')
+    def iterator(*a,**kw):
+        for frame in range(2):yield str(frame),np.zeros((64,64,3)),depth,np.zeros_like(observed),observed,K
+    def render(model,candidates,K,shape):
+        return np.array([.9 if abs(p[0,3]-.025)<1e-6 else .4 for p in candidates])
+    def continuous(*args):
+        calls.append(np.asarray(args[3]).copy())
+        p=initial.copy();p[0,3]=.2 if len(calls)==1 else .025
+        return dict(pose_camera=p.tolist(),proposal_valid_for_tracking=True)
+    upstream=SimpleNamespace(FoundationPose=FakePose,_foundationpose_frame_iterator=iterator,
+        _atomic_pickle_dump=lambda *a:None,_tensor_to_numpy=lambda value:value.numpy(),
+        _render_candidate_masks=render,measure_visible_silhouettes=lambda a,*rest:a,
+        _selected_metric_values=lambda measured,i:dict(iou=float(measured[i]),precision=.9,recall=.9))
+    adapter.install_recovery(upstream,table,tmp_path/'poses.pkl',continuous_recovery=continuous,
+                             max_continuous_calls=2)
+    model=upstream.FoundationPose();frames=upstream._foundationpose_frame_iterator();next(frames);frame=next(frames)
+    selected=model.track_one(frame[1],frame[2],frame[-1],5)
+    assert selected[0,3]==pytest.approx(.025)
+    event=json.loads((tmp_path/'poses.recovery.jsonl').read_text())
+    assert len(calls)==2 and model.continuous_calls==2
+    assert event['continuous_cpu_attempts'][0]['gpu_revalidation'][0]['rejected_for']
+    assert event['continuous_cpu_attempts'][1]['seed_kind']=='previous_accepted'
+    assert not event['continuous_cpu_attempts'][1]['gpu_revalidation'][0]['rejected_for']
+
+
 def test_adapter_rolls_back_bad_update_and_records_actual_recovery(monkeypatch, tmp_path):
-    import real2sim2real.reconstruction.recovery_quality as quality
     # CPU stand-in for the tensor operations at the adapter boundary; actual
     # FoundationPose/CUDA execution belongs to the guarded integration trial.
     class Tensor(np.ndarray):

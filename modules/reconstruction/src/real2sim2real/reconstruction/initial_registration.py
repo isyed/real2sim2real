@@ -35,9 +35,12 @@ def proposal_poses(path):
     return poses
 
 
-def probe(upstream, export, depth, support, output, *, candidate_poses=None):
-    """Use the packaged exporter/model; stop after measuring frame-zero poses."""
+def probe(upstream, export, depth, support, output, *, candidate_poses=None, proposal_mode='rgb', frame_index=0):
+    """Use the packaged exporter/model; measure one native source frame."""
     output = Path(output)
+    if proposal_mode not in ('rgb','depth'):raise ValueError('Registration proposal mode must be rgb or depth')
+    if isinstance(frame_index,bool) or not isinstance(frame_index,int) or frame_index<0:
+        raise ValueError('frame_index must be a nonnegative source frame')
     if output.exists():
         raise FileExistsError('Preserve previous registration probes')
     if (Path(export)/'poses.npy').exists():
@@ -55,8 +58,8 @@ def probe(upstream, export, depth, support, output, *, candidate_poses=None):
     def frame_iterator(*args, **kwargs):
         for value in original_iterator(*args, **kwargs):
             frame, rgb, observed_depth, human, obj, K = value
-            if int(frame) != 0:
-                raise ValueError('Initial registration probe may only inspect frame zero')
+            if int(frame) != frame_index:
+                raise ValueError('Registration probe inspected the wrong source frame')
             context.update(depth=observed_depth, human=human, object=obj, K=K)
             yield value
 
@@ -67,7 +70,7 @@ def probe(upstream, export, depth, support, output, *, candidate_poses=None):
         def register(self, *args, **kwargs):
             transform = upstream._tensor_to_numpy(self.get_tf_to_centered_mesh())
             if proposals is None:
-                kwargs.update(rgb_only=True, both_depth_and_rgb=False)
+                kwargs.update(rgb_only=proposal_mode=='rgb', both_depth_and_rgb=False)
                 super().register(*args, **kwargs)
                 centered = upstream._tensor_to_numpy(self.poses)[:32]
             else:
@@ -80,21 +83,21 @@ def probe(upstream, export, depth, support, output, *, candidate_poses=None):
             geometry = [consistency(points, p, context['K'], context['depth'],
                                     context['object'] & ~context['human'], support) for p in poses]
             selected, reports = choose_seed(poses, metrics, geometry)
-            report = dict(schema='real2sim2real.initial-registration/1', frame=0,
+            report = dict(schema='real2sim2real.initial-registration/1', frame=frame_index,
                           inspected_candidates=len(poses), maximum_candidates=32,
                           selected_index=selected, accepted=selected is not None,
                           candidates=reports, limits=Limits().__dict__,
                           later_frames_inspected=False, thresholds_relaxed=False,
                           full_reference_accepted=False, physics_validated=False,
-                          proposal_source='fresh_rgb_registration' if proposals is None else 'external_camera_pose_hypotheses',
+                          proposal_source='fresh_'+proposal_mode+'_registration' if proposals is None else 'external_camera_pose_hypotheses',
                           proposal_sha256=proposal_hash,
                           implementation_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest())
             (output/'report.json').write_text(json.dumps(report, indent=2, allow_nan=False)+'\n')
             np.savez_compressed(output/'candidates.npz', poses_camera=poses)
             if selected is not None:
-                seed = dict(source='observed_rgb_silhouette_depth_fit', frame=0,
+                seed = dict(source='observed_rgb_silhouette_depth_fit', frame=frame_index,
                             pose_cam=poses[selected].tolist(), K=context['K'].tolist(),
-                            clean_trajectory_used=False, method='fresh_rgb_registration_with_independent_validity_gates',
+                            clean_trajectory_used=False, method='fresh_'+proposal_mode+'_registration_with_independent_validity_gates',
                             probe_report_sha256=hashlib.sha256((output/'report.json').read_bytes()).hexdigest())
                 (output/'seed.json').write_text(json.dumps(seed, indent=2)+'\n')
             raise ProbeComplete()
@@ -104,7 +107,7 @@ def probe(upstream, export, depth, support, output, *, candidate_poses=None):
     try:
         try:
             upstream.run_foundationpose_mhr_export(export, depth, output/'unused.pkl',
-                camera_id=0, start=0, end=1, iteration=5, max_attempts=1,
+                camera_id=0, start=frame_index, end=frame_index+1, iteration=5, max_attempts=1,
                 first_usable_frame_gt_rotation_oracle=False,
                 sequence_mode=upstream.FOUNDATIONPOSE_SEQUENCE_MODE_REGISTER_FIRST_THEN_TRACK,
                 observed_initial_pose=None, rgb_only_score=True, viz_file=None)
@@ -121,12 +124,14 @@ def main():
     for name in ('export', 'depth', 'support', 'output'):
         parser.add_argument('--'+name, required=True)
     parser.add_argument('--candidate-poses', help='Optional NPZ poses_camera; measured with the actual GPU renderer and unchanged gates')
+    parser.add_argument('--proposal-mode',choices=['rgb','depth'],default='rgb',help='Proposal refiner only; independent acceptance gates remain unchanged')
+    parser.add_argument('--frame-index',type=int,default=0,help='Native source frame to register; default 0')
     args = parser.parse_args()
     from .tracking_recovery import load_exporter
     report = probe(load_exporter(), args.export, args.depth,
-                   json.loads(Path(args.support).read_text()), args.output, candidate_poses=args.candidate_poses)
+                   json.loads(Path(args.support).read_text()), args.output, candidate_poses=args.candidate_poses,proposal_mode=args.proposal_mode,frame_index=args.frame_index)
     if not report['accepted']:
-        raise SystemExit('No first-frame pose passes the unchanged independent validity gates')
+        raise SystemExit('No selected-frame pose passes the unchanged independent validity gates')
 
 
 if __name__ == '__main__':

@@ -4,7 +4,6 @@ Only standard-library dependencies run here; model dependencies stay in workers.
 """
 
 from __future__ import annotations
-import json
 from pathlib import Path
 import subprocess
 import sys
@@ -100,7 +99,7 @@ def run(request):
                 output / "phase_status.json",
                 dict(
                     phase=phase,
-                    state="failed",
+                    state="review_required" if isinstance(error,subprocess.CalledProcessError) and error.returncode==78 else "failed",
                     started=started,
                     finished=time.time(),
                     error=type(error).__name__,

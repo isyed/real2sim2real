@@ -95,6 +95,10 @@ def publish_scene(config):
         ("hand_audit", "hand_audit.json"),
         ("baseline_hand_quality", "baseline_hand_quality.json"),
         ("hand_refinement_attempts", "hands_metric/refinement_attempts.json"),
+        ("temporal_comparison", "temporal_comparison.json"),
+        ("temporal_attempts", "hands_metric/temporal_attempts.json"),
+        ("temporal_components", "hands_metric/temporal_components.json"),
+        ("readiness_assessment", "readiness_assessment.json"),
     ):
         if (root / name).exists():
             files[role] = root / name

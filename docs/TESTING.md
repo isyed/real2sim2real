@@ -57,3 +57,9 @@ bounded proper rotations in a CPU Torch environment; it needs no MANO assets.
 Actual hand fitting still requires a separately licensed local MANO model and
 its own prefix/full validation. Detector agreement and stereo consistency do
 not establish ground-truth hand accuracy or control readiness.
+
+`tests/test_hand_temporal.py` verifies nonuniform-timestamp acceleration, missing
+sample boundaries, transaction rejection, geodesic backtracking, rotated image
+coordinates, augmentation consensus and the separation of 2D candidates from
+metric/control coverage. Visibility tests change every held-out depth pixel to
+ensure those pixels cannot affect fitting weights.

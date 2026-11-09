@@ -16,3 +16,9 @@ module boundaries. Rejected hypotheses must not silently replace their input.
 GPU workloads require an explicit run request and the configured thermal and
 time limits. CPU tests and configuration validation may run without GPU access.
 Do not claim physical execution or complete model validation from CPU tests.
+
+# Git workflow
+
+Keep related iterations on one feature branch and reuse its existing pull
+request. Create new pull requests only as part of a user-requested local/remote
+sync. Local implementation and validation do not require opening another PR.

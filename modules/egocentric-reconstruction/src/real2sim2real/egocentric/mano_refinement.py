@@ -133,18 +133,27 @@ class ManoHand:
         ]
 
     def __call__(self, betas, pose, orient, hand):
+        vertices, joints = self.batch(betas[None], pose[None], orient[None], hand)
+        return vertices[0], joints[0]
+
+    def batch(self, betas, pose, orient, hand):
+        """Evaluate independent MANO poses together, retaining physical handedness."""
         import torch
 
         value = self.model(
-            betas=betas[None],
-            hand_pose=pose[None],
-            global_orient=orient[None],
+            betas=betas,
+            hand_pose=pose,
+            global_orient=orient,
             pose2rot=False,
         )
-        vertices = value.vertices[0]
-        joints = torch.cat((value.joints[0], vertices[self.tip_ids]), 0)[self.joint_ids]
+        vertices = value.vertices
+        joints = torch.cat((value.joints, vertices[:, self.tip_ids]), 1)[
+            :, self.joint_ids
+        ]
         reflection = vertices.new_tensor([2 * hand - 1, 1, 1])
-        return (vertices - joints[:1]) * reflection, (joints - joints[:1]) * reflection
+        return (vertices - joints[:, :1]) * reflection, (
+            joints - joints[:, :1]
+        ) * reflection
 
 
 def refine(

@@ -15,10 +15,11 @@
   },
   "images": {
     "track-hand-points": "r2s2r-tapir:f2f8888",
-    "refine-point-hands": "r2s2r-hand-refinement:embreex"
+    "refine-point-hands": "r2s2r-hand-refinement:embreex",
+    "sequence-point-hands": "r2s2r-hand-refinement:embreex"
   },
   "gpu_session": "/private/runs/point-hands/gpu-session",
-  "timeouts": {"track-hand-points": 1800, "refine-point-hands": 2400},
+  "timeouts": {"track-hand-points": 1800, "refine-point-hands": 2400, "sequence-point-hands": 2400},
   "tracking_size": 512,
   "point_limits": {
     "min_score": 0.8,

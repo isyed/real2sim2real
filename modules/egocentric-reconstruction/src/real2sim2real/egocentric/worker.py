@@ -294,6 +294,7 @@ def main():
             "temporal-hands",
             "track-hand-points",
             "refine-point-hands",
+            "sequence-point-hands",
         ],
         required=True,
     )
@@ -307,6 +308,7 @@ def main():
     from .hawor_worker import run as hawor_hands
     from .tapir_worker import run as track_hand_points
     from .point_hand_refinement import run as refine_point_hands
+    from .point_hand_sequence import run as sequence_point_hands
 
     {
         "segment": segmentation,
@@ -319,6 +321,7 @@ def main():
         "temporal-hands": temporal_hands,
         "track-hand-points": track_hand_points,
         "refine-point-hands": refine_point_hands,
+        "sequence-point-hands": sequence_point_hands,
     }[args.phase](request, args.check)
 
 

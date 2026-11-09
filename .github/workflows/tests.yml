@@ -1,0 +1,32 @@
+name: CPU tests
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+    env:
+      CUDA_VISIBLE_DEVICES: ''
+      JAX_PLATFORMS: cpu
+      OPENBLAS_NUM_THREADS: '1'
+      OMP_NUM_THREADS: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - run: python -m pip install -e '.[test]' ruff
+      - run: python -m pytest -q
+      - name: Check reusable Python modules
+        run: >-
+          ruff check --select F src/real2sim2real
+          modules/*/src/real2sim2real tests modules/reconstruction-repair/tests
+      - run: git diff --check

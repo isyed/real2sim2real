@@ -1,4 +1,37 @@
-# Extraction validation
+# Validation
+
+## Repository integration, 2026-11-09
+
+The accumulated reusable reconstruction, repair, retargeting and controller
+changes were checked together. See [testing instructions](TESTING.md) for the
+reproducible CPU environment and optional runtime commands.
+
+| Check | Result |
+| --- | --- |
+| Clean Python 3.12 CPU environment, complete default suite | 1,197 passed; 14 optional dependency skips |
+| Existing Python 3.11 simulation runtime, CPU only | 82 passed, including actor initialization, controller configuration, support topology and isolated settling |
+| Settling and solver checks after deferring backend imports | 12 passed; subset of the simulation checks above |
+| Torch motion-schema interoperability | 1 passed |
+| RoboSimStudio bridge, including actual camera projection parity | 15 passed |
+| Optional Embree inside/outside classification | 1 passed |
+| Reusable modules and tests, Ruff F rules | Passed |
+| Core plus six module wheels | Built; licenses present; no model/video/geometry assets packaged |
+| Wheel installation in an environment without scientific libraries | Module discovery and pipeline planning passed |
+
+The optional suites overlap the default suite; these counts are not additive.
+Numerical motion conditioning and solver configuration no longer load the
+simulation backend on import. Invalid settling requests are rejected before
+backend loading. Candidate tests preserve the explicit decision/hash checks and
+reject scale, mesh or timing edits in a pose-only candidate. A duplicate test
+filename was renamed so both suites collect together. The public change set was
+checked for private paths, credential markers and generated assets.
+
+The CPU CI workflow covers Python 3.11 and 3.12. Local validation above used
+synthetic fixtures and no GPU workload, cloud instance or downloaded model.
+These checks do not establish learned-model accuracy, policy task success or
+physical execution.
+
+## Original extraction validation
 
 Validation date: 2026-10-29. No GPU workload, model download or cloud instance
 was started for these checks.
@@ -200,3 +233,103 @@ rejecting the next frame of a 546-frame clip. Image/depth and temporal constrain
 had no jointly acceptable candidate. The numerical fix is CPU-validated, but this
 full-clip RGB recovery trial failed: no complete repaired reference, robot physics
 or actor-training readiness is established. The original artifact was retained.
+
+## Local translation-window repair (algorithm 0.11.0)
+
+The reconstruction-repair suite passed **157 CPU tests** after adding optional
+rotation-preserving translation fitting, conservative translation backtracking,
+interaction vetoes, and complete-clip local-window assembly. This includes
+legacy positional-argument compatibility, exact locked/untouched poses,
+nonoverlapping original frame IDs, rejected-window exclusion, remaining
+full-clip jump rejection, and existing depth/image/support acceptance checks.
+
+```sh
+PYTHONPATH=src:modules/reconstruction-repair/src python -m pytest -q modules/reconstruction-repair/tests
+```
+
+These tests validate module contracts and synthetic cases. Scene-specific
+reference acceptance, retargeting, physical task outcomes and competition scores
+remain downstream evidence; the generic suite does not establish them.
+
+## Initial-pose screening and honest incomplete-trial video review
+
+Twenty-one focused CPU tests pass across `test_initial_registration`,
+`test_tracking_recovery`, `test_tracking_runtime`, and `test_comparison_video`.
+They cover initial image/depth/support rejection, no invented temporal prior,
+exporter-hook restoration on error, unchanged recovery bounds, full video decode,
+explicit partial-prefix opt-in, missing-pose labels without carried geometry,
+cache reuse and surface-identity checks. Optional model execution remains a
+separate guarded integration check; CPU tests do not prove scene success.
+
+
+## Multi-frame prompt identity review
+
+Fifteen focused CPU tests pass across `tests/test_prompt_review.py` and
+`tests/test_mask_review.py`. They cover separate native-frame previews, missing
+later-frame RGB rejection, prompt bounds/timeline checks, mask coverage and the
+existing sparse-human input gate. Human subject identity still requires visual
+inspection; these tests do not certify reconstruction or physical execution.
+
+
+## Frozen tabletop baseline tools
+
+Sixteen focused CPU tests cover frozen-controller configuration/portable closure,
+rigid object reframing, URDF visuals, exact support triangle/parent transforms,
+missing-body/external-layer rejection, and initial support distance versus
+penetration. Open/nonconvex supports cannot be certified by the convex checker.
+Actual model forwards and guarded rollouts remain separate integration evidence.
+
+
+The frozen-controller suite now passes 21 focused CPU tests including native
+source/control-clock conversion, endpoint/FK-related contracts, optional collision
+cache copying and invalid cache-index rejection, in addition to configuration,
+mesh closure, support display and convex placement checks. GPU rollout evidence
+is recorded by downstream applications with their exact source/assets/caches.
+# Static supports and initial-rest proposals
+
+The focused regression suite covers explicit support topology, an actual CPU
+isolated simulation, settling limits/backend reporting, mesh-derived resting
+orientation hypotheses, bounded local corrections, unchanged later poses and
+task-specific contact admission. The 20 tests pass with CUDA hidden:
+
+```sh
+CUDA_VISIBLE_DEVICES='' python -m pytest \
+  tests/test_world_static_support.py tests/test_settling_admission.py \
+  tests/test_local_rest_orientation.py tests/test_contact_admission.py \
+  tests/test_reference_contact_readiness.py tests/test_frozen_support.py -q
+```
+
+Use the installed module environments or the source paths documented in the
+module READMEs. CPU tests do not substitute for guarded GPU acceptance. A
+downstream bounded acceptance completed three settling trials on each backend
+and three physical rollouts per original/repaired cohort; its source data and
+numeric results remain downstream. See [the workflow](STATIC_SUPPORT_SETTLING.md).
+
+Policy-bound settling and optional training-scene parity have15 focused passing
+CPU checks covering explicit friction/free-object damping, solver/timing
+compatibility, refusal of silent solver changes, and preservation of reward,
+curriculum and world-count settings:
+
+```sh
+CUDA_VISIBLE_DEVICES='' python -m pytest -q \
+  tests/test_isolated_scene_parameters.py tests/test_policy_scene_matching.py \
+  tests/test_settling_compatibility.py
+```
+
+A downstream portable-policy probe has also executed on CPU and CUDA using
+the same measured collision decomposition and actual support/initial pose.
+It reproduced a settling failure on both backends. This validates failure
+reporting and configuration matching, not physical stability or task success.
+
+Early body guidance has focused CPU coverage in `tests/test_approach_heading.py`
+for signed/wrapped yaw, token isolation, bounds, time/fall disabling, per-world
+reset, leg-only mappings and saved-state drift diagnostics. The combined suite
+with reference-pull, frozen-policy, no-progress watchdog and upstream SONIC
+runtime tests passed 30 tests; one GPU/data-dependent test was skipped. Actual
+encoder/decoder CPU forwards passed for an unchanged and two derived policies.
+The subsequent guarded three-repeat comparison completed all nine rollouts.
+Both opt-in guidance variants failed the declared body-approach gate; leg
+anchoring caused early balance loss. Heading-only scoring improved against that
+fresh control cohort while approach and contact worsened. This validates bounded
+execution and negative-result reporting, not a better controller. All thermal
+and temporal guidance bounds were checked on saved execution telemetry.

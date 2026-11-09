@@ -1,0 +1,50 @@
+# Testing the reusable modules
+
+Run these commands from the repository root with Python 3.11 or 3.12:
+
+```bash
+python3.12 -m venv .venv
+.venv/bin/python -m pip install -e '.[test]' ruff
+CUDA_VISIBLE_DEVICES='' OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 \
+  .venv/bin/python -m pytest -q
+.venv/bin/ruff check --select F src/real2sim2real \
+  modules/*/src/real2sim2real tests modules/reconstruction-repair/tests
+git diff --check
+```
+
+Pytest adds the module source directories to its import path. Tests use synthetic
+fixtures and temporary output directories; videos, model weights, robot assets,
+private repositories and GPUs are not required for this suite. The `test` extra
+includes the CPU geometry, image, HDF5, Parquet and checkpoint-format libraries.
+Optional simulation/USD, Torch, RoboSimStudio and Embree checks report explicit
+skips when their libraries are not installed. A skip is not a successful model
+or simulation validation.
+
+Simulation and actor tests also run on CPU in an independently provisioned
+FlashCHORD runtime. Use the same repository sources and disable GPU execution:
+
+```bash
+CUDA_VISIBLE_DEVICES='' JAX_PLATFORMS=cpu OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 \
+  /path/to/runtime/bin/python -m pytest -q \
+  tests/test_actor_warm_start.py tests/test_approach_heading.py \
+  tests/test_reference_body_pull.py tests/test_reference_denoising.py \
+  tests/test_sim_multiccd.py tests/test_action_imports.py \
+  tests/test_bounded_approach.py tests/test_residual_controller.py \
+  tests/test_world_static_support.py tests/test_frozen_render_meshes.py \
+  tests/test_policy_clearance.py
+```
+
+The runtime must provide its compatible Newton, Warp, JAX/Flax/Optax and
+checkpoint libraries. Torch motion-schema interoperability is checked separately
+with `tests/test_motion_interop.py` in a retargeting environment. Model inference,
+training and GPU simulation require their own authorized, bounded acceptance
+runs; passing the CPU suite does not validate physical grasp success.
+
+Keep test module filenames unique across both test directories. Pytest's default
+import mode uses those names as module keys. Numerical utilities should remain
+importable without optional model or simulation libraries; subprocess regression
+tests enforce this boundary.
+
+The GitHub Actions CPU workflow runs the lightweight suite and undefined-name /
+unused-import checks on both supported Python versions. It does not download
+models or start GPU inference.

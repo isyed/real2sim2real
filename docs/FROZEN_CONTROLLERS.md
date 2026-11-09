@@ -119,3 +119,58 @@ and both hashes. This mapping preserves physical tracking errors; it does not
 replace achieved motion with reference motion. Videos use the control-rate states
 and the actual simulation duration. Old packages that replay unequal source and
 controller frame rates one-for-one are rejected and must be repackaged.
+
+
+## Reusing collision preparation
+
+Complex object meshes may spend minutes in CPU convex decomposition before the
+first GPU rollout. When a provenance-checked CoACD cache is already available,
+package it explicitly rather than regenerating it:
+
+```sh
+python -m real2sim2real.controller_actor_training.frozen \
+  --reference /path/to/robot-reference --assets /path/to/assets \
+  --collision-cache /path/to/verified-cache/convex --output /path/to/frozen-policy
+```
+
+The cache is optional. Complete content-keyed NPZ files are checked for hull
+counts, finite vertices and valid triangle indices, copied into the bundle, and
+content-hashed alongside the models and robot assets. The simulator still looks
+up the exact geometry/parameter key; this option does not change mesh dimensions,
+collision settings or reference poses. Callers must verify the cache's original
+provenance. Keep the same pinned cache for repeatability, and retain the cache
+receipt with results. No public model or private geometry data is embedded in
+this source repository.
+
+
+For flat-base settling and initial robot/support clearance, see
+[Initial rest admission](INITIAL_REST_ADMISSION.md). The opt-in
+`initial_rest_reference` helper preserves every later native pose and all robot
+targets, then requires control-clock rebuilding and new physical evaluation.
+
+## Experimental early body guidance
+
+`controller_actor_training.body_guidance.package(source, output, guidance)`
+derives a separately hashed frozen policy with opt-in
+`flash_chord.runtime.actions.approach_heading.ApproachHeadingConfig`.
+It retains the network weights, reference, hand controller and zero learned
+residuals. The resulting controller is explicitly labelled as deterministic
+body guidance; it is not the unchanged pretrained prior.
+
+The heading term uses actual versus reference pelvis yaw, spreads a bounded
+correction across the future orientation tokens and leaves the current token
+unchanged. The optional leg term pulls twelve motor targets slightly toward
+their references. It supplies no world-position feedback. Both terms have an
+early-time envelope and disable on low pelvis height or excessive tilt. They
+apply through normal joint motors, never root/object forces or pose resets.
+These are hypotheses for physical testing, not validated improvements.
+
+The normal SONIC path remains disabled by default. Do not stack this controller
+with the separate reference-pull override. Frozen evaluation records the applied
+yaw and per-joint corrections, its configuration, and the parent policy hash.
+CPU tests cover bounded values, angle wrapping, frame-token isolation, joint
+mapping, reset isolation and fall/time-window shutoff. Compare a newly evaluated
+unchanged control and each variant on one numerical build before accepting a
+candidate; preserve balance and independent task metrics as well as approach
+errors. Hand-contact changes should be evaluated separately after the body
+controller can approach reliably.

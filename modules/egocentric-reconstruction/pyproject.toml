@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "real2sim2real-egocentric-reconstruction"
+version = "0.1.0"
+description = "Calibrated moving-camera rigid-object reconstruction"
+requires-python = ">=3.11,<3.13"
+dependencies = ["real2sim2real==0.1.0", "numpy>=1.26,<3", "scipy>=1.11,<2", "opencv-python-headless>=4.10,<6", "av>=14", "Pillow>=10,<14", "trimesh>=4"]
+
+[project.scripts]
+r2s2r-ego = "real2sim2real.egocentric.cli:main"
+
+[project.entry-points."real2sim2real.stages"]
+egocentric-reconstruction = "real2sim2real.egocentric:descriptor"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+namespaces = true

@@ -7,7 +7,9 @@ import time
 from real2sim2real.artifacts import digest, write_json
 
 
-def docker_command(config, output, phase, *, check=False, request_path=None):
+def docker_command(
+    config, output, phase, *, check=False, cpu_only=False, request_path=None
+):
     root = Path(config["source_root"]).resolve()
     out = Path(output).resolve()
     engine = root / "modules/reconstruction/src/r2s2r_engines"
@@ -50,7 +52,7 @@ def docker_command(config, output, phase, *, check=False, request_path=None):
             "-e",
             "CUDA_VISIBLE_DEVICES=",
         ]
-        if check
+        if check or cpu_only
         else ["--gpus", "device=0"]
     )
     env = dict(
@@ -108,6 +110,7 @@ def run_model(config, output, phase, *, check=False):
         "mesh": "mesh/metric.glb",
         "track": "object_motion.npz",
         "hands": "hands_raw/predictions.npz",
+        "refine-hands": "hands_metric/hands.npz",
     }[phase]
     if not check and (out / result).exists():
         raise FileExistsError(
@@ -119,8 +122,14 @@ def run_model(config, output, phase, *, check=False):
         output=str(out), weights=config["weights"], **config.get("model_options", {})
     )
     write_json(attempt / "request.json", request)
+    cpu_only = phase == "refine-hands"
     cmd, name = docker_command(
-        config, out, phase, check=check, request_path=attempt / "request.json"
+        config,
+        out,
+        phase,
+        check=check,
+        cpu_only=cpu_only,
+        request_path=attempt / "request.json",
     )
     log = attempt / "worker.log"
     root = Path(config["source_root"]).resolve()
@@ -135,7 +144,13 @@ def run_model(config, output, phase, *, check=False):
     }
     write_json(
         attempt / "source.json",
-        dict(command=cmd, files=files, request=request, check_only=check),
+        dict(
+            command=cmd,
+            files=files,
+            request=request,
+            check_only=check,
+            cpu_only=check or cpu_only,
+        ),
     )
     write_json(
         out / (phase + (".check" if check else "") + ".latest.json"),
@@ -145,6 +160,35 @@ def run_model(config, output, phase, *, check=False):
         with log.open("w") as stream:
             subprocess.run(
                 cmd, stdout=stream, stderr=subprocess.STDOUT, check=True, timeout=180
+            )
+        return
+    if cpu_only:
+        timeout = config.get("timeouts", {}).get(phase, 2400)
+        if (
+            isinstance(timeout, bool)
+            or not isinstance(timeout, (int, float))
+            or not 0 < timeout <= 28800
+        ):
+            raise ValueError(
+                "CPU refinement requires a finite deadline of at most eight hours"
+            )
+        try:
+            with log.open("w") as stream:
+                subprocess.run(
+                    cmd,
+                    stdout=stream,
+                    stderr=subprocess.STDOUT,
+                    check=True,
+                    timeout=timeout,
+                )
+        finally:
+            # The unique name belongs to this invocation; also clean up on timeout.
+            subprocess.run(
+                ["docker", "rm", "-f", name],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+                timeout=30,
             )
         return
     # A separate host process owns stdout so container output is both persistent

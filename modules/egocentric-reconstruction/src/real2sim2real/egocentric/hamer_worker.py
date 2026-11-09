@@ -22,9 +22,7 @@ def load_fixed_shape(path):
     return betas
 
 
-def load_model(weights):
-    import torch
-
+def legacy_mano_compatibility():
     # MANO's original pickle contains Chumpy values; compatibility is confined to
     # this legacy loader, before importing Chumpy. No pickle from video inputs.
     if not hasattr(inspect, "getargspec"):
@@ -40,6 +38,12 @@ def load_model(weights):
     ).items():
         if name not in np.__dict__:
             setattr(np, name, value)
+
+
+def load_model(weights):
+    import torch
+
+    legacy_mano_compatibility()
     from hamer.configs import get_config
     from hamer.models import HAMER
 

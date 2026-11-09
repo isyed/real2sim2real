@@ -48,3 +48,12 @@ tests enforce this boundary.
 The GitHub Actions CPU workflow runs the lightweight suite and undefined-name /
 unused-import checks on both supported Python versions. It does not download
 models or start GPU inference.
+
+Hand refinement admission, immutable baseline comparisons, missing-frame handling
+and CPU worker cleanup are covered by `tests/test_hand_refinement.py` and
+`tests/test_hand_comparison.py`. The optional
+`tests/test_hand_rotation_gradients.py` checks finite gradients at identity and
+bounded proper rotations in a CPU Torch environment; it needs no MANO assets.
+Actual hand fitting still requires a separately licensed local MANO model and
+its own prefix/full validation. Detector agreement and stereo consistency do
+not establish ground-truth hand accuracy or control readiness.

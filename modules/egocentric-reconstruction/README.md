@@ -311,3 +311,86 @@ reports a clearly labelled optimistic coverage bound for the new 2D candidates;
 those candidates never count as recovered 3D hands. Complete coverage alone does
 not certify control readiness: a particular robot still needs retargeting,
 collision and dynamic replay validation.
+
+## Compare detector-independent video hand observations
+
+`r2s2r-hand-experiment` compares a detector-gated HaMeR baseline with HaMeR and
+HaWoR using identical detector/mask-derived crops. See
+[`examples/video-hands.json`](examples/video-hands.json). The frame window is a
+zero-based start position plus a count; original capture frame IDs, timestamps
+and world transforms are retained. Selecting a later window does not create a
+new camera-world origin.
+
+The hand detector uses the WiLoR checkpoint selected by the pinned HaWoR fork.
+Physical left/right identities are assigned through the supplied masks, with
+one detector box assigned to at most one hand. A mask box is a fallback when
+localisation fails. Neither box availability nor a network prediction counts
+as a validated metric observation. Missing crops remain missing; the adapter
+does not invoke HaWoR's motion infiller.
+
+The HaWoR backend uses its temporal camera-space network in blocks of 16 images.
+Boundary images are repeated only as network padding and are never exported as
+extra observations. Both estimators use the same HaMeR crop preprocessing,
+normalisation, crop expansion, fixed MANO shape and calibrated metric scale;
+input tensor hashes verify that their crops match. This is a controlled adapter
+comparison, not an unmodified reproduction of HaWoR's complete demo pipeline.
+HaWoR receives the supplied principal point (reflected correctly for the left
+hand) and a scalar network focal equal to the geometric mean of fx/fy. Metric
+fitting and evaluation always use the full calibrated intrinsic matrix.
+
+Provision the optional runtime separately. Clone
+`https://github.com/malik-group/HaWoR.git` outside this repository and check out
+`2c3fa0c06e54a1b192c1ff692eaa89d526cd6317`, the revision used by do-as-i-do.
+Build `docker/hawor.Dockerfile` with that checkout as context, using an existing
+HaMeR runtime as `BASE_IMAGE`. The image checks the source revision and preserves
+its upstream notices. Do not put videos, weights or licensed MANO models in the
+build context. The model store contains `hawor.ckpt`, `model_config.yaml` from
+`ThunderVVV/HaWoR`, and `detector.pt` from `rolpotamias/WiLoR`. Record immutable
+model revisions and file hashes. The existing HaMeR store supplies MANO_RIGHT.
+The adapter uses the same mirrored right-hand MANO convention as the baseline.
+Optional backend/model licenses remain separate from this project's license.
+
+Run preparation and import checks before the bounded GPU stages:
+
+```bash
+r2s2r-hand-experiment --config /work/video-hands.json --phase prepare
+r2s2r-hand-experiment --config /work/video-hands.json --phase detector --check
+r2s2r-hand-experiment --config /work/video-hands.json --phase hawor --check
+# Requires an active clock lease; each container has a thermal guard and deadline.
+r2s2r-hand-experiment --config /work/video-hands.json --phase detector
+r2s2r-hand-experiment --config /work/video-hands.json --phase hamer
+r2s2r-hand-experiment --config /work/video-hands.json --phase hawor
+# CPU fitting and review; contact-fast is optional.
+timeout 2400 r2s2r-hand-experiment --config /work/video-hands.json --phase fit --variant baseline
+timeout 2400 r2s2r-hand-experiment --config /work/video-hands.json --phase fit --variant hamer
+timeout 2400 r2s2r-hand-experiment --config /work/video-hands.json --phase fit --variant hawor
+timeout 300 r2s2r-hand-experiment --config /work/video-hands.json --phase review-inputs
+# Supply evaluation-only visible landmark annotations, then:
+timeout 300 r2s2r-hand-experiment --config /work/video-hands.json --phase evaluate
+```
+
+`inputs/archived_baseline.npz` retains the previous accepted reconstruction.
+`baseline/` re-evaluates its original raw predictions with the common fitter so
+changes to fitting are distinguishable from changes to detection/model input.
+The new fitter uses measured stereo pixels, visible automatic landmarks and
+silhouette residuals. A disjoint depth checkerboard measures held-out surface
+consistency. It fixes shape/scale/camera/object/table; contact is evaluated after
+fitting. A hypothesis can pass geometry checks without every joint being visible.
+Those results are labelled `geometry_supported`, never silently substituted for
+the archived baseline. Rejected hypotheses are retained for inspection.
+
+Evaluation produces `review/review.html`, `comparison.json` and a standalone
+`annotations.html` editor. Where a calibrated capture is provided, it exports
+undistorted secondary images and projects hypotheses using the existing stereo
+extrinsics. Visual labels bind source frame, physical hand, joint, camera and
+image hash. They live outside the worker mounts and are never used for fitting.
+Annotate only clearly visible joints, record uncertainty and reviewer identity,
+and do not label hidden joints from model overlays. Assistant-inspected anchors
+must be marked as such, with `human_verified: false` until a person reviews them.
+
+Reports separate inferred poses, geometry support, losses/recoveries relative
+to the archived baseline, automatic landmark residuals, held-out depth, identity,
+contact, temporal measurements and visual-anchor errors. These are consistency
+diagnostics and sparse image evidence, not complete 3D ground truth. The command
+never promotes a candidate or declares control readiness. Use a new output or
+`review_directory` when repeating an evaluation; preserve prior hypotheses.

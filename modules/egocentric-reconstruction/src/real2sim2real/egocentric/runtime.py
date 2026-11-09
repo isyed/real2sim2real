@@ -110,6 +110,8 @@ def run_model(config, output, phase, *, check=False):
         "mesh": "mesh/metric.glb",
         "track": "object_motion.npz",
         "hands": "hands_raw/predictions.npz",
+        "detect-hands": "hand_tracks/tracks.npz",
+        "hawor-hands": "hands_raw/predictions.npz",
         "refine-hands": "hands_metric/hands.npz",
         "temporal-hands": "hands_metric/hands.npz",
     }[phase]

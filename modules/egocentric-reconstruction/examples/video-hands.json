@@ -1,0 +1,23 @@
+{
+  "source_root": "/workspace/real2sim2real",
+  "reconstruction": "/work/object-reconstruction",
+  "baseline": "/work/interaction-baseline",
+  "output": "/work/hand-window",
+  "frame_start": 40,
+  "frame_count": 46,
+  "mask_ids": [2, 3],
+  "object_id": 1,
+  "weights": {"hamer": "/models/hamer", "hawor": "/models/hawor"},
+  "images": {
+    "detect-hands": "r2s2r-hawor:2c3fa0c",
+    "hands": "r2s2r-hamer:3a01849",
+    "hawor-hands": "r2s2r-hawor:2c3fa0c"
+  },
+  "gpu_session": "/work/hand-window/gpu-session",
+  "timeouts": {"detect-hands": 600, "hands": 1200, "hawor-hands": 1200},
+  "hand_crop_factor": 2.0,
+  "capture": "/captures/calibrated-capture.json",
+  "review_frame_ids": [40, 50, 60, 70, 85],
+  "annotations": "/work/hand-window/evaluation_inputs/annotations.json",
+  "contacts": {"ray_backend": "auto"}
+}

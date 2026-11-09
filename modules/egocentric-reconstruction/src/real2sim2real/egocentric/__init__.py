@@ -7,3 +7,11 @@ def descriptor():
         {"calibrated-capture"},
         "object-reconstruction",
     )
+
+
+def interaction_descriptor():
+    return (
+        "real2sim2real.egocentric.interaction_stage",
+        {"object-reconstruction"},
+        "metric-interaction-reconstruction",
+    )

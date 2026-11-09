@@ -91,4 +91,3 @@ def write_support(path, meshes):
                  '        bool physics:collisionEnabled = true\n'
                  '    }\n')
     path.write_text(text+'}\n')
-

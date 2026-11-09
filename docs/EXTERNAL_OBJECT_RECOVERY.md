@@ -305,4 +305,3 @@ requires every declared depth hypothesis to pass. Test original and diagnostical
 floor-calibrated controls separately. A finite translation search that fails does
 not prove no rotation/shape/pose solution exists; it establishes only that the
 tested depth-only corrections cannot reconcile the evidence.
-

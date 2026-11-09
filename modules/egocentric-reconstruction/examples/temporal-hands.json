@@ -1,0 +1,28 @@
+{
+  "source_root": "/workspace/real2sim2real",
+  "reconstruction": "/work/object-reconstruction",
+  "output": "/work/interaction-temporal",
+  "frame_count": 100,
+  "hand_landmarks": {"mask_ids": [2, 3]},
+  "hand_temporal": {
+    "parent": "/work/interaction-refined",
+    "optimizer": {
+      "max_joint_correction_deg": 8.0,
+      "max_rigid_correction_deg": 3.0,
+      "max_translation_correction_m": 0.005,
+      "correspondence_iterations": 5
+    },
+    "temporal_weight": 1.0,
+    "max_step_s": 0.1
+  },
+  "hand_observation_probe": {
+    "parent": "/work/interaction-refined",
+    "model": "/models/hand_landmarker.task",
+    "timeout_s": 300
+  },
+  "observation_probe_path": "/work/interaction-temporal/observation_probe",
+  "weights": {"hamer": "/models/hamer"},
+  "images": {"temporal-hands": "r2s2r-hamer:3a01849"},
+  "timeouts": {"temporal-hands": 2400},
+  "contacts": {"ray_backend": "auto"}
+}

@@ -40,28 +40,33 @@ def execute(config, phase):
         from .hand_landmarks import detect
 
         return detect(config)
+    if phase == "probe-hands2d":
+        from .hand_observation_probe import probe
+
+        return probe(config)
     if phase == "audit-hands":
         from .hand_audit import audit
 
         return audit(config["hand_refinement"]["parent"], root / "hand_audit.json")
-    if phase == "refine-hands":
+    if phase in ("refine-hands", "temporal-hands"):
         from .runtime import run_model
 
         config = dict(config)
+        option_key = "hand_refinement" if phase == "refine-hands" else "hand_temporal"
         config["model_options"] = dict(
             reconstruction=str(Path(config["reconstruction"]).resolve()),
             frame_count=config.get("frame_count"),
-            hand_refinement=dict(
-                config["hand_refinement"],
-                parent=str(Path(config["hand_refinement"]["parent"]).resolve()),
-            ),
+            object_id=config.get("object_id", 1),
             hand_landmarks=config["hand_landmarks"],
+        )
+        config["model_options"][option_key] = dict(
+            config[option_key], parent=str(Path(config[option_key]["parent"]).resolve())
         )
         config["read_only_inputs"] = [
             str(Path(config["reconstruction"]).resolve()),
-            str(Path(config["hand_refinement"]["parent"]).resolve()),
+            str(Path(config[option_key]["parent"]).resolve()),
         ]
-        return run_model(config, config["output"], "refine-hands")
+        return run_model(config, config["output"], phase)
     if phase in ("hands", "hands-check"):
         from .runtime import run_model
 
@@ -98,6 +103,14 @@ def execute(config, phase):
         from .hand_comparison import compare
 
         return compare(config["hand_refinement"]["parent"], root)
+    if phase == "compare-temporal-hands":
+        from .temporal_hand_report import compare
+
+        return compare(config)
+    if phase == "assess-readiness":
+        from .interaction_readiness import assess
+
+        return assess(config)
     if phase == "review":
         from .interaction_review import review
 
@@ -117,14 +130,18 @@ def main():
         choices=[
             "support",
             "hands2d",
+            "probe-hands2d",
             "hands",
             "hands-check",
             "align-hands",
             "audit-hands",
             "refine-hands",
+            "temporal-hands",
             "contacts",
             "score",
             "compare-hands",
+            "compare-temporal-hands",
+            "assess-readiness",
             "review",
             "publish",
         ],

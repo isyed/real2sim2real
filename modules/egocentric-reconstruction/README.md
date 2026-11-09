@@ -259,3 +259,55 @@ report. `hands.npz` adds `articulation_delta_rad` and `refinement_accepted`.
 For admitted refinements, `fits` contains the updated rigid transform; interpreting
 it with the raw model also requires the saved local articulation delta. Downstream
 consumers should use the explicit accepted camera/world vertices and joints.
+
+### Visibility-aware temporal fitting and missing-observation probes
+
+[The temporal example](examples/temporal-hands.json) starts from a published,
+independently refined interaction. Run `probe-hands2d` (optional),
+`temporal-hands`, `contacts`, `score`, `compare-temporal-hands`,
+`assess-readiness`, `review`, `publish` sequentially. Use a new output directory
+and inspect a prefix before extending the same settings. Everything in this
+sequence runs on CPU; the model container has no network or GPU access.
+
+`temporal-hands` may adjust only the parent's `refinement_accepted` observations.
+Original unrefined anchors, missing estimates, detections, shape, scale and scene
+geometry remain fixed. It does not repeatedly smooth already temporally refined
+outputs. Neighbor targets use the actual capture timestamps and the fixed world
+frame. Both immediate neighbors must be accepted, with each time step at most
+`max_step_s` (default 0.1 s). No missing hand is filled. Future observations make
+this an offline reconstruction stage, not an online controller.
+
+Image weights use the hand/object masks and only the fitting checkerboard of
+stereo depth. Unsupported landmarks retain a small weight. This is a visibility
+proxy, not calibrated confidence or an assertion that an occluded finger is
+correct. MANO corrections are bounded to 8 degrees per joint, 3 degrees of rigid
+rotation and 5 mm translation by default. Backtracking tries fractions 1, 1/2,
+1/4, 1/8 and 1/16 on the rotation groups; it never blends mesh vertices.
+
+The original absolute image/depth gates still apply. Median and p90 image errors
+may each worsen by no more than 0.5 px; held-out depth may worsen by no more than
+1 mm median or 3 mm p90. New object/table penetration above 3 mm fails. Changes
+are accepted together when they affect common temporal triplets: acceleration
+RMS must improve by at least 5%, its peak cannot grow by more than 5%, and speed
+p90/maximum cannot grow by more than 0.05/0.1 m/s. These are comparative regression
+checks, not robot-specific dynamic feasibility limits. Failed proposals fall back
+to the parent without reducing coverage. Every trial and backtracking fraction
+is retained. The full run can make different decisions near a prefix boundary
+because additional observed neighbors are available.
+
+`probe-hands2d` tests missing detections in tight, rotated crops. Nearby detections
+provide search boxes only; reported landmarks are fresh image-model outputs.
+Candidates need the original 65% hand-mask overlap, at most 30% overlap with the
+other hand, and agreement from at least two distinct crop/rotation requests
+(median <=10 px and p90 <=20 px). A probe result is not automatically admitted to
+metric reconstruction. Repeated model agreement is not independent accuracy
+validation, and unsupported occluded joints remain an open issue.
+
+`temporal_comparison.json` compares identical accepted frame sets, reports
+acceleration and speed in metres/seconds, and verifies immutable anchors.
+`readiness_assessment.json` lists remaining metric gaps, contiguous observed
+intervals, contact failures and requirements still needing validation. It also
+reports a clearly labelled optimistic coverage bound for the new 2D candidates;
+those candidates never count as recovered 3D hands. Complete coverage alone does
+not certify control readiness: a particular robot still needs retargeting,
+collision and dynamic replay validation.

@@ -20,7 +20,7 @@ from .interaction_io import Reconstruction, fresh_directory
 from .metric_hands import hand_metrics, hand_rejections, observed_hand_surface
 
 
-def refinement_rejections(before, after, limits):
+def refinement_rejections(before, after, limits, *, require_image_improvement=True):
     keys = (
         "reprojection_median_px",
         "reprojection_p90_px",
@@ -35,7 +35,9 @@ def refinement_rejections(before, after, limits):
         return failed
     if any(after[k] > before[k] + 0.5 for k in image):
         failed.append("image_regression")
-    if not any(after[k] <= 0.9 * before[k] for k in image):
+    if require_image_improvement and not any(
+        after[k] <= 0.9 * before[k] for k in image
+    ):
         failed.append("insufficient_image_improvement")
     for key, tolerance in (
         ("validation_surface_median_m", 0.001),

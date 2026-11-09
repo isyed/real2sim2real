@@ -35,6 +35,8 @@ def review(config):
     comparison = (
         json.loads(comparison_path.read_text()) if comparison_path.exists() else None
     )
+    temporal_path = root / "temporal_comparison.json"
+    temporal = json.loads(temporal_path.read_text()) if temporal_path.exists() else None
     hands = np.load(hand_path) if hand_path.exists() else None
     hand_quality_path = root / "hands_metric/quality.json"
     hand_quality = (
@@ -108,6 +110,7 @@ def review(config):
         summary=contacts["summary"] if contacts else None,
         metrics=metrics,
         comparison=comparison,
+        temporal=temporal,
         fit_limits=hand_quality["limits"] if hand_quality else None,
     )
     write_json(
@@ -148,6 +151,7 @@ const slider=document.getElementById('frame'), canvas=document.getElementById('s
 slider.max=DATA.frames.length-1;let yaw=-.3,pitch=.7,zoom=850,drag=null,playing=false,timer;
 document.getElementById('status').textContent=DATA.has_hands?(DATA.metrics?`Accepted metric frames: left ${DATA.metrics.hands.left.accepted_metric_frames}/${DATA.frames.length}, right ${DATA.metrics.hands.right.accepted_metric_frames}/${DATA.frames.length}. Missing estimates remain invalid.`:'Accepted metric hand estimates are shown; inspect coverage and contact errors below.'):'PARTIAL REVIEW: tabletop and object are reconstructed. Articulated metric 3D hands are not yet available.';
 if(DATA.comparison)document.getElementById('status').textContent+=` Recovered: left ${DATA.comparison.hands.left.recovered_frames}, right ${DATA.comparison.hands.right.recovered_frames}. Previously accepted geometry is unchanged.`;
+if(DATA.temporal)document.getElementById('status').textContent+=` Temporal corrections: left ${DATA.temporal.hands.left.changed_frame_ids.length}, right ${DATA.temporal.hands.right.changed_frame_ids.length}. Coverage and original anchors are unchanged. Control readiness: not established.`;
 function projected(p){const x=p[0],y=p[1]-.12,z=p[2]-.10,a=Math.cos(yaw)*x-Math.sin(yaw)*y,b=Math.sin(yaw)*x+Math.cos(yaw)*y;return [507+zoom*a,380-zoom*(Math.cos(pitch)*z-Math.sin(pitch)*b),Math.sin(pitch)*z+Math.cos(pitch)*b];}
 function line(a,b,color,width=2){a=projected(a);b=projected(b);ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();}
 function pose(p,t){return [0,1,2].map(i=>t[i][0]*p[0]+t[i][1]*p[1]+t[i][2]*p[2]+t[i][3]);}

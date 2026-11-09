@@ -1,0 +1,16 @@
+real2sim2real
+Copyright 2026 real2sim2real contributors
+
+Original project contributions are licensed under Apache License 2.0.
+Bundled third-party code, documentation and assets retain their own licenses
+and attribution notices. This notice does not relicense those components.
+
+This project includes source derived from NVIDIA work:
+Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+The original upstream notice assigns Apache-2.0 to source code and CC-BY-4.0
+to upstream documentation/skills. Its full text is retained in
+licenses/UPSTREAM-LICENSE. Other component notices remain in licenses/ and
+in source-file headers. See docs/THIRD_PARTY.md in the source repository.
+
+Project modifications include reusable module boundaries, artifact contracts,
+calibrated reconstruction adapters, evaluation and runtime supervision.

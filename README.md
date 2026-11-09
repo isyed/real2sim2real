@@ -2,16 +2,19 @@
 
 Composable tools for reconstructing human–object motion from RGB video,
 repairing that reconstruction, retargeting it to a robot, and training a
-correction controller in simulation. This repository is private for now.
+correction controller in simulation. Dataset-specific experiments and private
+configuration belong in downstream repositories.
 
 | Module | Input | Output |
 | --- | --- | --- |
 | [reconstruction](modules/reconstruction/README.md) | RGB video, segmentation prompts, local pretrained models | Human motion, object mesh and poses, shared metric depth/camera, diagnostics |
+| [egocentric-reconstruction](modules/egocentric-reconstruction/README.md) | Calibrated synchronized video streams and segmentation prompts | Metric stereo depth, camera motion, rigid object mesh/motion, diagnostics |
+| [reconstruction-evaluation](modules/reconstruction-evaluation/README.md) | Predicted mesh/motion and isolated reference assets | Offline geometry/trajectory scores, coverage and per-frame errors |
 | [reconstruction-repair](modules/reconstruction-repair/README.md) | Reconstruction and explicit image/depth evidence | Accepted repaired reference, retained parent, per-stage gate results |
 | [retargeting](modules/retargeting/README.md) | Human/object reference, robot definition, body-model assets | Robot joint/root targets, object motion and geometric contact schedule |
 | [controller-actor-training](modules/controller-actor-training/README.md) | Robot reference, robot assets and frozen controller weights | FlashSAC correction actor, training state and configuration |
 
-The current implementations use SAM2, MoGe2, SAM 3D Body, depth-conditioned
+The current implementations use SAM2, MoGe2, calibrated stereo, SAM 3D Body, depth-conditioned
 SAM 3D Objects, FoundationPose, SOMA/Pink IK, and FlashCHORD/FlashSAC. The
 initial robot recipe is G1 with Dex3 hands and SONIC. Alternative robots need
 their own retargeting and controller/embodiment configuration.

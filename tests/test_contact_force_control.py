@@ -54,6 +54,46 @@ def test_joint_stop_antiwindup_uses_remaining_joints_and_caps_integral():
         normal_force_step([2], [0], [0.01], 1, 2, 0.01, [[-1, 1]], s)
 
 
+def test_tangent_step_corrects_sliding_without_reversing_pressure():
+    s = settings()
+    normal = np.array([0.01, 0, 0])
+    tangent = np.diag([0, 0.01, 0.01])
+    original = normal.copy()
+    q, offset = normal_force_step(
+        np.zeros(3),
+        np.zeros(3),
+        normal,
+        1,
+        2,
+        0.01,
+        np.array([[-1, 1]] * 3),
+        s,
+        tangent_jacobian=tangent,
+        tangent_velocity=[0, 0.001, -0.001],
+    )
+    assert q[0] < 0 and q[1] > 0 and q[2] < 0
+    assert np.linalg.norm(offset) <= 0.01 * s["max_joint_speed_rad_s"] + 1e-12
+    np.testing.assert_array_equal(normal, original)
+    blocked, _ = normal_force_step(
+        np.zeros(3),
+        np.zeros(3),
+        normal,
+        1,
+        2,
+        0.01,
+        np.array([[0, 1], [-1, 1], [-1, 1]]),
+        s,
+        tangent_jacobian=tangent,
+        tangent_velocity=[0, 0.001, -0.001],
+    )
+    assert blocked[0] == 0 and blocked[1] > 0 and blocked[2] < 0
+    s.update(tangent_gain_s_inv=1, max_tangent_speed_m_s=0.002)
+    validate_settings(s)
+    s["normal_observation"] = "solved_contact"
+    with pytest.raises(ValueError, match="tangent"):
+        validate_settings(s)
+
+
 def test_controller_settings_reject_unbounded_or_incomplete_force_targets():
     s = settings()
     validate_settings(s)
@@ -148,6 +188,10 @@ def test_stationary_promotion_pins_controller_candidate_completion_and_states(tm
         validate_stationary_promotion(altered, base, candidate)
     bad = deepcopy(base)
     bad["contact_force_feedback"]["max_joint_offset_rad"] = 0.3
+    with pytest.raises(ValueError, match="retune"):
+        validate_stationary_promotion(config(), bad, candidate)
+    bad = deepcopy(base)
+    bad["object_pose_feedback"] = {"rotation_gain_s_inv": 1}
     with pytest.raises(ValueError, match="retune"):
         validate_stationary_promotion(config(), bad, candidate)
     r["simulation_final_time_s"] = 5
@@ -246,3 +290,28 @@ def test_cross_study_review_names_cannot_overwrite_same_candidate_media(tmp_path
     ]
     with pytest.raises(ValueError, match="overwrite"):
         unique_trial_media_names([paths[0], paths[0]])
+
+
+def test_collision_witness_preserves_pair_and_excludes_nonrobot_contacts():
+    from types import SimpleNamespace
+    from real2sim2real.controller_actor_training.object_grasp_audit import (
+        penetration_witnesses,
+    )
+
+    model = SimpleNamespace(
+        geom=lambda i: SimpleNamespace(name=["pad", "object", "table"][i]),
+        body=lambda i: SimpleNamespace(name=["hand", "object", "world"][i]),
+        geom_bodyid=[0, 1, 2],
+    )
+
+    def contact(a, b, distance):
+        return SimpleNamespace(geom1=a, geom2=b, dist=distance, pos=[1, 2, 3])
+
+    data = SimpleNamespace(
+        contact=[contact(1, 0, -0.004), contact(1, 2, -0.008), contact(0, 2, 0.001)]
+    )
+    rows = penetration_witnesses(model, data, {0})
+    assert len(rows) == 1
+    assert rows[0]["geoms"] == ["pad", "object"]
+    assert rows[0]["penetration_m"] == 0.004
+    assert rows[0]["position_world_m"] == [1, 2, 3]

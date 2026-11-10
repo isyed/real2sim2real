@@ -7,7 +7,31 @@ import numpy as np
 
 from real2sim2real.artifacts import digest, write_json
 from .grasp_feedback import relative_translation_drift
-from .object_grasp_pilot import load_scene, set_wrist_frame, object_transform
+from .object_grasp_pilot import (
+    load_scene,
+    set_wrist_frame,
+    set_root_frame,
+    object_transform,
+)
+
+
+def penetration_witnesses(model, data, robot_geoms):
+    """Name actual intersecting geometry pairs; no inferred contact forces."""
+    result = []
+    for contact in data.contact:
+        pair = sorted([int(contact.geom1), int(contact.geom2)])
+        if contact.dist >= 0 or not set(pair) & set(robot_geoms):
+            continue
+        result.append(
+            dict(
+                geom_ids=pair,
+                geoms=[model.geom(g).name or f"geom-{g}" for g in pair],
+                bodies=[model.body(int(model.geom_bodyid[g])).name for g in pair],
+                penetration_m=float(-contact.dist),
+                position_world_m=np.asarray(contact.pos).tolist(),
+            )
+        )
+    return result
 
 
 def audit(config, directory, output):
@@ -31,17 +55,34 @@ def audit(config, directory, output):
         model, data, config, candidate["base_position_m"], candidate["base_rotation"]
     )
     idx = robot_indices(model, config["robot"]["root_body"])
+    robot_geoms = set(idx["geoms"])
+    if "support" in candidate:
+        hand = candidate["support"]
+        set_root_frame(
+            model,
+            data,
+            hand["root_body"],
+            hand["fixture_prefix"],
+            hand["base_position_m"],
+            hand["base_rotation"],
+        )
+        robot_geoms.update(robot_indices(model, hand["root_body"])["geoms"])
     states = dict(np.load(directory / "states.npz"))
     if len(states["qpos"]) != len(result["records"]):
         raise ValueError("State/record count differs")
     objects, wrists, rotations = [], [], []
+    peaks = {}
     for q, time, row in zip(states["qpos"], states["timestamps_s"], result["records"]):
         if time != row["time_s"]:
             raise ValueError("State/record time differs")
-        if row["phase"] != "hold":
-            continue
         data.qpos[:] = q
         mujoco.mj_forward(model, data)
+        for witness in penetration_witnesses(model, data, robot_geoms):
+            key = tuple(witness["geom_ids"])
+            if witness["penetration_m"] > peaks.get(key, {}).get("penetration_m", 0):
+                peaks[key] = dict(witness, time_s=float(time), phase=row["phase"])
+        if row["phase"] != "hold":
+            continue
         obj, wrist = object_transform(model, data)[:3, 3], data.xpos[idx["root"]]
         if not np.allclose(
             obj, row["object_position_m"], atol=1e-10, rtol=0
@@ -66,7 +107,11 @@ def audit(config, directory, output):
         original_results_changed=False,
         physics_rerun=False,
         independent_validation=False,
-        note="Coordinate correction only; this does not provide new physical evidence.",
+        sampled_penetration_witnesses=sorted(
+            peaks.values(), key=lambda w: w["penetration_m"], reverse=True
+        ),
+        sampled_penetration_is_continuous_bound=False,
+        note="Coordinate and saved-sample geometry audit only; no new physical evidence or changed admission thresholds.",
     )
     write_json(output, report)
     return report

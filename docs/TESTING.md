@@ -1,5 +1,9 @@
 # Testing the reusable modules
 
+`tests/test_stereo_contact_evidence.py` checks sparse stereo correspondence and
+triangulation against known synthetic disparities, including ambiguous, textureless,
+reverse-inconsistent and search-boundary cases. No GPU or private images are needed.
+
 `tests/test_contact_region_audit.py` and `tests/test_paired_contacts.py` cover
 visibility/depth evidence, local convex-union boundaries, per-pad force budgets,
 paired diagnostic provenance and rejection of unsupported contact regions.

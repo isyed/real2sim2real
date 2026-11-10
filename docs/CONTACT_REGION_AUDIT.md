@@ -1,5 +1,8 @@
 # Contact evidence before paired grasp planning
 
+For direct checks in the original stereo images, with textured-image controls and
+patch-size sensitivities, see [Stereo contact evidence](STEREO_CONTACT_EVIDENCE.md).
+
 `egocentric.contact_observations` projects object-local contact points and normals
 through calibrated camera poses, tests visibility, and measures optical-axis depth
 residuals in metres. It separates missing evidence from disagreement. Occluder and

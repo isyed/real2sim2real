@@ -89,3 +89,11 @@ grasp. That result does not validate simultaneous hand placement or establish th
 the reconstructed contact surface is observed. Keep static balance, observation
 support, paired robot IK/collisions and dynamic success as separate stages. See
 [Contact region audits](CONTACT_REGION_AUDIT.md) for the reusable implementations.
+
+Before correcting a thin contact surface, distinguish ambiguous stereo from a
+repeatable metric disagreement. A smaller image patch can remove adjacent pixels
+while also destroying match uniqueness. Direct stereo checks, reverse matching
+and textured-image controls are implemented in
+[Stereo contact evidence](STEREO_CONTACT_EVIDENCE.md). Successful background
+matches do not validate contact surfaces; absent contact matches cannot justify
+fitting geometry toward a controller's acceptance threshold.

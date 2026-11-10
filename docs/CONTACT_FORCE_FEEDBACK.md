@@ -197,6 +197,12 @@ failure; they do not establish payload robustness or admit loaded arm dynamics.
 
 ## Review and validation
 
+Use [loaded contact motion](CONTACT_PATCH_MOTION.md) to separate sampled material
+slip from force-weighted contact-centroid migration before changing posture or
+pressure. Its read-only replay must preserve the original state archive. A
+separate bounded pad-patch refit preserves wrists and rechecks fresh geometry
+admission before physics and the original sensitivity matrix.
+
 Saved-state review assigns distinct media names when multiple studies use the
 same candidate directory name. Baseline, stationary and moving videos must never
 silently overwrite one another. Each section labels its motion condition.

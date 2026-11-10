@@ -167,3 +167,8 @@ An opt-in supported-load pressure scheduler can adapt finger goals and bilateral
 load allocation while preserving common wrist commands. Validate its stationary
 and nominal reference conditions, then freeze the rule for sensitivity testing;
 simulator force/acceleration inputs remain privileged observations.
+When pressure alone leaves drift, `contact_patch_audit` measures actual sampled
+material velocities and patch migration on a byte-identical replay.
+`bilateral_patch_replan` proposes new pad surfaces/finger postures with fixed
+wrists, then repeats geometry admission and fresh physical evaluation. See
+[contact patch motion](CONTACT_PATCH_MOTION.md).

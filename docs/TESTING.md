@@ -1,5 +1,12 @@
 # Testing the reusable modules
 
+`test_contact_patch_motion.py` separates normal motion, tangential material slip
+and patch-centroid migration; verifies gap-safe integration and common-motion
+invariance; and checks optional MuJoCo point-velocity telemetry without physical
+state writes. `test_bilateral_patch_replan.py` verifies bounded owned-finger
+changes while freezing wrists and unselected joints. Actual surface support,
+collision admission and fresh physics remain downstream evidence.
+
 `tests/test_payload_pressure.py` checks supported-load estimation with acceleration
 compensation, external-support freezing, opposite-sign pressure allocation,
 bounded rate/targets and invalid observations. The contact-force ownership test

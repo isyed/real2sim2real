@@ -408,3 +408,9 @@ and physical criteria, and records each failed case before subsequent arm audits
 allocation between hands. The core consumes force/acceleration observations;
 the current fixture adapter changes only finger targets, records its privileged
 inputs, and retains the original wrist path, actuator limits and acceptance gates.
+
+`contact_patch_audit` adds read-only solved-contact material velocities and patch
+centroids, preserving replay state archives. `bilateral_patch_replan` uses pinned
+diagnostics to propose bounded pad-surface/finger-posture changes with fixed
+wrists, then rechecks geometric admission before fresh physics. See
+[loaded contact motion](../../docs/CONTACT_PATCH_MOTION.md).

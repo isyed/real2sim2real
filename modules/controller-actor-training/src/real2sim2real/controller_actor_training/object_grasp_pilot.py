@@ -569,11 +569,29 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
     pre, opened, closed = [
         np.asarray(candidate[k]).copy() for k in ["q_pregrasp", "q_open", "q_grasp"]
     ]
-    for i, name in enumerate(candidate["joint_names"]):
-        if name.endswith(("MCP_FE", "PIP", "DIP", "IP", "thumb_CMC_FE")):
-            closed[i] += config["rollout"]["close_offset_rad"]
+    from .finger_closure import closure_target
+
+    closed = closure_target(
+        candidate["joint_names"],
+        closed,
+        config["rollout"]["close_offset_rad"],
+        config.get("finger_closure"),
+    )
     limits = model.jnt_range[idx["joints"]]
     closed = np.clip(closed, limits[:, 0], limits[:, 1])
+    from .finger_closure import closure_geometry
+
+    closure_audit = closure_geometry(
+        model,
+        data,
+        idx,
+        config["robot"]["sites"],
+        candidate["q_grasp"],
+        closed,
+        candidate["targets_m"]
+        if "targets_m" in candidate
+        else candidate["pair"]["targets_m"],
+    )
     data.qpos[idx["q"]] = pre
     if support:
         data.qpos[support.idx["q"]] = candidate["support"]["q_pregrasp"]
@@ -587,6 +605,16 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
     feedback = config.get("clearance_feedback")
     contact_feedback = config.get("contact_feedback")
     rotation_feedback = config.get("orientation_feedback")
+    surface = None
+    if config.get("finger_surface_feedback") is not None:
+        from .finger_closure import FingerSurfaceController
+
+        if contact_feedback:
+            raise ValueError("Choose either scalar closure or finger surface feedback")
+        surface = FingerSurfaceController(
+            model, config, candidate, idx, settled["settled_world_from_object"]
+        )
+    previous_group_forces = {}
     closure_correction = 0.0
     rotation_correction = np.zeros(3)
     previous_opposing_force = 0.0
@@ -633,6 +661,12 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
     all_robot_geoms = hand_geoms | support_geoms
     table = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "table")
     sample_every = max(1, round(0.02 / model.opt.timestep))
+    from .simulation_health import step_rejection
+
+    warning_names = [
+        n for n in mujoco.mjtWarning.__members__ if n.startswith("mjWARN_")
+    ]
+    solver_warnings = dict.fromkeys(warning_names, 0)
     for step in range(round(duration / model.opt.timestep)):
         q, phase = target_at(data.time, pre, opened, closed, z_index, settings)
         if support and phase == "hold":
@@ -675,6 +709,10 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
             # Keep the entry setpoint; common object-frame correction now moves
             # both wrists, replacing independent primary orientation updates.
             q[rotation_indices] += rotation_correction
+        if surface and phase != "approach":
+            q = surface.target(
+                model, data, q, previous_group_forces, model.opt.timestep
+            )
         q = np.clip(q, limits[:, 0], limits[:, 1])
         target = data.qpos.copy()
         target[idx["q"]] = q
@@ -697,7 +735,18 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
 
                 target = bias_compensated_target(model, data, target, support.idx)
         command(model, data, target)
+        previous_time = float(data.time)
         mujoco.mj_step(model, data)
+        solver_warnings = {
+            n: int(data.warning[getattr(mujoco.mjtWarning, n)].number)
+            for n in warning_names
+        }
+        health = step_rejection(
+            previous_time, float(data.time), float(model.opt.timestep), solver_warnings
+        )
+        if health:
+            aborted = health
+            break
         if not np.isfinite(data.qpos).all() or not np.isfinite(data.qvel).all():
             aborted = "nonfinite_state"
             break
@@ -707,6 +756,7 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
         group_forces = dict.fromkeys(
             ("thumb", "index", "middle", "ring", "pinky", "palm_or_other"), 0.0
         )
+        patch_forces = {}
         table_contacts = 0
         support_force = np.zeros(3)
         support_torque = np.zeros(3)
@@ -756,11 +806,19 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
                     "palm_or_other",
                 )
                 group_forces[group] += max(0.0, float(force[0]))
+                if config.get("contact_patch_logging", False):
+                    label = (
+                        name or f"geom-{gid}@{model.body(model.geom_bodyid[gid]).name}"
+                    )
+                    patch_forces[label] = patch_forces.get(label, 0.0) + max(
+                        0.0, float(force[0])
+                    )
                 if "thumb" in name:
                     thumb += max(0.0, float(force[0]))
                 elif any(x in name for x in ["index", "middle", "ring", "pinky"]):
                     fingers += max(0.0, float(force[0]))
         previous_opposing_force = fingers
+        previous_group_forces = group_forces
         previous_support_up_force = float(support_force[2])
         peak_forces = np.maximum(peak_forces, np.abs(data.actuator_force))
         if step % sample_every == 0 or step == round(duration / model.opt.timestep) - 1:
@@ -791,6 +849,12 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
                     normal_contact_force_by_group_n=group_forces,
                     opposing_closure_correction_rad=closure_correction,
                     wrist_rotation_correction_rad=rotation_correction.tolist(),
+                    **(surface.diagnostics() if surface else {}),
+                    **(
+                        dict(primary_contact_force_by_geom_n=patch_forces)
+                        if config.get("contact_patch_logging", False)
+                        else {}
+                    ),
                     **(coordination.diagnostics() if coordination else {}),
                     **(
                         dict(
@@ -872,6 +936,7 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
         success=not failures,
         rejected_for=failures,
         **metrics,
+        closure_target_geometry=closure_audit,
         hold_slip_frame="wrist",
         max_robot_penetration_m=max_pen,
         max_robot_table_penetration_m=max_table_pen,
@@ -893,6 +958,16 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
             close_offset_rad=settings["close_offset_rad"],
             duration_s=duration,
             **(
+                dict(finger_surface_feedback=config["finger_surface_feedback"])
+                if surface
+                else {}
+            ),
+            **(
+                dict(finger_closure=config["finger_closure"])
+                if config.get("finger_closure") is not None
+                else {}
+            ),
+            **(
                 dict(object_frame_coordination=config["object_frame_coordination"])
                 if coordination
                 else {}
@@ -903,6 +978,9 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
         source_scene_sha256=digest(Path(config["output"]) / "scene/scene.xml"),
         states_sha256=digest(output / "states.npz"),
         mujoco_version=mujoco.__version__,
+        solver_warning_counts=solver_warnings,
+        simulation_final_time_s=float(data.time),
+        simulation_requested_duration_s=float(duration),
         object_assistance=False,
         arm_reachability_validated=False,
         physical_hardware_validated=False,
@@ -1018,6 +1096,8 @@ def verify_frozen_controller(config, selected):
         "contact_feedback",
         "orientation_feedback",
         "object_frame_coordination",
+        "finger_closure",
+        "finger_surface_feedback",
     ):
         if config.get(key) != selected["controller"].get(key):
             raise ValueError("Frozen validation cannot change controller feedback")

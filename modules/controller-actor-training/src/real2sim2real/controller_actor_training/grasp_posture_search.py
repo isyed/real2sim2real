@@ -85,6 +85,8 @@ def source(config):
         "clearance_feedback",
         "orientation_feedback",
         "contact_feedback",
+        "finger_closure",
+        "finger_surface_feedback",
     ):
         if config.get(key) != report["configuration"].get(key):
             raise ValueError(

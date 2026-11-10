@@ -14,6 +14,9 @@ object pose using a shared bounded correction and joint-limit projection. Its
 world-motion audit remains separate from contact and wrist-relative drift gates.
 [Contact/posture search](../../docs/GRASP_POSTURE_SEARCH.md) evaluates finger
 placement and reserved wrist travel against both retained controllers.
+[Finger closing and contact feedback](../../docs/FINGER_CLOSURE.md) separates
+unconstrained closing commands from actual loaded contact, with bounded named
+offsets, per-finger surface regulation and numerical-integrity checks.
 See the [task-first roadmap](../../docs/OBJECT_CENTRIC_ROADMAP.md) for optional
 skill-graph integration and subsequent object-reference tracking.
 

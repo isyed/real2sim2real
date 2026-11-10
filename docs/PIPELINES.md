@@ -172,3 +172,9 @@ material velocities and patch migration on a byte-identical replay.
 `bilateral_patch_replan` proposes new pad surfaces/finger postures with fixed
 wrists, then repeats geometry admission and fresh physical evaluation. See
 [contact patch motion](CONTACT_PATCH_MOTION.md).
+
+An optional [supported-load posture transition](PAYLOAD_POSTURE.md) interpolates
+owned fingers toward an admitted alternative while preserving wrists and object
+targets. The transition uses filtered load observations, explicit travel/speed
+bounds and intermediate collision checks. Freeze the entire rule before testing
+the full sensitivity matrix; separate fixed-posture successes cannot be pooled.

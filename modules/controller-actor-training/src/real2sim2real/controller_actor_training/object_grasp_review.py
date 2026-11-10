@@ -209,6 +209,13 @@ def render(config, directory, output, *, stem=None):
                     f"Supported-load estimate {load['estimated_weight_n']:.2f} N | primary/support pressure scales {scales[0]:.2f} / {scales[1]:.2f} | simulator observations",
                     fill=(20, 30, 45),
                 )
+            if row.get("payload_posture"):
+                posture = row["payload_posture"]
+                draw.text(
+                    (15, 483),
+                    f"Load-driven posture {posture['fraction']:.2f} | requested {posture['desired_fraction']:.2f} | bounded finger transition",
+                    fill=(20, 30, 45),
+                )
             draw.text(
                 (15, 502),
                 f"Object bottom {row['minimum_object_height_m'] * 1000:.1f} mm | wrist fixture, arm not modelled | no object assistance",

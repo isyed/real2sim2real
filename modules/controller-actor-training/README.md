@@ -414,3 +414,8 @@ centroids, preserving replay state archives. `bilateral_patch_replan` uses pinne
 diagnostics to propose bounded pad-surface/finger-posture changes with fixed
 wrists, then rechecks geometric admission before fresh physics. See
 [loaded contact motion](../../docs/CONTACT_PATCH_MOTION.md).
+
+`payload_posture` adds bounded supported-load-driven finger-posture transitions
+between pinned admitted endpoints. The current adapter preserves wrist fixtures,
+object targets and native limits. See [posture transitions](../../docs/PAYLOAD_POSTURE.md)
+for configuration, observations and frozen-matrix admission.

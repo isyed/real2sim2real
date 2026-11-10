@@ -134,3 +134,82 @@ fully decodes them, and binds each video to its state hash. It shows initializat
 changes and representative passing/failing trials. Detailed tables retain all
 results. Nominal lift success does not validate uncertain human fingers, a full
 episode reference or a physical robot.
+
+## Feedback and robustness experiments
+
+Optional `contact_feedback` integrates an extra, bounded closure command for the
+opposing fingers from their summed normal contact force. Its config declares
+`target_force_n`, `gain_rad_per_n_s`, `max_speed_rad_s` and `max_offset_rad`.
+Optional `orientation_feedback` uses observed object orientation error and the
+wrist rotational Jacobian to command bounded wrist corrections. It declares
+`gain_s_inv`, `max_speed_rad_s` and `max_offset_rad`. Both modify robot joint
+targets under the existing joint/force limits. They never modify object poses,
+geometry, forces applied directly to the object, or human reconstruction.
+
+The pilot presently reads exact simulated object orientation and contact forces.
+Those are privileged observations until a corresponding estimator/sensor path
+exists. Force groups distinguish thumb, individual opposing fingers and remaining
+hand geometry. A five-fingertip geometric plan does not imply that all five
+fingers carry load in the actual grasp.
+
+`grasp_robustness --config study.json` pins a previously successful grasp, compares
+up to 24 controller/case combinations and conditionally validates a frozen
+selection. Controller variations are restricted to the two feedback options;
+scene, contact targets and success thresholds remain fixed. `--validate` accepts
+a `robustness_validation` config with comparison/protocol hashes, controller name,
+finite deadline, explicit cases and hold duration. Diagnostic continuation of a
+failed development candidate cannot promote it, even if later cases pass.
+
+Trial schema 2 measures `hold_slip_m` in the **moving wrist frame**:
+`p_relative = R_world_from_wrist.T @ (p_object - p_wrist)`.
+The maximum displacement from the first hold sample must remain within 10 mm.
+Schema 1 used the changing world vector `p_object - p_wrist`; intentional wrist
+rotation could therefore be confused with slip. Schema 2 retains that quantity
+as `hold_relative_world_displacement_m`. This is a coordinate correction, not a
+larger tolerance. `object_grasp_audit.audit` can rescore saved hold kinematics,
+checking source/state identity and reproducing recorded positions, without
+overwriting historical verdicts or claiming new physical evidence. Translation
+drift remains a proxy for in-hand motion, not measured surface slip.
+
+`object_grasp_review.review_trials` creates a saved-state comparison of explicitly
+selected trials. Reviews provide VP8 WebM, the original MP4 and an embedded
+animated GIF fallback for local viewers. `real2sim2real.review_media` can also
+prepare portable media from an existing video, verifying complete decoding and
+source/cache hashes. This changes display files only; it never reruns physics.
+
+## Object tasks versus demonstration repair
+
+In demonstration repair, the unknown is what the human actually did. Corrections
+need support from RGB, calibrated depth, visible joint identity and other
+observations. Making a simulated robot succeed does not independently establish
+the truth of the repaired human fingers or contact timing.
+
+In an object task, the goal is declared directly: for example, lift a pot clear
+of the table, keep it upright and hold it. Robot contact locations, approach,
+joint commands and feedback may be optimized against that goal. Human motion
+can suggest a handle or approach side as a low-confidence proposal prior. It
+does not constrain the robot to reproduce uncertain finger positions. Unknown
+human articulation can remain unknown while robot manipulation is investigated.
+
+Independent joint evidence can include held-out, anatomically identified image
+landmarks, calibrated views not used for fitting, or motion-capture measurements.
+Another prediction from the same fitted model is not independent evidence.
+Appearance tracks need semantic identity checks: a tracked skin point is not
+automatically a particular joint. A secondary view reused in fitting/depth is
+a consistency check unless a clear evaluation holdout is maintained.
+
+Independent contact evidence can include visible touching/contact transitions,
+multi-view separation constraints, or measured tactile/force signals. Images
+often constrain contact without proving its force or exact location. Simulated
+contact forces test the consequences of a hypothesized robot scene; they are
+not observations of the human's original contact.
+
+Physics begins with free-body settling and proceeds to actuated contact trials.
+Policy training additionally needs a task-specific environment adapter: resets,
+bounded actions, attainable observations, reward, success/termination rules and
+evaluation cases. A programmed feedback controller is not a learned policy.
+Exploratory learning can address remaining control failures, but cannot certify
+incorrect geometry, unobservable deployment inputs or infeasible arm motions.
+Before substantial training, demonstrate a feasible sustained grasp, validate
+the simulator/reset/observation boundary, and freeze a separate evaluation set.
+An arm-based policy further requires the intended arm and its constraints.

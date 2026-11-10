@@ -103,6 +103,11 @@ def render(config, directory, output):
     report = json.loads((directory / "result.json").read_text())
     if digest(directory / "states.npz") != report["states_sha256"]:
         raise ValueError("Recorded trial changed")
+    if (
+        digest(Path(config["output"]) / "scene/scene.xml")
+        != report["source_scene_sha256"]
+    ):
+        raise ValueError("Recorded trial belongs to another scene")
     states = dict(np.load(directory / "states.npz"))
     model, data, _ = load_scene(config)
     candidate = report["candidate"]
@@ -172,6 +177,9 @@ def render(config, directory, output):
     reader.close()
     if decoded != len(indices):
         raise ValueError("Rendered video incomplete")
+    from real2sim2real.review_media import prepare
+
+    portable = prepare(path, output / (directory.name + ".playback"))
     return dict(
         path=path.name,
         frames=decoded,
@@ -181,11 +189,13 @@ def render(config, directory, output):
         state_sha256=report["states_sha256"],
         display_only_decimation=True,
         dynamics_rerun=False,
+        portable_media=portable,
     )
 
 
 def review(config):
     import mujoco
+    from real2sim2real.review_media import player
 
     root = Path(config["output"])
     output = root / config.get("review_directory", "review")
@@ -238,7 +248,13 @@ def review(config):
         + f"{settled['translation_m'] * 1000:.1f} mm and {settled['rotation_deg']:.1f} degrees. The original reconstruction is preserved."
         + '</p><img src="initialization.jpg">'
         + "".join(
-            f'<h2>{html.escape(v["path"])}</h2><video controls loop muted src="{html.escape(v["path"])}"></video>'
+            f"<h2>{html.escape(v['path'])}</h2>"
+            + player(
+                v["path"],
+                Path(v["path"]).stem + ".playback/video.webm",
+                Path(v["path"]).stem + ".playback/preview.gif",
+                embedded_gif=output / (Path(v["path"]).stem + ".playback/preview.gif"),
+            )
             for v in videos
         )
         + f'<p><a href="../{evaluation_root.name}/evaluation.json">Evaluation</a> | <a href="../scene/collision_audit.json">Collision proxy audit</a> | <a href="../settling.json">Settling</a></p>'
@@ -250,5 +266,55 @@ def review(config):
             evaluation_sha256=digest(evaluation_root / "evaluation.json"),
             config=config,
         ),
+    )
+    return videos
+
+
+def review_trials(
+    config, trials, output, *, title="Fixed-grasp controller diagnostics"
+):
+    """Compare named saved trials across bounded studies without rerunning them."""
+    from real2sim2real.review_media import player
+
+    output = Path(output)
+    output.mkdir(parents=True, exist_ok=False)
+    sections, videos = [], []
+    for directory in map(Path, trials):
+        result = json.loads((directory / "result.json").read_text())
+        video = render(config, directory, output)
+        videos.append(
+            dict(
+                **video,
+                source_result=str(directory / "result.json"),
+                source_result_sha256=digest(directory / "result.json"),
+            )
+        )
+        stem = directory.name
+        verdict = (
+            "Pass"
+            if result["success"]
+            else "Rejected: " + ", ".join(result["rejected_for"])
+        )
+        sections.append(
+            f"<h2>{html.escape(stem)}</h2><p>{html.escape(verdict)}. "
+            f"Mass {config['physics']['mass_kg'] * result['mass_scale']:.2f} kg; friction {result['friction']:.2f}. "
+            f"Minimum hold clearance {result['hold_minimum_clearance_m'] * 1000:.1f} mm; "
+            f"hold drift {result['hold_slip_m'] * 1000:.1f} mm ({html.escape(result.get('hold_slip_frame', 'world-vector legacy metric'))} frame).</p>"
+            + player(
+                video["path"],
+                stem + ".playback/video.webm",
+                stem + ".playback/preview.gif",
+                embedded_gif=output / (stem + ".playback/preview.gif"),
+            )
+        )
+    (output / "review.html").write_text(
+        '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+        f"<title>{html.escape(title)}</title><style>body{{font:17px/1.5 system-ui;max-width:1100px;margin:30px auto;padding:0 20px;background:#18202b;color:#eee}}a{{color:#8cf}}video,img{{width:100%}}details{{padding:12px;background:#293745}}</style>"
+        f"<h1>{html.escape(title)}</h1><p>Actual saved CPU physics. Articulated hand and force-limited wrist fixture; no arm or object assistance. Human finger trajectories are not targets. Short passes do not erase longer hold failures.</p>"
+        + "".join(sections)
+        + "</html>"
+    )
+    write_json(
+        output / "review.json", dict(videos=videos, config=config, physics_rerun=False)
     )
     return videos

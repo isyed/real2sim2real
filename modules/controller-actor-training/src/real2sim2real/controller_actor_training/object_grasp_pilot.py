@@ -529,6 +529,17 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
     if settings["hold_s"] < goal["hold_s"]:
         raise ValueError("Trial hold cannot be shorter than the task requirement")
     feedback = config.get("clearance_feedback")
+    contact_feedback = config.get("contact_feedback")
+    rotation_feedback = config.get("orientation_feedback")
+    closure_correction = 0.0
+    rotation_correction = np.zeros(3)
+    previous_opposing_force = 0.0
+    opposing_indices = [
+        i
+        for i, name in enumerate(candidate["joint_names"])
+        if "thumb" not in name and name.endswith(("MCP_FE", "PIP", "DIP", "IP"))
+    ]
+    rotation_indices = [candidate["joint_names"].index("fixture_r" + a) for a in "xyz"]
     displacement = 0.0
     duration = sum(settings[k] for k in ["approach_s", "close_s", "lift_s", "hold_s"])
     records = []
@@ -554,6 +565,31 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
                 displacement, clearance, goal["lift_m"], model.opt.timestep, feedback
             )
             q[z_index] = closed[z_index] + displacement
+        if contact_feedback and phase in ("lift", "hold"):
+            from .grasp_feedback import contact_closure
+
+            closure_correction = contact_closure(
+                closure_correction,
+                previous_opposing_force,
+                model.opt.timestep,
+                contact_feedback,
+            )
+            q[opposing_indices] += closure_correction
+        if rotation_feedback and phase in ("lift", "hold"):
+            from .grasp_feedback import orientation_correction
+
+            jac = np.zeros((3, model.nv))
+            mujoco.mj_jacBody(model, data, None, jac, idx["root"])
+            rotation_correction = orientation_correction(
+                rotation_correction,
+                object_transform(model, data)[:3, :3],
+                initial_rotation,
+                jac[:, idx["dofs"][rotation_indices]],
+                model.opt.timestep,
+                rotation_feedback,
+            )
+            q[rotation_indices] += rotation_correction
+        q = np.clip(q, limits[:, 0], limits[:, 1])
         target = data.qpos.copy()
         target[idx["q"]] = q
         command(model, data, target)
@@ -564,6 +600,9 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
         if np.any(data.xfrc_applied) or np.any(data.qfrc_applied):
             raise ValueError("External assistance applied")
         thumb = fingers = 0.0
+        group_forces = dict.fromkeys(
+            ("thumb", "index", "middle", "ring", "pinky", "palm_or_other"), 0.0
+        )
         table_contacts = 0
         for contact_id, c in enumerate(data.contact):
             pair = {c.geom1, c.geom2}
@@ -580,10 +619,16 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
                 name = (
                     mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, int(gid)) or ""
                 )
+                group = next(
+                    (g for g in group_forces if g != "palm_or_other" and g in name),
+                    "palm_or_other",
+                )
+                group_forces[group] += max(0.0, float(force[0]))
                 if "thumb" in name:
                     thumb += max(0.0, float(force[0]))
                 elif any(x in name for x in ["index", "middle", "ring", "pinky"]):
                     fingers += max(0.0, float(force[0]))
+        previous_opposing_force = fingers
         peak_forces = np.maximum(peak_forces, np.abs(data.actuator_force))
         if step % sample_every == 0 or step == round(duration / model.opt.timestep) - 1:
             mujoco.mj_forward(model, data)
@@ -605,10 +650,14 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
                     minimum_object_height_m=height,
                     object_position_m=transform[:3, 3].tolist(),
                     wrist_position_m=data.xpos[idx["root"]].tolist(),
+                    wrist_rotation=data.xmat[idx["root"]].reshape(3, 3).tolist(),
                     rotation_change_deg=tilt,
                     thumb_force_n=thumb,
                     finger_force_n=fingers,
                     table_contacts=table_contacts,
+                    normal_contact_force_by_group_n=group_forces,
+                    opposing_closure_correction_rad=closure_correction,
+                    wrist_rotation_correction_rad=rotation_correction.tolist(),
                 )
             )
             qstates.append(data.qpos.copy())
@@ -638,9 +687,20 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
     relative = np.array(
         [np.asarray(r["object_position_m"]) - r["wrist_position_m"] for r in hold]
     )
-    slip = (
+    legacy_displacement = (
         float(np.linalg.norm(relative - relative[0], axis=1).max())
         if len(relative)
+        else None
+    )
+    from .grasp_feedback import relative_translation_drift
+
+    slip = (
+        relative_translation_drift(
+            [r["object_position_m"] for r in hold],
+            [r["wrist_position_m"] for r in hold],
+            [r["wrist_rotation"] for r in hold],
+        )
+        if hold
         else None
     )
     failures = []
@@ -665,7 +725,7 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
         timestamps_s=np.array([r["time_s"] for r in records]),
     )
     report = dict(
-        schema="real2sim2real.object-grasp-trial/1",
+        schema="real2sim2real.object-grasp-trial/2",
         candidate_id=candidate["candidate_id"],
         candidate=candidate,
         mass_scale=mass_scale,
@@ -675,6 +735,8 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
         hold_minimum_clearance_m=clearance,
         hold_opposed_contact_fraction=contacts,
         hold_slip_m=slip,
+        hold_slip_frame="wrist",
+        hold_relative_world_displacement_m=legacy_displacement,
         max_robot_penetration_m=max_pen,
         max_robot_table_penetration_m=max_table_pen,
         actuator_peak_forces={
@@ -690,9 +752,12 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
         },
         controller=dict(
             clearance_feedback=feedback,
+            contact_feedback=contact_feedback,
+            orientation_feedback=rotation_feedback,
             close_offset_rad=settings["close_offset_rad"],
             duration_s=duration,
         ),
+        configuration=config,
         records=records,
         source_scene_sha256=digest(Path(config["output"]) / "scene/scene.xml"),
         states_sha256=digest(output / "states.npz"),

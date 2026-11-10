@@ -161,6 +161,10 @@ def settle(config):
 def plan(config):
     import mujoco
     from real2sim2real.retargeting.object_grasp import surface_pairs
+    from real2sim2real.retargeting.contact_layout import (
+        surface_layouts,
+        contact_targets,
+    )
     from real2sim2real.retargeting.grasp_kinematics import (
         robot_indices,
         fit_contacts,
@@ -178,7 +182,21 @@ def plan(config):
     world = mesh.copy()
     world.apply_transform(settled["settled_world_from_object"])
     settings = config["planning"]
-    pairs = surface_pairs(
+    method = settings.get("surface_search", "outer")
+    if method not in ("outer", "local_spans"):
+        raise ValueError("Unknown surface search method")
+    generator = surface_layouts if method == "local_spans" else surface_pairs
+    search_diagnostics = {}
+    search_options = (
+        dict(
+            yaw_samples=settings.get("yaw_samples", 8),
+            gravity_lever_weight=settings.get("gravity_lever_weight", 1.0),
+            diagnostics=search_diagnostics,
+        )
+        if method == "local_spans"
+        else {}
+    )
+    pairs = generator(
         world,
         min_width_m=settings["min_width_m"],
         max_width_m=settings["max_width_m"],
@@ -186,6 +204,7 @@ def plan(config):
         max_candidates=max(1, settings["max_candidates"] // 2),
         cues=config.get("human_cues", []),
         finger_offsets_m=settings.get("finger_offsets_m", [-0.012, 0.012]),
+        **search_options,
     )
     write_json(
         output / "surface_pairs.json",
@@ -193,6 +212,8 @@ def plan(config):
             pairs=pairs,
             cues=config.get("human_cues", []),
             human_finger_targets_used=False,
+            search_method=method,
+            search_diagnostics=search_diagnostics,
         ),
     )
     idx = robot_indices(model, config["robot"]["root_body"])
@@ -206,8 +227,23 @@ def plan(config):
     ]
     z_index = names.index("fixture_z")
     rows = []
+    target_rejections = []
     for pair in pairs:
         for direction in [1, -1]:
+            offsets = settings.get("finger_offsets_m", [-0.012, 0.012])
+            if settings.get("orient_finger_order", False) and direction < 0:
+                offsets = offsets[::-1]
+            # Reversing the wrist must also exchange thumb/opposing surfaces.
+            targets = contact_targets(world, pair, offsets, direction=direction)
+            if targets is None:
+                target_rejections.append(
+                    dict(
+                        pair=pair,
+                        direction=direction,
+                        reason="missing_opposing_surface",
+                    )
+                )
+                continue
             number = len(rows)
             close = np.asarray(pair["close_axis"]) * direction
             x = np.array([0.0, 0.0, -1.0])
@@ -226,9 +262,6 @@ def plan(config):
                     seed[i] = 0.7
                 if name.endswith("thumb_CMC_FE"):
                     seed[i] = 1.2
-            targets = np.asarray(pair["targets_m"]).copy()
-            if settings.get("orient_finger_order", False) and direction < 0:
-                targets[1:] = targets[:0:-1]
             fit = fit_contacts(
                 model,
                 data,
@@ -264,6 +297,7 @@ def plan(config):
                 reasons.append("approach_penetration")
             row = dict(
                 candidate_id=number,
+                thumb_side_direction=direction,
                 pair=pair,
                 targets_m=targets.tolist(),
                 base_position_m=position.tolist(),
@@ -299,6 +333,8 @@ def plan(config):
         scene_receipt_sha256=digest(Path(config["output"]) / "scene/receipt.json"),
         human_finger_reference_used=False,
         physical_success_validated=False,
+        target_rejections=target_rejections,
+        surface_search=method,
     )
     write_json(output / "plan.json", report)
     return report
@@ -811,6 +847,26 @@ def evaluate(config):
     return report
 
 
+def verify_frozen_controller(config, selected):
+    """Reject feedback or trajectory retuning disguised as fixed-grasp validation."""
+    for key in ("clearance_feedback", "contact_feedback", "orientation_feedback"):
+        if config.get(key) != selected["controller"].get(key):
+            raise ValueError("Frozen validation cannot change controller feedback")
+    original = selected.get("configuration", {}).get("rollout")
+    if original is not None:
+        current = config["rollout"]
+        # Closure is restored from the selected trial by validate_selected.
+        excluded = {"hold_s", "close_offset_rad"}
+        if {k: v for k, v in current.items() if k not in excluded} != {
+            k: v for k, v in original.items() if k not in excluded
+        }:
+            raise ValueError(
+                "Frozen validation cannot change the approach/lift trajectory"
+            )
+        if not np.isfinite(current["hold_s"]) or current["hold_s"] < original["hold_s"]:
+            raise ValueError("Frozen validation cannot shorten the selected hold")
+
+
 def validate_selected(config):
     """Evaluate one frozen selection on declared physical-parameter cases."""
     root = Path(config["output"])
@@ -824,6 +880,7 @@ def validate_selected(config):
         (parent.parent / evaluation["selected_trial"] / "result.json").read_text()
     )
     verify_selected_trial(evaluation, selected, load_plan(config))
+    verify_frozen_controller(config, selected)
     if (
         digest(parent.parent / evaluation["selected_trial"] / "states.npz")
         != selected["states_sha256"]

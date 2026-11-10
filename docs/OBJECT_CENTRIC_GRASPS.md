@@ -140,6 +140,40 @@ episode reference or a physical robot.
 
 ## Feedback and robustness experiments
 
+### Alternative contact layouts
+
+Set `planning.surface_search: local_spans` to use
+`retargeting.contact_layout.surface_layouts`. Unlike the default outermost-ray
+search, this pairs consecutive entry/exit intersections through solid material,
+so a vessel wall can be proposed without treating the cavity as solid. It requires
+a closed, consistently oriented volume. `yaw_samples` (2–16, default 8) bounds
+horizontal directions; existing width, height, finger-spacing and candidate
+limits still apply. Both thumb-side layouts must have nearby opposing-finger
+surfaces. This is a limited proposal family, not an exhaustive feasibility test.
+
+`gravity_lever_weight` (default 1) weights the horizontal distance from a contact
+centre to the uniform-density mesh centre of mass. `gravity_lever` also reports
+the gravity torque per kilogram about that centre. A shorter lever reduces this
+static torque demand; it does not certify force closure, actual finger loading,
+stability or the object's true mass distribution. Thin reconstructed walls may
+be comparable to collision-proxy error and should not be treated as reliable
+grasp features merely because ray intersections exist.
+
+New plans exchange the thumb and opposing contact surfaces when reversing the
+wrist orientation. Anatomical finger order is handled separately. Saved plans
+and previous results are unchanged. `surface_pairs.json` records the search
+method and, for local spans, sampled width/lever diagnostics and missing finger
+surfaces. Plans retain rejected target hypotheses. Search all admitted layouts
+through contact IK, approach collision checks and sustained free-object holds
+before promotion. Keep nominal selection separate from frozen parameter checks;
+longer holds can reveal failures hidden by shorter trials.
+
+Fixed-grasp validation rejects feedback changes. For trials carrying a full
+configuration receipt it also rejects changed approach/lift schedules and shorter
+holds; it restores the closure from the selected result. Legacy results without
+that receipt cannot provide the same trajectory comparison. A new contact layout
+must be evaluated as a new experiment, not substituted into an old selection.
+
 Optional `contact_feedback` integrates an extra, bounded closure command for the
 opposing fingers from their summed normal contact force. Its config declares
 `target_force_n`, `gain_rad_per_n_s`, `max_speed_rad_s` and `max_offset_rad`.

@@ -369,3 +369,10 @@ object-motion transfer after support establishment. It preserves physical gates
 and scores motion fidelity separately; it does not validate human finger motion.
 See [GUIDED_MOTION.md](../../docs/GUIDED_MOTION.md) for initialization, observation
 and Cartesian-fixture limits.
+
+`grasp_retention` provides an opt-in, bounded primary-wrist correction for an
+established loaded grasp. `retention_experiment` freezes the source trajectory
+and physical criteria, then compares matched nominal and validation cases.
+`retention_review` renders saved states with separate physical/fidelity outcomes.
+See [GRASP_RETENTION.md](../../docs/GRASP_RETENTION.md) for privileged observations,
+contact freezes, saturation and the distinction between retention and pad slip.

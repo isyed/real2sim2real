@@ -160,3 +160,6 @@ Optional common object-pose feedback rotates/translates the wrist pair about the
 independent goal without changing their commanded relative frames. Its world-pose
 accuracy and both wrist-frame grasp-drift checks remain separate: improving one
 can worsen the other. A nominal fixture pass must precede arm revalidation.
+Use `grasp_sensitivity` to replay a pinned passing controller under declared
+payload/friction changes before loaded arm integration. A nominal state mismatch
+stops the campaign; all controller settings, reference timing and gates stay fixed.

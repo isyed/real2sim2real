@@ -115,6 +115,30 @@ penetration and duration alongside position/rotation error. A failing stationary
 candidate cannot advance to motion, and a passing reference metric cannot erase a
 failed physical grasp. Simulator pose feedback remains privileged observation.
 
+## Frozen payload and friction sensitivity
+
+`python -m real2sim2real.controller_actor_training.grasp_sensitivity --config ...`
+tests a pinned complete source trial with fresh grasp acquisition in every case.
+Its configuration accepts only `source_result`, `source_sha256`,
+`protocol_sha256`, `output`, `deadline_s` and `cases`. Each case has a local
+`name`, `mass_scale` and `sliding_friction` (null preserves prepared friction).
+Begin with `{"name": "nominal", "mass_scale": 1.0, "sliding_friction": null}`.
+
+The stage verifies source completion, physical/reference admission, result and
+state hashes and the original protocol. It reuses the exact candidate,
+controller, reference clock, timestep, initial scene and hold duration. Nominal
+state-archive mismatch stops perturbations. Payload and inertia scale together;
+sliding friction changes both contacting surfaces, including the table and other
+robot geoms, so MuJoCo's coefficient combination cannot preserve the old high
+friction on one side. Torsional/rolling coefficients remain prepared values.
+These are declared simulator perturbations, not measured material uncertainty.
+
+The report retains physical and reference verdicts for each case and admits the
+declared case set only if all complete passes and nominal replay agree. Improving
+world-pose metrics under a perturbation cannot erase a grasp-drift failure.
+Kinematic arm audits may still diagnose the nominal path after a sensitivity
+failure; they do not establish payload robustness or admit loaded arm dynamics.
+
 ## Review and validation
 
 Saved-state review assigns distinct media names when multiple studies use the

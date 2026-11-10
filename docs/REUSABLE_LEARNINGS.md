@@ -110,3 +110,10 @@ can block the turn beneath a rim. Audit the opening, proxy intrusion and the ful
 tool sweep separately. A required extra gap identifies a pre-grasp tilt/lift
 subproblem; changing IK or MPC does not supply that gap. See
 [Handle insertion](HANDLE_INSERTION.md) for the geometry checks and module map.
+
+Demonstrated object motion can improve trajectory following while exceeding a
+grasp-slip limit. Keep motion fidelity and physical retention as independent
+requirements. Transfer from an achieved grasp is not replay of a reconstructed
+floating start. Review actual human contact strategy before selecting insertion
+templates, and compare the same object-local surfaces before/after settling.
+See [Reference-guided motion and strategy](GUIDED_MOTION.md).

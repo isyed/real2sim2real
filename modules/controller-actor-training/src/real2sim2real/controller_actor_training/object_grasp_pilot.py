@@ -612,7 +612,7 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
         if "targets_m" in candidate
         else candidate["pair"]["targets_m"],
     )
-    if 'pad_plan' in candidate:
+    if "pad_plan" in candidate:
         from .pad_grasp_planning import pad_closure_geometry
 
         closure_audit = pad_closure_geometry(model, data, idx, candidate, closed)
@@ -680,6 +680,29 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
             initial_rotation,
         )
     object_geoms = set(np.flatnonzero(model.geom_bodyid == obj))
+    guidance = None
+    if config.get("reference_guidance") is not None:
+        if not support or not support.enabled or coordination:
+            raise ValueError(
+                "Reference guidance requires two hands and exclusive wrist-command ownership"
+            )
+        from .guided_motion import GuidedMotion
+
+        guidance = GuidedMotion(
+            model,
+            [
+                (config["robot"]["root_body"], "fixture_"),
+                (
+                    config["support_robot"]["root_body"],
+                    config["support_robot"]["fixture_prefix"],
+                ),
+            ],
+            config["reference_guidance"],
+        )
+        if settings["hold_s"] < guidance.reference.elapsed[-1] + task["goal"]["hold_s"]:
+            raise ValueError(
+                "Reference transfer must leave the required final hold duration"
+            )
     hand_geoms = set(idx["geoms"])
     support_geoms = set(support.idx["geoms"]) if support else set()
     all_robot_geoms = hand_geoms | support_geoms
@@ -696,8 +719,12 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
         if support and phase == "hold":
             phase = support.phase(data.time)
         lifted = phase in ("lift", "hold", "support_approach", "support_seat")
+        if guidance and phase == "hold":
+            guidance.enter(data.time, object_transform(model, data))
         if feedback and lifted:
             pose = object_transform(model, data)
+            if guidance:
+                pose = guidance.feedback_pose(pose, data.time)
             clearance = float(
                 (mesh.vertices @ pose[2, :3]).min() + pose[2, 3] - table_top
             )
@@ -722,7 +749,11 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
             mujoco.mj_jacBody(model, data, None, jac, idx["root"])
             rotation_correction = orientation_correction(
                 rotation_correction,
-                object_transform(model, data)[:3, :3],
+                (
+                    guidance.feedback_pose(object_transform(model, data), data.time)
+                    if guidance
+                    else object_transform(model, data)
+                )[:3, :3],
                 initial_rotation,
                 jac[:, idx["dofs"][rotation_indices]],
                 model.opt.timestep,
@@ -754,6 +785,11 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
                 target = coordination.target(
                     model, target, object_transform(model, data), model.opt.timestep
                 )
+            if guidance and phase == "hold":
+                target = guidance.target(model, target, data.time)
+                if guidance.rejection:
+                    aborted = guidance.rejection
+                    break
             if support.settings.get("actuator_bias_compensation", False):
                 from .support_control import bias_compensated_target
 
@@ -864,6 +900,8 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
                     phase=phase,
                     minimum_object_height_m=height,
                     object_position_m=transform[:3, 3].tolist(),
+                    object_rotation=transform[:3, :3].tolist(),
+                    **(guidance.observation(transform, data.time) if guidance else {}),
                     wrist_position_m=data.xpos[idx["root"]].tolist(),
                     wrist_rotation=data.xmat[idx["root"]].reshape(3, 3).tolist(),
                     rotation_change_deg=tilt,
@@ -927,6 +965,8 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
         extra = support_hold_metrics(records, float(model.body_mass[obj] * 9.81))
         metrics.update(extra)
         failures.extend(support_rejections(extra, support.rejection))
+    if guidance and guidance.max_command_error_m > 1e-6:
+        failures.append("reference_command_pose_error")
     if coordination:
         from .wrist_coordination import hold_world_motion
 
@@ -982,6 +1022,11 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
             close_offset_rad=settings["close_offset_rad"],
             duration_s=duration,
             **(
+                dict(reference_guidance=config["reference_guidance"])
+                if guidance
+                else {}
+            ),
+            **(
                 dict(finger_surface_feedback=config["finger_surface_feedback"])
                 if surface
                 else {}
@@ -1008,6 +1053,19 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
         object_assistance=False,
         arm_reachability_validated=False,
         physical_hardware_validated=False,
+        **(
+            dict(
+                reference_mode="world_increment_after_grasp",
+                reference_capture_start_reproduced=False,
+                reference_anchor_world_from_object=None
+                if guidance.anchor is None
+                else guidance.anchor.tolist(),
+                reference_start_time_s=guidance.start,
+                reference_max_command_error_m=guidance.max_command_error_m,
+            )
+            if guidance
+            else {}
+        ),
         **(
             dict(
                 coordination=coordination.diagnostics(),
@@ -1122,6 +1180,7 @@ def verify_frozen_controller(config, selected):
         "object_frame_coordination",
         "finger_closure",
         "finger_surface_feedback",
+        "reference_guidance",
     ):
         if config.get(key) != selected["controller"].get(key):
             raise ValueError("Frozen validation cannot change controller feedback")
@@ -1215,7 +1274,15 @@ def main():
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument(
         "--phase",
-        choices=["prepare", "plan", "approach", "pad-patches", "evaluate", "validate", "review"],
+        choices=[
+            "prepare",
+            "plan",
+            "approach",
+            "pad-patches",
+            "evaluate",
+            "validate",
+            "review",
+        ],
         required=True,
     )
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)

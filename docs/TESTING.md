@@ -110,3 +110,15 @@ retained fallback coverage cannot hide rejected components, unknown evidence
 blocks reference promotion, requested-frame gaps stay explicit, and a passing
 reference never claims controller validation. Boundary uncertainty and actual
 finger identity still require capture-specific evaluation.
+
+`tests/test_object_grasp.py` checks surface-width/height constraints, distinct
+finger targets, bounded uncertain cue influence, separation of closure/lift
+phases and clearance-feedback speed/travel bounds. Optional MuJoCo tests verify
+contact Jacobians against finite differences, robot/object joint ownership and
+rejection of gravity, weld and object-actuator assistance. Saved-plan tests reject
+changed scene receipts, changed settled starts and altered selected grasps or
+recorded outcomes. Run this file again
+inside the optional grasp runtime to exercise those tests instead of skipping
+them. Real-scene settling, collision approximation, nominal lift and fixed-grasp
+parameter trials remain separate experiments; a nominal pass is not robustness
+or hardware validation.

@@ -1,5 +1,10 @@
 # Egocentric reconstruction
 
+`object_task` exports accepted metric object/table geometry, frame transforms and
+capture timestamps for [object-centric grasp pilots](../../docs/OBJECT_CENTRIC_GRASPS.md).
+It requires no hand reconstruction and does not turn the reference object motion
+into a simulated force or actuator.
+
 An independently installed stage for calibrated moving-camera captures. The
 initial implementation reconstructs one rigid object with metric stereo depth,
 background RGB-D odometry, SAM2, SAM 3D Objects and FoundationPose. It publishes

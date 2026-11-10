@@ -776,6 +776,24 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
         )
     all_robot_geoms = hand_geoms | support_geoms
     table = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "table")
+    patch_motion = None
+    if config.get("contact_patch_motion") is not None:
+        if not force_servo:
+            raise ValueError(
+                "Contact-motion logging requires explicit force-controlled pad ownership"
+            )
+        from .contact_patch_motion import (
+            ContactPatchMotion,
+            summarize as summarize_contact_motion,
+        )
+
+        patch_motion = ContactPatchMotion(
+            model,
+            obj,
+            force_servo.role_geoms,
+            force_servo.pads,
+            config["contact_patch_motion"],
+        )
     sample_every = max(1, round(0.02 / model.opt.timestep))
     from .simulation_health import step_rejection
 
@@ -1037,6 +1055,11 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
                     **(surface.diagnostics() if surface else {}),
                     **(force_servo.diagnostics() if force_servo else {}),
                     **(
+                        dict(contact_patch_motion=patch_motion.sample(model, data))
+                        if patch_motion
+                        else {}
+                    ),
+                    **(
                         dict(object_pose_feedback=pose_feedback.diagnostics())
                         if pose_feedback
                         else {}
@@ -1198,6 +1221,15 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
         object_assistance=False,
         arm_reachability_validated=False,
         physical_hardware_validated=False,
+        **(
+            dict(
+                contact_patch_motion_summary=summarize_contact_motion(
+                    records, config["contact_patch_motion"]
+                )
+            )
+            if patch_motion
+            else {}
+        ),
         **(
             dict(
                 object_pose_feedback=config["object_pose_feedback"],

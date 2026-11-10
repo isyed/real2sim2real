@@ -324,6 +324,19 @@ def unique_trial_media_names(trials):
     return names
 
 
+def protocol_fidelity_limits(path):
+    """Read explicit criteria or their pinned source for a frozen sensitivity run."""
+    protocol = json.loads(Path(path).read_text())
+    if "fidelity_limits" in protocol:
+        return protocol["fidelity_limits"]
+    if "source_result" in protocol:
+        source = Path(protocol["source_result"]).parent.parent / "protocol.json"
+        if digest(source) != protocol["protocol_sha256"]:
+            raise ValueError("Inherited reference-acceptance protocol changed")
+        return json.loads(source.read_text())["fidelity_limits"]
+    return None
+
+
 def review_trials(
     config, trials, output, *, title="Fixed-grasp controller diagnostics"
 ):
@@ -360,8 +373,7 @@ def review_trials(
             result.get("configuration", {}).get("reference_guidance")
             and protocol_path.exists()
         ):
-            protocol = json.loads(protocol_path.read_text())
-            limits = protocol.get("fidelity_limits")
+            limits = protocol_fidelity_limits(protocol_path)
             if limits:
                 from .retention_experiment import assess
 

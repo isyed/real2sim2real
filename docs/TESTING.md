@@ -1,5 +1,11 @@
 # Testing the reusable modules
 
+`tests/test_grasp_sensitivity.py` checks bounded physical cases, mandatory nominal
+replay, immutable controller/gate admission, changed/failed/incomplete source
+rejection and early stopping on a state-archive mismatch. A trial that never enters
+reference motion must still return an explicit completion verdict and fail
+reference admission. Downstream free-object cases remain required evidence.
+
 Contact-force and wrist-coordination tests also cover optional tangent/normal
 velocity control, joint stops, immutable externally supplied pose goals, bounded
 3D corrections, robot-only ownership and rejection of controller retuning between

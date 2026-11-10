@@ -10,6 +10,7 @@ force budget per pad; failed balance is not a control success.
 
 | Finding | Reusable implementation | Verification / interpretation |
 | --- | --- | --- |
+| A nominal grasp pass can fail after either increasing or decreasing payload | `grasp_sensitivity` pins the complete accepted trial, replays nominal states, then varies only declared mass/inertia and sliding friction | Reject controller/gate overrides and incomplete/changed sources; stop on nominal mismatch; retain physical and reference acceptance separately for every case |
 | Improving object orientation can increase sliding within a bilateral grasp | Optional explicit-goal `wrist_coordination` plus `contact_force_control`, admitted through `bilateral_evaluate` | Freeze the stationary goal or reference clock; retain both wrists' relative drift gates alongside world-pose metrics. Pressure, common wrist motion and planned-site tangent correction are separate tested hypotheses |
 | Different imitation and task-control strategies need explicit boundaries | `pipeline_profiles`, `object_control_stage`, `control_artifacts` | Typed recipes, pinned configuration, source-preserving adoption and failed-audit admission tests; see [pipelines](PIPELINES.md) |
 | A short nominal pass does not establish a longer or robust controller | `reference_extension`, `arm_robustness`, `evidence_assessment` | Preserve reference prefix/clock and frozen controller; reject missing evidence and changed physical gates; keep perturbation failures |

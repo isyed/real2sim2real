@@ -18,17 +18,19 @@ from .object_grasp_pilot import trial
 
 def assess(result, limits):
     ref = load_reference(result["configuration"]["reference_guidance"])
+    complete = (
+        result["simulation_final_time_s"]
+        >= result["simulation_requested_duration_s"] - 1e-6
+    )
     if result["reference_start_time_s"] is None:
-        return dict(combined_pass=False, reference_pass=False, fidelity=None)
+        return dict(
+            combined_pass=False, reference_pass=False, fidelity=None, complete=complete
+        )
     score = fidelity(
         result["records"],
         ref,
         result["reference_start_time_s"],
         np.array(result["reference_anchor_world_from_object"]),
-    )
-    complete = (
-        result["simulation_final_time_s"]
-        >= result["simulation_requested_duration_s"] - 1e-6
     )
     passed = (
         complete

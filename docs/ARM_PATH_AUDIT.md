@@ -14,7 +14,7 @@ python -m real2sim2real.controller_actor_training.arm_path_review \
 ```
 
 The configuration pins `trial`, `urdf` and `sources`; declares a fresh `output`,
-finite `deadline_s`, `base_body`, at most eight `placements`, up to 200 samples
+finite `deadline_s`, `base_body`, at most eight `placements`, up to 1000 samples
 and an IK iteration budget. Every placement supplies `position_m` and `yaw_rad`
 in the upright task frame. Table height relative to the robot base is an explicit
 experimental assumption until measured. The imported URDF's fixed torso posture
@@ -48,6 +48,13 @@ the hand-frame comparison; it does not set `arm_integration_ready`. Actual arm
 torque, dynamic contact, table/base collisions beyond the declared arm bodies,
 continuous path clearance and robot sensing still need their own validation.
 Failed local fits do not prove that no base, torso posture or grasp could work.
+
+A different grasp family requires a fresh audit of its own saved wrist poses,
+including acquisition, closure and lift. Reusing the old base positions can make
+an otherwise reachable new grasp appear unreachable. Compare explicit independent
+base placements and densely audit any passing shortlist. Payload sensitivity is
+a separate physical gate; an accurate collision-free nominal IK path does not
+erase a failed payload trial or establish loaded arm control.
 
 Outputs retain all placements and sampled failures, native timing, original
 states, asset hashes and implementation identity. The review adds per-phase

@@ -399,3 +399,7 @@ video comparison to the simultaneous bilateral fixture pipeline.
 It also supports opt-in common object-pose corrections and planned-surface tangent
 feedback. These are separately evaluated hypotheses; accurate object motion alone
 does not establish retained contact or arm feasibility.
+
+`grasp_sensitivity` performs frozen payload/friction tests from a pinned complete
+passing fixture trial. It requires identical nominal replay, preserves reference
+and physical criteria, and records each failed case before subsequent arm audits.

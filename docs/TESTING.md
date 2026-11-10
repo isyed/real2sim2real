@@ -1,5 +1,12 @@
 # Testing the reusable modules
 
+`tests/test_guided_motion.py` checks timestamp-preserving motion transfer,
+feedback coordinates, missing intervals and fidelity independently of stationary
+task success. Its optional MuJoCo test checks wrist limits and no object-state
+writes. `tests/test_demonstration_strategy.py` checks original starting clearance
+and frame IDs without inferring contact. Run the existing grasp, bimanual-support
+and wrist-coordination tests after changing the shared runner.
+
 `tests/test_insertion_geometry.py` covers projected openings, swept-probe
 clearance, overlapping collision-piece membership and between-sample obstacles.
 Run `tests/test_object_grasp.py`, `tests/test_pad_planning.py` and

@@ -363,3 +363,9 @@ Before fitting a handle hook or underbody support grasp, use
 the source mesh, convex proxy and finite table. See
 [HANDLE_INSERTION.md](../../docs/HANDLE_INSERTION.md) for the bounded probe
 templates, browser review, uncertainty limits and integration with contact IK.
+
+`guided_motion_pilot` compares a retained grasp against an opt-in reconstructed
+object-motion transfer after support establishment. It preserves physical gates
+and scores motion fidelity separately; it does not validate human finger motion.
+See [GUIDED_MOTION.md](../../docs/GUIDED_MOTION.md) for initialization, observation
+and Cartesian-fixture limits.

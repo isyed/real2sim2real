@@ -186,3 +186,83 @@ Public integration references: [Sharpa flange CAD](https://github.com/sharpa-rob
 [official UR descriptions](https://github.com/UniversalRobots/Universal_Robots_ROS2_Description).
 External models and their notices stay with their downloaded assets; this project's
 Apache license does not replace the licenses of those assets.
+
+## Search a whole path before changing the controller
+
+Each audit placement may declare `ik_seed_indices`, mapping arm names to indices
+in their explicit `initial_seeds_rad` lists. The selected seed is used only at
+the beginning. Subsequent samples continue from the preceding solution; no
+mid-motion branch jump is used to bypass a collision. Omitting the mapping
+preserves the previous initial multi-seed behavior.
+
+`arm_path_planning.rank_paths` shortlists only paths passing all existing pose,
+joint, speed, hand-frame and collision checks. Among passing paths it prefers
+lower speed utilization, then larger joint margin. This is a ranking of sampled
+paths, not a global planning or continuous-clearance certificate. Sparse discovery
+can underestimate peak speed and miss collisions; every archived timestamp must
+be re-audited before replay. Symmetric base placements are not mandatory: a
+bimanual grasp can require asymmetric arm placement while both hand targets and
+the object trajectory remain unchanged. Bases, stands, mounts and cable routing
+remain explicit hardware assumptions.
+
+A collision-free path and a passing object-position error are not sufficient for
+control acceptance. Longer motion can lose opposing finger contact or exceed
+wrist-frame slip while both arms remain clear. Keep these failures independent.
+
+## Diagnose payload and friction failures by phase
+
+`arm_replay_comparison.phase_object_deviation` compares each run with the first
+run on matching phases and clocks, without alignment. It reports first/last
+world displacement and the maximum object-translation difference per phase.
+Missing or mismatched timelines remain unavailable. The first run is a saved
+simulation baseline, not a human or ground-truth reference. This distinguishes
+errors introduced during support insertion from later arm-path tracking error.
+
+`arm_clearance_audit` reconstructs robot/table intersection witnesses from saved
+states using position/collision calculations only. It verifies scene/state/audit
+hashes, bounds the archive to 1,000 samples and records per-phase maxima and
+geometry identities. It excludes object/table support from robot contacts. It
+does not infer contact forces, rerun dynamics or change historical acceptance.
+
+```bash
+python -m real2sim2real.controller_actor_training.arm_clearance_audit --directory /data/trial
+```
+
+## Experimental contact corrections
+
+These options are opt-in experiments, not default improvements or accepted
+replacements for an existing passing controller. Repeat nominal acceptance
+before freezing any candidate for a matched robustness cohort.
+
+`finger_contact_trim` integrates a declared finger's normal-force deficit along
+explicit signed flexion-joint directions. The adapter permits only owned,
+bounded, unit-gear position actuators in the primary hand. Rate, travel, physical
+joint/command limits, primary-thumb contact and fixed-reference position error
+bound the correction. It does not alter force limits, friction, arms or object
+state. Saturated closing travel without recovered opposing force is evidence to
+revisit contact placement, not permission to raise gains until acceptance.
+
+The force channels and object pose are privileged simulator observations. A
+nonzero normal force is not a friction-cone or force-closure certificate. Record
+which individual fingers actually carry opposing force; many articulated target
+fingers can still produce only one effective opposing contact.
+
+`precontact_support_alignment: true`, with explicit `object_feedback` and a
+support-approach feedback phase, lets retained primary opposed contact enable
+the existing bounded support-wrist pose servo before support contact exists.
+Seating and hold still require measured support contact. The reported support
+force remains the actual measured force; it is never replaced by primary force.
+
+Alternatively, `support_height_alignment` latches one vertical object discrepancy
+at support-approach entry and rate-limits a fixed support-wrist offset. It requires
+retained primary contact and a bounded initial pose discrepancy. It cannot be
+combined with continuous object feedback. Later object observations do not change
+the latch. This avoids continuously chasing the object, but **does not establish
+insertion clearance**. Even a small downward offset can put the hand into the
+table and create large loaded tracking errors. Such a trial must remain rejected.
+
+When payload changes the object's pose before second-hand insertion, replan the
+support approach against the finite table and the observed pose range. If access
+is insufficient, revisit the preparatory grasp/lift sequence and re-audit its
+reference anchoring. Do not treat small online offsets as a substitute for a
+collision-checked insertion path or relax contact gates to accept pose tracking.

@@ -12,6 +12,90 @@ from .support_control import support_load_offset
 from .wrist_coordination import bounded_vector
 
 
+class SupportHeightAlignment:
+    """Latch one observed height discrepancy before insertion; never chase it."""
+
+    def __init__(self, settings):
+        bounds = {
+            "max_offset_m": 0.01,
+            "max_speed_m_s": 0.02,
+            "minimum_primary_contact_n": 10,
+            "maximum_initial_error_m": 0.02,
+        }
+        if set(settings) != set(bounds) or any(
+            not np.isfinite(settings[k]) or not 0 < settings[k] <= v
+            for k, v in bounds.items()
+        ):
+            raise ValueError("Explicit bounded support-height alignment required")
+        self.settings = settings
+        self.target_offset = self.offset = 0.0
+        self.state = "waiting"
+
+    def update(self, phase, delta_world_m, primary_opposed_n, dt):
+        delta = np.asarray(delta_world_m, float)
+        if (
+            delta.shape != (3,)
+            or not np.isfinite(delta).all()
+            or not np.isfinite([primary_opposed_n, dt]).all()
+            or primary_opposed_n < 0
+            or dt <= 0
+        ):
+            raise ValueError(
+                "Finite object discrepancy, primary contact and positive clock required"
+            )
+        s = self.settings
+        if self.state == "waiting" and phase == "support_approach":
+            if (
+                primary_opposed_n < s["minimum_primary_contact_n"]
+                or np.linalg.norm(delta) > s["maximum_initial_error_m"]
+            ):
+                self.state = "rejected_observation"
+            else:
+                self.target_offset = float(
+                    np.clip(delta[2], -s["max_offset_m"], s["max_offset_m"])
+                )
+                self.state = "latched"
+        self.offset += float(
+            np.clip(
+                self.target_offset - self.offset,
+                -s["max_speed_m_s"] * dt,
+                s["max_speed_m_s"] * dt,
+            )
+        )
+        return self.offset
+
+    def diagnostics(self):
+        return dict(
+            state=self.state,
+            target_offset_m=self.target_offset,
+            applied_offset_m=self.offset,
+        )
+
+
+def support_contact_evidence(
+    phase, support_force_n, primary_opposed_n, *, allow_precontact=False
+):
+    """Gate precontact alignment on the primary grasp, never invent support force.
+
+    Before support insertion there cannot yet be support contact. With explicit
+    opt-in, primary opposed contact can enable the existing bounded pose servo
+    during support_approach. Seating and hold still require support contact.
+    """
+    if (
+        type(allow_precontact) is not bool
+        or not np.isfinite([support_force_n, primary_opposed_n]).all()
+        or min(support_force_n, primary_opposed_n) < 0
+    ):
+        raise ValueError(
+            "Finite nonnegative observed forces and explicit alignment flag required"
+        )
+    return (
+        primary_opposed_n
+        if allow_precontact and phase == "support_approach"
+        else support_force_n
+    )
+
+
 def rigid_pose(value):
     value = np.asarray(value, float)
     if (

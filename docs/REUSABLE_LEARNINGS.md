@@ -179,3 +179,18 @@ declared reference, geometry and time interval. Report moving intervals separate
 from stationary padding. In lifted-object observation audits, an image-context
 region labelled `nearby_table` is not necessarily the tabletop: verify its actual
 contents before interpreting depth as table height.
+
+Recent arm/contact planning extensions:
+
+- `arm_path_planning` preserves explicit whole-path seed choices and ranks only
+  passing paths. Dense replay admission still applies; coarse sampled speed can
+  miss a limit violation (`test_arm_path_planning.py`).
+- `phase_object_deviation` locates divergence during insertion rather than
+  attributing every later object error to arm lag (`test_arm_replay_comparison.py`).
+- `finger_contact_trim` isolates bounded owned-finger recovery with contact,
+  reference, rate and travel gates (`test_finger_contact_trim.py`). A failed
+  force-recovery candidate remains a diagnostic, not a promoted controller.
+- `SupportHeightAlignment` latches a single precontact observation rather than
+  chasing subsequent motion. `arm_clearance_audit` makes table intersections
+  explicit; neither a small correction nor an IK pass establishes insertion
+  access (`test_arm_object_feedback.py`, `test_arm_clearance_audit.py`).

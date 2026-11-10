@@ -266,3 +266,10 @@ precontact force gate and single-observation support-height latch.
 `test_arm_clearance_audit.py` checks that saved geometric robot/table intersections
 exclude ordinary object/table support. These options require separate nominal
 and frozen-condition physics validation; unit tests do not promote them.
+
+`tests/test_contact_replan.py` checks pivot-preserving support rotation, horizontal
+insertion and vertical seating, extra opening-gap isolation, bounded finger-only
+changes, rotated compiled-mesh clearance, and loaded-wrist rebasing without
+moving the object or any world body. MuJoCo-dependent tests need the optional
+runtime. Downstream fixture/arm dynamics and matched material tests are required
+before promoting any planned contact change; see [contact replanning](CONTACT_REPLANNING.md).

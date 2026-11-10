@@ -1,5 +1,11 @@
 # Testing the reusable modules
 
+`tests/test_arm_tracking_control.py` covers causal velocity/acceleration bounds,
+integral rate/travel limits, torque anti-windup and bounded inertial coupling.
+`tests/test_arm_reference_evaluation.py` checks that object translation and
+rotation affect MPPE/ADD, and rejects empty scoring cohorts. Retention and
+reference acceptance still require downstream actuator-driven trials.
+
 `tests/test_arm_object_feedback.py` checks rigid object-relative rotation including
 its wrist lever arm, correction rate/travel bounds, contact/reference freezes,
 signed support-load response and singular-Jacobian behavior. The optional MuJoCo

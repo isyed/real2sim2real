@@ -142,6 +142,45 @@ contact criteria or certifies mounting hardware. Compare baseline, object feedba
 and added force sharing under identical conditions; retain a failed variant as
 evidence rather than silently replacing the baseline.
 
+## Reduce arm lag without changing the demonstration
+
+`arm_tracking_control.ArmTrackingCompensator` provides causal filtered velocity
+feedforward and optional integral compensation of arm joint position errors.
+The velocity term has native speed and explicit acceleration bounds. The integral
+has offset/rate bounds and freezes outward integration when the actuator reaches
+its torque limit. Neither option changes the scored trajectory or its timestamps.
+Use `tracking_phases` to restrict activation, for example to `hold` after grasp
+establishment. An integral that improves tracking can still damage the grasp;
+evaluate support drift independently.
+
+`InertialFeedforward` adds a filtered, capped arm-inertia term, `M_arm(q) qdd_ref`,
+to actuator bias compensation. Accelerations are derived from the fixed audited
+joint sequence at its native timestamps. The reference is known in advance;
+the torque filter is causal. This is an approximate model-based feedforward term,
+not full inverse dynamics or MPC: it omits independently commanded finger
+accelerations and contact forces. It uses only arm motor commands, retaining
+the final actuator torque caps. Object forces and object-state writes are never
+used. Assess actual velocity, contact and margin gates, not only command bounds.
+
+The optional `tracking_compensation` settings are `velocity_fraction`,
+`filter_time_s`, `max_acceleration_rad_s2`, `integral_gain_s_inv`, `max_offset_rad`
+and `max_offset_speed_rad_s`. `inertial_feedforward` requires `time_constant_s`
+and `torque_fraction`. The legacy unfiltered `velocity_feedforward` option cannot
+be combined with the filtered compensator. Implementation snapshots and peak
+inertial torques are included in the saved run.
+
+`arm_reference_evaluation` reuses FlashCHORD object ADD-AUC and MPPE functions
+against the immutable grasp-aligned reference. It reports moving-reference and
+complete-hold cohorts separately. Scoring verifies hashes, complete records and
+source-clock correspondence; it does not shift time to reduce error. MPPE uses
+object-local keypoints, not human fingers. These local pilot scores use estimated
+object geometry and a reconstructed, grasp-aligned reference; they are not
+official challenge scores against held-out ground truth.
+
+```bash
+python -m real2sim2real.controller_actor_training.arm_reference_evaluation --directory /private/path/pilot-output
+```
+
 Public integration references: [Sharpa flange CAD](https://github.com/sharpa-robotics/sharpa-opencad-library),
 [Franka/right-Sharpa assembly](https://tml.stanford.edu/cloak/setup/sharpa.html),
 [official UR descriptions](https://github.com/UniversalRobots/Universal_Robots_ROS2_Description).

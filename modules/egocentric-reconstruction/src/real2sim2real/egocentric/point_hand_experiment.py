@@ -145,6 +145,7 @@ def runtime_config(config, phase):
                 Path(config["parent"]) / "baseline/hands_raw/predictions.npz"
             ),
             sequence_optimizer=config.get("sequence_optimizer", {}),
+            observation_policy=config.get("observation_policy"),
         )
         read_only.extend([options["sequence_parent"], options["anchor_priors"]])
     return dict(

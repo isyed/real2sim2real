@@ -250,7 +250,17 @@ def evaluate(config):
             quality.get("sequence_fitting")
         ),
         independent_3d_ground_truth_available=False,
-        baseline_unchanged=True,
+        source_baseline_unchanged=True,
+        baseline_unchanged=not bool(
+            np.any(
+                candidate.get("sequence_admitted", np.zeros_like(baseline["accepted"]))
+                & baseline["accepted"]
+            )
+        ),
+        observation_policy=quality.get("observation_policy"),
+        validation_uses_original_observations=quality.get(
+            "validation_uses_original_observations", True
+        ),
         promoted=False,
         control_ready=False,
         hypothesis_sha256=digest(candidate_dir / "hypotheses.npz"),
@@ -296,13 +306,22 @@ def evaluate(config):
                 )
                 if name == "point_refined" and view_name == "target":
                     for h in range(2):
-                        for point in observations["keypoints_px"][i, h]:
+                        for joint, point in enumerate(
+                            observations["keypoints_px"][i, h]
+                        ):
                             if np.isfinite(point).all():
+                                reduced = (
+                                    "effective_observation_weights" in candidate
+                                    and candidate["effective_observation_weights"][
+                                        i, h, joint
+                                    ]
+                                    < observations["weights"][i, h, joint]
+                                )
                                 cv2.circle(
                                     image,
                                     tuple(np.rint(point).astype(int)),
                                     4,
-                                    (0, 255, 0),
+                                    (255, 170, 30) if reduced else (0, 255, 0),
                                     1,
                                 )
                 cv2.putText(
@@ -336,12 +355,14 @@ def evaluate(config):
             "sequence_admitted_per_hand",
             "accepted_baseline_changes_per_hand",
             "sequence_components",
+            "observation_policy",
+            "validation_uses_original_observations",
         )
     }
     (out / "review.html").write_text(
         '<!doctype html><meta charset="utf-8"><title>Point-guided hand refinement</title>'
         "<style>body{font:16px system-ui;margin:25px;background:#17202b;color:#eee}img{width:100%}summary{padding:12px;cursor:pointer}a{color:#8cf}pre{white-space:pre-wrap}</style>"
-        "<h1>Point-guided hand refinement</h1><p>Baseline · original HaWoR · point-guided diagnostic. Green circles: retained image tracks. Red mesh: rejected hypothesis. Magenta crosses: evaluation annotations. Images include rejected hypotheses, not a control trajectory.</p>"
+        "<h1>Point-guided hand refinement</h1><p>Baseline · original HaWoR · point-guided diagnostic. Green circles: retained image tracks. Orange circles: tracks downweighted for fitting but retained for validation. Red mesh: rejected hypothesis. Magenta crosses: evaluation annotations. Images include rejected hypotheses, not a control trajectory.</p>"
         "<p>The source baseline remains unchanged. Proposed fits shown here may be rejected as a complete interval; the saved result then retains its parent. Changes to previously accepted poses are counted below. Track agreement is fitting evidence; sparse visual labels remain assistant-reviewed unless explicitly human-verified.</p>"
         "<p>Promotion is withheld. Inspect finger transitions and held-out joint-error tails; geometry support does not establish continuous accurate motion.</p>"
         '<p><a href="comparison.json">Metrics and paired errors</a></p><pre>'

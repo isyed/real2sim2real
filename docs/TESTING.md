@@ -93,3 +93,11 @@ rejection of repeated/textureless patches, calibration validation and explicit
 warnings for nearby fingertip identities. The synthetic translated-texture
 case supplies no hand model or predicted depth. These tests verify geometry
 and matching logic, not anatomical correctness on real images.
+
+`tests/test_hand_observation_policy.py` checks symmetric ambiguity weighting,
+preserved observations/missing joints, anchor reliability from unambiguous
+fitting residuals, weak-anchor correction priors, preservation of the original
+image/depth loss normalization, bounded options and fixed image/wrist regions
+for post-fit depth diagnostics. The real MANO sequence worker separately checks
+that exported retained poses reproduce its retained geometry. Neither test
+suite nor regional residuals establish control readiness.

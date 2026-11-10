@@ -7,6 +7,8 @@ name = "real2sim2real-reconstruction"
 version = "0.1.0"
 description = "Metric shared-depth human and object reconstruction"
 requires-python = ">=3.11,<3.13"
+license = {file = "LICENSE"}
+classifiers = ["License :: OSI Approved :: Apache Software License"]
 dependencies = ["real2sim2real==0.1.0", "numpy>=1.26,<3", "scipy>=1.11,<2", "Pillow>=10,<14", "trimesh>=4", "h5py>=3", "opencv-python>=4", "av>=14"]
 
 [tool.setuptools.packages.find]
@@ -17,4 +19,4 @@ namespaces = true
 "*" = ["*.json", "*.yaml", "*.yml", "*.txt", "*.cpp", "*.h", "*.hpp", "*.cmake", "*.cu", "*.cuh", "*.sh", "LICENSE", "NOTICE", "CMakeLists.txt"]
 
 [tool.setuptools]
-license-files = ["LICENSE", "licenses/*"]
+license-files = ["LICENSE", "NOTICE", "licenses/*"]

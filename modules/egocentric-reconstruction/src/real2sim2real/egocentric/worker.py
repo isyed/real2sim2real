@@ -283,7 +283,19 @@ def main():
     parser.add_argument("--request", required=True)
     parser.add_argument(
         "--phase",
-        choices=["segment", "mesh", "track", "hands", "refine-hands", "temporal-hands"],
+        choices=[
+            "segment",
+            "mesh",
+            "track",
+            "hands",
+            "detect-hands",
+            "hawor-hands",
+            "refine-hands",
+            "temporal-hands",
+            "track-hand-points",
+            "refine-point-hands",
+            "sequence-point-hands",
+        ],
         required=True,
     )
     parser.add_argument("--check", action="store_true")
@@ -292,14 +304,24 @@ def main():
     from .hamer_worker import run as hands
     from .hand_refinement import run as refine_hands
     from .temporal_hand_worker import run as temporal_hands
+    from .hand_tracks import detect as detect_hands
+    from .hawor_worker import run as hawor_hands
+    from .tapir_worker import run as track_hand_points
+    from .point_hand_refinement import run as refine_point_hands
+    from .point_hand_sequence import run as sequence_point_hands
 
     {
         "segment": segmentation,
         "mesh": mesh,
         "track": tracking,
         "hands": hands,
+        "detect-hands": detect_hands,
+        "hawor-hands": hawor_hands,
         "refine-hands": refine_hands,
         "temporal-hands": temporal_hands,
+        "track-hand-points": track_hand_points,
+        "refine-point-hands": refine_point_hands,
+        "sequence-point-hands": sequence_point_hands,
     }[args.phase](request, args.check)
 
 

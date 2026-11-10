@@ -5,6 +5,15 @@ repairing that reconstruction, retargeting it to a robot, and training a
 correction controller in simulation. Dataset-specific experiments and private
 configuration belong in downstream repositories.
 
+For robot manipulation without a trusted human finger reference, see the
+[object-centric grasp workflow](docs/OBJECT_CENTRIC_GRASPS.md). The
+[reusable learning index](docs/REUSABLE_LEARNINGS.md) maps findings to modules,
+tests and explicit limitations.
+
+Original project contributions are licensed under [Apache License 2.0](LICENSE).
+Bundled third-party components and upstream documentation retain their own
+terms; see [NOTICE](NOTICE) and [component licenses](docs/THIRD_PARTY.md).
+
 | Module | Input | Output |
 | --- | --- | --- |
 | [reconstruction](modules/reconstruction/README.md) | RGB video, segmentation prompts, local pretrained models | Human motion, object mesh and poses, shared metric depth/camera, diagnostics |
@@ -12,7 +21,7 @@ configuration belong in downstream repositories.
 | [reconstruction-evaluation](modules/reconstruction-evaluation/README.md) | Predicted mesh/motion and isolated reference assets | Offline geometry/trajectory scores, coverage and per-frame errors |
 | [reconstruction-repair](modules/reconstruction-repair/README.md) | Reconstruction and explicit image/depth evidence | Accepted repaired reference, retained parent, per-stage gate results |
 | [retargeting](modules/retargeting/README.md) | Human/object reference, robot definition, body-model assets | Robot joint/root targets, object motion and geometric contact schedule |
-| [controller-actor-training](modules/controller-actor-training/README.md) | Robot reference, robot assets and frozen controller weights | FlashSAC correction actor, training state and configuration |
+| [controller-actor-training](modules/controller-actor-training/README.md) | Robot reference and controller assets, or a metric object/table task and robot hand | FlashSAC correction actor, or bounded grasp/lift diagnostics |
 
 The current implementations use SAM2, MoGe2, calibrated stereo, SAM 3D Body, depth-conditioned
 SAM 3D Objects, FoundationPose, SOMA/Pink IK, and FlashCHORD/FlashSAC. The

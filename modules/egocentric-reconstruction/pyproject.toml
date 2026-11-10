@@ -7,11 +7,15 @@ name = "real2sim2real-egocentric-reconstruction"
 version = "0.1.0"
 description = "Calibrated moving-camera rigid-object reconstruction"
 requires-python = ">=3.11,<3.13"
+license = {file = "LICENSE"}
+classifiers = ["License :: OSI Approved :: Apache Software License"]
 dependencies = ["real2sim2real==0.1.0", "numpy>=1.26,<3", "scipy>=1.11,<2", "opencv-python-headless>=4.10,<6", "av>=14", "Pillow>=10,<14", "trimesh>=4"]
 
 [project.scripts]
 r2s2r-ego = "real2sim2real.egocentric.cli:main"
 r2s2r-interaction = "real2sim2real.egocentric.interaction:main"
+r2s2r-hand-experiment = "real2sim2real.egocentric.hand_experiment:main"
+r2s2r-point-hand-experiment = "real2sim2real.egocentric.point_hand_experiment:main"
 
 [project.optional-dependencies]
 hands2d = ["mediapipe==0.10.32"]
@@ -27,4 +31,4 @@ where = ["src"]
 namespaces = true
 
 [tool.setuptools]
-license-files = ["LICENSE"]
+license-files = ["LICENSE", "NOTICE", "licenses/*"]

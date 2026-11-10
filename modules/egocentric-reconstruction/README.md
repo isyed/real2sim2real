@@ -1,5 +1,10 @@
 # Egocentric reconstruction
 
+`object_task` exports accepted metric object/table geometry, frame transforms and
+capture timestamps for [object-centric grasp pilots](../../docs/OBJECT_CENTRIC_GRASPS.md).
+It requires no hand reconstruction and does not turn the reference object motion
+into a simulated force or actuator.
+
 An independently installed stage for calibrated moving-camera captures. The
 initial implementation reconstructs one rigid object with metric stereo depth,
 background RGB-D odometry, SAM2, SAM 3D Objects and FoundationPose. It publishes
@@ -311,3 +316,323 @@ reports a clearly labelled optimistic coverage bound for the new 2D candidates;
 those candidates never count as recovered 3D hands. Complete coverage alone does
 not certify control readiness: a particular robot still needs retargeting,
 collision and dynamic replay validation.
+
+## Compare detector-independent video hand observations
+
+`r2s2r-hand-experiment` compares a detector-gated HaMeR baseline with HaMeR and
+HaWoR using identical detector/mask-derived crops. See
+[`examples/video-hands.json`](examples/video-hands.json). The frame window is a
+zero-based start position plus a count; original capture frame IDs, timestamps
+and world transforms are retained. Selecting a later window does not create a
+new camera-world origin.
+
+The hand detector uses the WiLoR checkpoint selected by the pinned HaWoR fork.
+Physical left/right identities are assigned through the supplied masks, with
+one detector box assigned to at most one hand. A mask box is a fallback when
+localisation fails. Neither box availability nor a network prediction counts
+as a validated metric observation. Missing crops remain missing; the adapter
+does not invoke HaWoR's motion infiller.
+
+The HaWoR backend uses its temporal camera-space network in blocks of 16 images.
+Boundary images are repeated only as network padding and are never exported as
+extra observations. Both estimators use the same HaMeR crop preprocessing,
+normalisation, crop expansion, fixed MANO shape and calibrated metric scale;
+input tensor hashes verify that their crops match. This is a controlled adapter
+comparison, not an unmodified reproduction of HaWoR's complete demo pipeline.
+HaWoR receives the supplied principal point (reflected correctly for the left
+hand) and a scalar network focal equal to the geometric mean of fx/fy. Metric
+fitting and evaluation always use the full calibrated intrinsic matrix.
+
+Provision the optional runtime separately. Clone
+`https://github.com/malik-group/HaWoR.git` outside this repository and check out
+`2c3fa0c06e54a1b192c1ff692eaa89d526cd6317`, the revision used by do-as-i-do.
+Build `docker/hawor.Dockerfile` with that checkout as context, using an existing
+HaMeR runtime as `BASE_IMAGE`. The image checks the source revision and preserves
+its upstream notices. Do not put videos, weights or licensed MANO models in the
+build context. The model store contains `hawor.ckpt`, `model_config.yaml` from
+`ThunderVVV/HaWoR`, and `detector.pt` from `rolpotamias/WiLoR`. Record immutable
+model revisions and file hashes. The existing HaMeR store supplies MANO_RIGHT.
+The adapter uses the same mirrored right-hand MANO convention as the baseline.
+Optional backend/model licenses remain separate from this project's license.
+
+Run preparation and import checks before the bounded GPU stages:
+
+```bash
+r2s2r-hand-experiment --config /work/video-hands.json --phase prepare
+r2s2r-hand-experiment --config /work/video-hands.json --phase detector --check
+r2s2r-hand-experiment --config /work/video-hands.json --phase hawor --check
+# Requires an active clock lease; each container has a thermal guard and deadline.
+r2s2r-hand-experiment --config /work/video-hands.json --phase detector
+r2s2r-hand-experiment --config /work/video-hands.json --phase hamer
+r2s2r-hand-experiment --config /work/video-hands.json --phase hawor
+# CPU fitting and review; contact-fast is optional.
+timeout 2400 r2s2r-hand-experiment --config /work/video-hands.json --phase fit --variant baseline
+timeout 2400 r2s2r-hand-experiment --config /work/video-hands.json --phase fit --variant hamer
+timeout 2400 r2s2r-hand-experiment --config /work/video-hands.json --phase fit --variant hawor
+timeout 300 r2s2r-hand-experiment --config /work/video-hands.json --phase review-inputs
+# Supply evaluation-only visible landmark annotations, then:
+timeout 300 r2s2r-hand-experiment --config /work/video-hands.json --phase evaluate
+```
+
+`inputs/archived_baseline.npz` retains the previous accepted reconstruction.
+`baseline/` re-evaluates its original raw predictions with the common fitter so
+changes to fitting are distinguishable from changes to detection/model input.
+The new fitter uses measured stereo pixels, visible automatic landmarks and
+silhouette residuals. A disjoint depth checkerboard measures held-out surface
+consistency. It fixes shape/scale/camera/object/table; contact is evaluated after
+fitting. A hypothesis can pass geometry checks without every joint being visible.
+Those results are labelled `geometry_supported`, never silently substituted for
+the archived baseline. Rejected hypotheses are retained for inspection.
+
+Evaluation produces `review/review.html`, `comparison.json` and a standalone
+`annotations.html` editor. Where a calibrated capture is provided, it exports
+undistorted secondary images and projects hypotheses using the existing stereo
+extrinsics. Visual labels bind source frame, physical hand, joint, camera and
+image hash. They live outside the worker mounts and are never used for fitting.
+Annotate only clearly visible joints, record uncertainty and reviewer identity,
+and do not label hidden joints from model overlays. Assistant-inspected anchors
+must be marked as such, with `human_verified: false` until a person reviews them.
+
+Reports separate inferred poses, geometry support, losses/recoveries relative
+to the archived baseline, automatic landmark residuals, held-out depth, identity,
+contact, temporal measurements and visual-anchor errors. These are consistency
+diagnostics and sparse image evidence, not complete 3D ground truth. The command
+never promotes a candidate or declares control readiness. Use a new output or
+`review_directory` when repeating an evaluation; preserve prior hypotheses.
+## Point-guided articulation experiments
+
+`r2s2r-point-hand-experiment` adds optional BootsTAPIR observations to a completed
+hand-observation comparison. It retains the calibrated camera/object/table
+world and fixed MANO shape and scale. Configure a new output directory using
+[`examples/point-hand-experiment.json`](examples/point-hand-experiment.json).
+Frame IDs in the seed and held-out lists are **source IDs**, while `frame_start`
+is the reconstruction array index. The example assumes IDs start at zero.
+
+```bash
+r2s2r-point-hand-experiment --config /private/experiment.json --phase prepare
+r2s2r-point-hand-experiment --config /private/experiment.json --phase track --check
+r2s2r-point-hand-experiment --config /private/experiment.json --phase track
+r2s2r-point-hand-experiment --config /private/experiment.json --phase refine --check
+r2s2r-point-hand-experiment --config /private/experiment.json --phase refine
+r2s2r-point-hand-experiment --config /private/experiment.json --phase evaluate
+```
+
+Prepare the run output directory as the normal user before starting its GPU
+lease helper. `track` requires the configured GPU lease and thermal guard;
+`refine` uses a CPU-only container with a finite deadline. The other phases run
+under bounded CPU subprocesses. Check phases load dependencies/checkpoints on
+CPU without running image inference. Existing outputs are never overwritten.
+
+Build [`docker/tapir.Dockerfile`](docker/tapir.Dockerfile) with a separately
+downloaded `malik-group/tapnet` checkout at
+`f2f8888a803051ea42cd79c89cfca6c25dfeae77` as the Docker context. The original
+Apache notices remain in that checkout/image; no upstream code is vendored or
+imported from a neighbouring project. Put the official
+[`bootstapir_checkpoint_v2.pt`](https://storage.googleapis.com/dm-tapnet/bootstap/bootstapir_checkpoint_v2.pt)
+under `weights.tapir`; record its digest and download provenance privately.
+Build [`docker/hand-refinement.Dockerfile`](docker/hand-refinement.Dockerfile)
+for CPU MANO/Embree refinement, using the existing HaMeR image as the base.
+The licensed MANO model remains separately supplied under `weights.hamer`.
+
+The pipeline selects visible automatic 2D detector seeds from explicitly
+selected frames. Evaluation frames are excluded. Each hand uses one fixed
+image crop over the complete window. Tracks must pass visibility/uncertainty,
+physical hand masks, a return track re-queried at another time, and agreement
+between at least two distinct seed frames. Occluded/drifting observations stay
+missing. Raw tracks, return queries and rejection evidence remain available.
+
+The articulation fitter accepts partial landmarks with zero weights for missing
+joints. It makes a fresh rigid initialization from fitting depth and tracks,
+then fits bounded MANO rotations and a small wrist correction. It never loads
+held-out detector labels or visual annotations. `fixed_betas` reconstructs the
+HaWoR geometry; its per-frame `betas` field contains unused network shape
+predictions. MANO mesh/joint reconstruction is checked before optimization.
+
+Only rejected baseline intervals are eligible for candidate additions. Separate
+diagnostic fits at held-out frames allow checks where the baseline is already
+accepted; those fits never replace baseline anchors. The diagnostic artifact
+retains rejected geometry with explicit support masks. Evaluation verifies that
+all accepted baseline geometry and source files are unchanged, reports held-out
+2D detector errors, sparse visual annotations in calibrated views, reserved
+depth and contact diagnostics, and writes an HTML comparison.
+
+Tracker agreement is fitting evidence, not independent ground truth. Surface
+appearance tracks may not follow anatomical joint centres, and multiple seeds
+can share detector bias. Held-out detector labels remain correlated with the
+seed detector; stereo samples are spatially correlated too. Manual review and
+robot-specific replay remain separate acceptance steps. The experiment always
+reports `promoted: false` and `control_ready: false`.
+
+### Sequence continuity candidates
+
+After pointwise fitting, copy the experiment configuration, set a fresh
+`candidate_directory` and `review_directory`, and add `sequence-point-hands`
+to `images` and `timeouts` (the CPU refinement image can be reused). Then run
+`--phase sequence`, followed by `--phase evaluate`. `--check` checks the CPU
+MANO/contact dependencies. Every sequence candidate starts from the retained
+pointwise `refined/hands_metric` result; candidates cannot be chained silently.
+
+`sequence_optimizer.context_frames: 0` changes recovered frames only, using
+fixed measured neighbors. A positive value also proposes changes to that many
+surrounding frames in a separate candidate. The source baseline is immutable.
+Missing observations and capture-time gaps split components. Shared temporal
+triples join neighboring components so boundary constraints remain consistent.
+
+The CPU optimizer batches MANO poses and minimizes image/depth residuals with
+velocity/acceleration penalties at actual capture times. Joint, rigid rotation
+and translation corrections are bounded relative to the retained poses; shape,
+metric scale, cameras, object motion and tabletop remain fixed. Default bounds
+are 30 degrees, 10 degrees and 15 mm respectively. `anchor_data_weight` can
+increase fitting evidence at surrounding baseline frames. A positive
+`boundary_velocity_weight` constrains previously observed baseline/baseline
+edges, never the recovered/baseline jumps being repaired.
+
+An interval is admitted atomically only after geometry, contact and motion
+checks. Validation depth and evaluation labels never enter the objective.
+Detector-based checks can still be correlated with the baseline used for
+initialization/anchors; they must not be presented as independent ground truth.
+Rejected interval hypotheses remain in `diagnostic_*` / `proposed_world_*` arrays;
+the primary arrays retain their parent. Reviews distinguish those hypotheses
+from the admitted result. Complete MANO poses are exported and checked against
+retained meshes; old pointwise deltas are renamed `parent_local_delta_rad`.
+
+Sequence admission establishes relative consistency improvement, not readiness
+for control. Inspect absolute finger motion at joins, conflicting observations
+and held-out image checks before retargeting or physical replay.
+
+An optional `observation_policy` in the point-hand experiment config separates
+tracker confidence from fitting reliability. It flags distinct fingertip tracks
+within `ambiguity_radius_px` (default 8), multiplies their fitting weights by
+`ambiguous_weight` (0.1), and by default propagates that caution to the two
+finger chains (`propagate_to_finger: true`). Neither identity is reassigned and
+missing coordinates remain missing. The original confidence sum normalizes the
+image loss, so suppressing ambiguous terms does not amplify other terms against
+depth. Omit the policy to preserve existing fitting behavior.
+
+With `reassess_anchors: true`, previously accepted poses need at least
+`anchor_min_landmarks` (3) unambiguous fitting observations with initial median
+reprojection error ≤`anchor_max_median_px` (12) to retain a strong correction
+prior and supply a boundary-velocity target. Weak accepted poses inside the
+existing context window use `weak_anchor_prior_weight` (0.25); measured image
+and depth terms retain their original anchor data weight. Fixed endpoints
+outside that window remain fixed, and weak endpoints are reported explicitly.
+This reliability is an evidence check, not whole-hand accuracy certification.
+
+The worker saves original/effective weights, ambiguity masks, anchor reliability
+and its assessment records. All admission gates still use the original image
+observations, reserved depth, contacts and motion criteria. Suppressed points
+appear orange in the review. Visual annotations and cross-camera audit labels
+are not loaded by fitting. Compare weighting-only and anchor-reassessment
+variants separately before choosing a policy.
+
+`python -m real2sim2real.egocentric.hand_depth_audit --config audit.json` provides
+a separate CPU diagnostic for depth conflicts. Its config declares the metric
+`reconstruction`, `frame_start`/`frame_count`, `observations`, `crops`, two
+`mask_ids`, selected `cases` (`frame_id`, `hand`), named `regions` of landmark
+indices, `radius_px`, candidate `variants` (`path`, `vertices_key`) and a fresh
+`output`. Every candidate is compared with exactly the same reserved depth
+points and image regions; missing regions/poses remain explicit. It saves
+per-point residuals, source hashes, summaries and a visual review.
+
+Optional `wrist_observations` supplies a separate accepted 2D landmark file for
+a diagnostic wrist boundary. `wrist_margin_px` defaults to 10 pixels beyond the
+wrist opposite the observed palm direction. This is a detector-dependent image
+proxy, not anatomical segmentation. Neither regional scores nor wrist masks
+change fitting samples or acceptance thresholds. Use them to investigate
+unmodeled wrist/forearm support before designing a separate support policy.
+
+### Declared hand depth support and reference readiness
+
+`python -m real2sim2real.egocentric.hand_depth_support --config inputs.json`
+prepares a frozen image boundary from accepted wrist/palm detections. The config
+declares `landmarks` (NPZ), `blocked_frame_ids` and a fresh `output`. It writes
+`boundaries.npz` and a hash receipt; no pose, depth residual or manual label
+chooses the boundary. A missing or withheld detection retains the original
+support. Wrist-to-palm length must be 20–300 pixels; this heuristic is
+resolution-dependent and must be reviewed for each capture.
+
+Before fitting, inspect image-only boundaries with
+`python -m real2sim2real.egocentric.hand_support_review --config review.json`.
+Declare `reconstruction`, `frame_start`, `frame_count`, `boundaries`,
+`blocked_frame_ids`, `mask_ids`, `frame_ids`, `margins_px`, `probes` and `output`.
+The probe JSON contains `reviewer`, `human_verified` and `points`, each with
+`frame_id`, `hand` (0 left, 1 right), `xy_px`, `image_sha256`, `expected`
+(`retain_hand` or `exclude_forearm`) and `uncertainty_px`. Use separate frames
+for choosing a conservative margin and validating it. Sparse probes do not
+certify a complete anatomical segmentation.
+
+Sequence configs can then add:
+
+```json
+"hand_depth_support": {"path": "/data/prepared-boundaries", "margin_px": 30}
+```
+
+The margin extends from the detected wrist toward the forearm; larger values
+retain more proximal support. This example is not a universal calibrated value.
+Only the prepared boundary folder is added to inference mounts. Held-out
+detector frames must exactly match the sequence declaration. The image region
+filters depth before the existing fit/reserved-pixel split. Parent and candidate
+use identical reserved samples for admission; unchanged image, contact and
+motion gates still apply. Records also preserve residuals on the original depth
+support, preventing a domain change from being mistaken for an improvement on
+the original whole mask.
+
+`sequence_optimizer.fit_all_supported: true` fits all geometrically supported
+frames in the declared capture window. Missing observations or capture-time gaps
+still split components. It removes fixed interior boundary poses as a diagnostic
+variable; it does not invent observations or allow failed components to replace
+their parent. All-frame fits can expose previously untested baseline failures.
+
+After fitting, `python -m real2sim2real.egocentric.hand_support_sensitivity
+--config audit.json` evaluates frozen meshes at multiple margins plus original
+support. Declare the same capture/boundary fields, `frame_ids`, `margins_px`,
+`crops`, `raw` (including hand faces), `variants` (`path`, optional `vertices_key`)
+and fresh `output`. No refitting or score-based margin selection occurs. Compare
+residuals only within a declared support domain; reports include input hashes.
+Use finite process deadlines for these CPU preparation/review commands.
+
+`interaction_readiness.sequence_assessment` checks selected/admitted masks,
+component failures, requested frame coverage and explicit evidence for hand
+identity, independent alignment, depth support and contact diagnostics. Each
+evidence record needs `passed` (true/false/null), `source` and `reason`. It blocks
+promotion when evidence is missing or unresolved. Complete fallback geometry
+cannot conceal a rejected sequence. A successful reference assessment still
+requires robot-specific kinematics and dynamic-contact/controller validation;
+it never declares physical control success.
+
+### Cross-camera observation audit
+
+`python -m real2sim2real.egocentric.hand_anchor_audit --config audit.json` compares
+existing hand hypotheses with synchronized undistorted review images. It runs
+on CPU and writes a fresh `audit.json` and `review.html`; it never updates poses.
+Generate review inputs with `hand_review_inputs.prepare_review_inputs`, using
+the original capture manifest alongside its videos. Source video hashes,
+capture timestamps and the accepted reconstruction calibration are checked
+during preparation. Video decoding requires the declared `av` dependency.
+
+The audit config declares `views` (directory containing `views.json`),
+`observations` (point-track NPZ), optional evaluation-only `annotations`,
+`frame_ids`, two `secondary_views`, a fresh `output`, and `variants` mapping
+display names to `{ "path": "/data/hypotheses.npz", "joints_key": "camera_joints" }`.
+Use `diagnostic_camera_joints` explicitly to inspect a rejected proposal.
+Candidate arrays must share the observation frame IDs and capture timestamps.
+Example configurations and image assets for individual experiments belong in
+downstream private repositories.
+
+The generic `multiview_points` helpers search along calibrated epipolar lines
+over a declared depth interval, using normalized patch correlation, uniqueness
+and reciprocal matches. Defaults are 0.2–1.5 metres, patch radius 6 pixels,
+correlation ≥0.85, uniqueness margin ≥0.08 and cycle error ≤2 pixels. Two
+secondary matches are required for a three-view surface hypothesis; inconsistent
+pair depths (>30 mm), reprojection (>2 px), small ray angles (<1 degree) or
+high one-pixel depth sensitivity (>20 mm) reject it. These are explicit
+diagnostic thresholds, not calibrated confidence estimates. `matching` can
+override the search/patch parameters.
+
+The audit also flags distinct observed fingertips within 8 pixels, which can
+indicate occlusion or ambiguous identity. It does not relabel those fingers or
+turn missing fingers into measurements. Appearance matches establish neither
+anatomical joint centres nor control readiness. Secondary views overlap with
+the stereo-depth source; this is a consistency audit, not independent 3D ground
+truth. Approximate visual labels stay separate from automatic matching. Source
+image, input-array and implementation hashes accompany every report.

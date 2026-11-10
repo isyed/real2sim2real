@@ -1,5 +1,11 @@
 # Controller and actor training
 
+For a CPU grasp/lift pilot driven by object geometry rather than a human motion
+reference, see [object-centric grasp planning](../../docs/OBJECT_CENTRIC_GRASPS.md).
+It provides a force-limited wrist/hand fixture, collision/approach checks, an
+unassisted dynamic object, optional clearance feedback and parameter validation.
+It is separate from the whole-body FlashCHORD/SONIC training path below.
+
 `collision_cache_similarity.reuse` is an explicit offline alternative to a cold
 collision decomposition when the new mesh is exactly the same triangulated
 surface under a positive uniform scale and rigid frame change. It requires a

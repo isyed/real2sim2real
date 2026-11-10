@@ -1,0 +1,37 @@
+{
+  "source_root": "/workspace/real2sim2real",
+  "parent": "/private/runs/video-hands",
+  "reconstruction": "/private/runs/reconstruction",
+  "output": "/private/runs/point-hands",
+  "frame_start": 0,
+  "frame_count": 46,
+  "mask_ids": [2, 3],
+  "object_id": 1,
+  "seed_frame_ids": [0, 5, 11, 35, 41],
+  "heldout_frame_ids": [10, 20, 30, 40],
+  "weights": {
+    "tapir": "/private/assets/tapir",
+    "hamer": "/private/assets/hamer"
+  },
+  "images": {
+    "track-hand-points": "r2s2r-tapir:f2f8888",
+    "refine-point-hands": "r2s2r-hand-refinement:embreex",
+    "sequence-point-hands": "r2s2r-hand-refinement:embreex"
+  },
+  "gpu_session": "/private/runs/point-hands/gpu-session",
+  "timeouts": {"track-hand-points": 1800, "refine-point-hands": 2400, "sequence-point-hands": 2400},
+  "tracking_size": 512,
+  "point_limits": {
+    "min_score": 0.8,
+    "max_cycle_px": 5,
+    "max_agreement_px": 8,
+    "min_seeds": 2
+  },
+  "optimizer": {
+    "max_joint_correction_deg": 30,
+    "max_rigid_correction_deg": 15,
+    "max_translation_correction_m": 0.03,
+    "correspondence_iterations": 5
+  },
+  "contacts": {"ray_backend": "embree"}
+}

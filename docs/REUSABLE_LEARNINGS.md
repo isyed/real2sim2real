@@ -104,3 +104,9 @@ surface coverage first, freeze an observation-supported shortlist, and test forc
 directions and gravity balance before spending time fitting hands. See
 [Contact site search](CONTACT_SITE_SEARCH.md). Preserve failures and keep point
 depth support separate from verified surface normals and finite contact area.
+
+A preserved handle opening does not guarantee hook access: the finite tabletop
+can block the turn beneath a rim. Audit the opening, proxy intrusion and the full
+tool sweep separately. A required extra gap identifies a pre-grasp tilt/lift
+subproblem; changing IK or MPC does not supply that gap. See
+[Handle insertion](HANDLE_INSERTION.md) for the geometry checks and module map.

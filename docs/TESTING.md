@@ -1,5 +1,11 @@
 # Testing the reusable modules
 
+`tests/test_insertion_geometry.py` covers projected openings, swept-probe
+clearance, overlapping collision-piece membership and between-sample obstacles.
+Run `tests/test_object_grasp.py`, `tests/test_pad_planning.py` and
+`tests/test_bimanual_support.py` in the optional MuJoCo runtime after changing
+shared prepared-scene verification.
+
 `tests/test_contact_site_search.py` covers observation-first surface sampling,
 discovery-only shortlists, lifting-force direction, provenance, deduplication and
 exclusion of failed validation from combined contact screening. Existing furniture

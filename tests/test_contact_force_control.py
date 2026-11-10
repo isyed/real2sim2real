@@ -203,7 +203,10 @@ def test_stationary_promotion_pins_controller_candidate_completion_and_states(tm
         validate_stationary_promotion(config(), base, candidate)
 
 
-def test_force_feedback_owns_fingers_and_preserves_physical_state_and_limits():
+@pytest.mark.parametrize("payload_adaptation", [False, True])
+def test_force_feedback_owns_fingers_and_preserves_physical_state_and_limits(
+    payload_adaptation,
+):
     mj = pytest.importorskip("mujoco")
     from real2sim2real.controller_actor_training.contact_force_control import (
         BilateralContactForce,
@@ -248,7 +251,7 @@ def test_force_feedback_owns_fingers_and_preserves_physical_state_and_limits():
             )
         )
     xml.append(
-        '<body name="task_object"><freejoint/><geom type="box" size=".1 .1 .1" mass=".5"/></body></worldbody><actuator>'
+        '<body name="task_object"><freejoint name="task_object_free"/><geom type="box" size=".1 .1 .1" mass=".5"/></body></worldbody><actuator>'
         + "".join(actuators)
         + "</actuator></mujoco>"
     )
@@ -257,9 +260,21 @@ def test_force_feedback_owns_fingers_and_preserves_physical_state_and_limits():
     mj.mj_forward(model, data)
     candidate = dict(hands[0], support=hands[1])
     mesh = trimesh.creation.box(extents=[0.2, 0.2, 0.2])
-    controller = BilateralContactForce(
-        model, data, settings(), candidate, np.eye(4), mesh
-    )
+    control = settings()
+    if payload_adaptation:
+        control["payload_adaptation"] = dict(
+            reference_weight_n=4.905,
+            weight_filter_s=0.15,
+            share_filter_s=0.15,
+            minimum_weight_ratio=0.5,
+            maximum_weight_ratio=1.25,
+            target_secondary_fraction=0.5,
+            share_gain=0.5,
+            maximum_share_correction=0.15,
+            maximum_scale_rate_s_inv=1.0,
+            maximum_acceleration_m_s2=3.0,
+        )
+    controller = BilateralContactForce(model, data, control, candidate, np.eye(4), mesh)
     q = data.qpos.copy()
     ranges = model.jnt_range.copy()
     forces = model.actuator_forcerange.copy()

@@ -1,5 +1,12 @@
 # Testing the reusable modules
 
+`tests/test_payload_pressure.py` checks supported-load estimation with acceleration
+compensation, external-support freezing, opposite-sign pressure allocation,
+bounded rate/targets and invalid observations. The contact-force ownership test
+also runs with payload adaptation enabled in the optional MuJoCo runtime. It
+preserves object state and joint/actuator limits. These checks do not establish
+payload robustness; repeat the frozen downstream cases before arm dynamics.
+
 `tests/test_grasp_sensitivity.py` checks bounded physical cases, mandatory nominal
 replay, immutable controller/gate admission, changed/failed/incomplete source
 rejection and early stopping on a state-archive mismatch. A trial that never enters

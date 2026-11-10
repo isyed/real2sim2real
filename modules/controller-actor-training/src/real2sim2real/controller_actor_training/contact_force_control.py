@@ -109,6 +109,7 @@ def validate_settings(settings):
         "minimum_observed_force_n",
         "tangent_gain_s_inv",
         "max_tangent_speed_m_s",
+        "payload_adaptation",
     }
     if (set(settings) - optional) != required or set(settings["target_force_n"]) != {
         "thumb",
@@ -127,6 +128,10 @@ def validate_settings(settings):
         raise ValueError("Unknown force-normal observation mode")
     if not 0 < settings.get("minimum_observed_force_n", 0.1) <= 1:
         raise ValueError("Finite positive observed-contact threshold required")
+    if "payload_adaptation" in settings:
+        from .payload_pressure import validate_settings as validate_payload
+
+        validate_payload(settings["payload_adaptation"])
     if "tangent_gain_s_inv" in settings or "max_tangent_speed_m_s" in settings:
         if (
             not 0 < settings.get("tangent_gain_s_inv", 0) <= 5
@@ -212,6 +217,14 @@ class BilateralContactForce:
         self.settings = settings
         self.object_id = model.body("task_object").id
         self.pads = []
+        self.role_geoms = {}
+        self.payload = None
+        if "payload_adaptation" in settings:
+            from .payload_pressure import PayloadPressure
+
+            self.payload = PayloadPressure(settings["payload_adaptation"])
+            if not np.allclose(model.opt.gravity[:2], 0) or model.opt.gravity[2] >= 0:
+                raise ValueError("Payload adaptation requires an upright gravity frame")
         transform = np.asarray(world_from_object, float)
         if (
             transform.shape != (4, 4)
@@ -241,6 +254,7 @@ class BilateralContactForce:
             ),
         ]:
             indices = robot_indices(model, model.body(root).name)
+            self.role_geoms[role] = set(indices["geoms"])
             frames = hand["pad_plan"]["frames"]
             if len(frames) != 5 or len({f["geom"] for f in frames}) != 5:
                 raise ValueError(
@@ -359,6 +373,41 @@ class BilateralContactForce:
         observations = object_pad_observations(
             model, data, self.object_id, [p["gid"] for p in self.pads]
         )
+        if self.payload:
+            from .support_control import contact_wrench_on_body
+
+            forces = np.zeros(2)
+            isolated = True
+            for i, contact in enumerate(data.contact):
+                pair = {int(contact.geom1), int(contact.geom2)}
+                if not any(model.geom_bodyid[g] == self.object_id for g in pair):
+                    continue
+                owned = False
+                for role, number in (("primary", 0), ("secondary", 1)):
+                    if pair & self.role_geoms[role]:
+                        forces[number] += contact_wrench_on_body(
+                            model, data, i, self.object_id
+                        )[0][2]
+                        owned = True
+                if not owned:
+                    isolated = False
+            dof = int(model.joint("task_object_free").dofadr[0])
+            self.payload.update(
+                forces,
+                data.qacc[dof + 2],
+                -model.opt.gravity[2],
+                dt,
+                active=active,
+                isolated=isolated
+                and all(
+                    any(
+                        observations[p["gid"]]["force_n"] > 0.1
+                        for p in self.pads
+                        if p["role"] == role
+                    )
+                    for role in ("primary", "secondary")
+                ),
+            )
         # Refresh only positions/Jacobians. Do not assign a physical coordinate.
         mujoco.mj_kinematics(model, data)
         mujoco.mj_comPos(model, data)
@@ -381,6 +430,10 @@ class BilateralContactForce:
             )
             ids = pad["qids"]
             q = output[ids]
+            goal_n = self.settings["target_force_n"][pad["group"]]
+            if self.payload:
+                goal_n = self.payload.target(pad["role"], goal_n, group=pad["group"])
+            pad["target_n"] = goal_n
             observed = (
                 self.settings.get("normal_observation", "planned") == "solved_contact"
                 and pad["force"] >= self.settings.get("minimum_observed_force_n", 0.1)
@@ -417,7 +470,7 @@ class BilateralContactForce:
                     pad["offset"],
                     normal @ jac[:, pad["dofs"]],
                     pad["force"],
-                    self.settings["target_force_n"][pad["group"]],
+                    goal_n,
                     dt,
                     pad["limits"],
                     self.settings,
@@ -435,11 +488,18 @@ class BilateralContactForce:
 
     def diagnostics(self):
         return dict(
+            **(
+                dict(payload_pressure=self.payload.diagnostics())
+                if self.payload
+                else {}
+            ),
             contact_force_feedback={
                 p["role"] + ":" + p["group"]: dict(
                     force_n=p["force"],
                     normal_source=p.get("normal_source", "planned"),
-                    target_n=self.settings["target_force_n"][p["group"]],
+                    target_n=p.get(
+                        "target_n", self.settings["target_force_n"][p["group"]]
+                    ),
                     joint_offset_rad=p["offset"].tolist(),
                     normal_gap_m=p["normal_gap"],
                     tangent_gap_m=p["tangent_gap"],
@@ -447,5 +507,5 @@ class BilateralContactForce:
                     frozen_steps=p["frozen"],
                 )
                 for p in self.pads
-            }
+            },
         )

@@ -128,6 +128,7 @@ def run(config):
             "grasp_sensitivity.py",
             "object_grasp_pilot.py",
             "contact_force_control.py",
+            "payload_pressure.py",
             "support_control.py",
             "guided_motion.py",
             "wrist_coordination.py",

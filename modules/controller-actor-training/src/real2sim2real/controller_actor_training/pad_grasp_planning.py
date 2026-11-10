@@ -201,7 +201,13 @@ def fit_candidate(model, data, config, world, targets, seed, idx, z_index):
     if not 0 < gap <= 0.02 or not 0 <= preload <= 0.002:
         raise ValueError("Bounded opening and preload required")
     frames = [
-        pad_frame(model, config["robot"]["root_body"], p["geom"], p["outward_body"])
+        pad_frame(
+            model,
+            config["robot"]["root_body"],
+            p["geom"],
+            p["outward_body"],
+            point_body_m=p.get("point_body_m"),
+        )
         for p in settings["pads"]
     ]
     raw_targets = np.asarray(targets).copy()

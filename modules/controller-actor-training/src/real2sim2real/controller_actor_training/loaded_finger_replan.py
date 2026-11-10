@@ -41,6 +41,56 @@ def rebase_wrist(model, data, base, idx, names):
     return fixed_wrist
 
 
+def joint_search_bounds(names, limits, seed, active, maximum_offset_rad, wrist=None):
+    """Intersect bounded coupled planning changes with native physical limits."""
+    limits, seed, active = (
+        np.asarray(limits, float),
+        np.asarray(seed, float),
+        set(active),
+    )
+    if (
+        len(set(names)) != len(names)
+        or limits.shape != (len(names), 2)
+        or seed.shape != (len(names),)
+        or not np.isfinite(limits).all()
+        or not np.isfinite(seed).all()
+        or not active
+        or not active.issubset(names)
+        or any(n.startswith("fixture_") for n in active)
+        or (limits[:, 0] >= limits[:, 1]).any()
+        or (seed < limits[:, 0]).any()
+        or (seed > limits[:, 1]).any()
+        or not 0 < maximum_offset_rad <= (0.7 if wrist is not None else 0.35)
+    ):
+        raise ValueError(
+            "Finite legal seed, distinct owned fingers and bounded search required"
+        )
+    if wrist is not None and (
+        not np.isfinite([wrist["translation_m"], wrist["rotation_rad"]]).all()
+        or not 0 < wrist["translation_m"] <= 0.03
+        or not 0 < wrist["rotation_rad"] <= 0.35
+    ):
+        raise ValueError(
+            "Wrist search limited to 30 mm translation and 0.35 rad per axis"
+        )
+    movable = set(active)
+    bounds = {}
+    for i, name in enumerate(names):
+        radius = maximum_offset_rad if name in active else 1e-7
+        if wrist is not None and name.startswith("fixture_"):
+            radius = (
+                wrist["rotation_rad"]
+                if name.startswith("fixture_r")
+                else wrist["translation_m"]
+            )
+            movable.add(name)
+        bounds[name] = [
+            max(limits[i, 0], seed[i] - radius),
+            min(limits[i, 1], seed[i] + radius),
+        ]
+    return bounds, movable
+
+
 def run(config):
     import mujoco
     from .object_grasp_pilot import (
@@ -65,10 +115,16 @@ def run(config):
     sample = config["sample_index"]
     if type(sample) is not int or not 0 <= sample < len(parent["records"]):
         raise ValueError("Explicit valid saved sample required")
-    if not 0 < config["maximum_offset_rad"] <= 0.35:
-        raise ValueError("Finger offsets bounded to 0.35 radians required")
-    if not 1 <= len(config["pads"]) <= 4:
-        raise ValueError("One to four opposing pads required")
+    if (
+        not 0
+        < config["maximum_offset_rad"]
+        <= (0.7 if config.get("wrist_search") else 0.35)
+    ):
+        raise ValueError(
+            "Finger offsets bounded to 0.35 rad, or 0.7 rad for coupled search, required"
+        )
+    if not 1 <= len(config["pads"]) <= 5:
+        raise ValueError("One to five declared pads required")
     base, candidate = parent["configuration"], parent["candidate"]
     model, data, mesh = load_scene(base)
     set_wrist_frame(
@@ -113,10 +169,75 @@ def run(config):
     mesh.apply_transform(pose)
     targets, _, faces = trimesh.proximity.closest_point(mesh, targets)
     normals = -mesh.face_normals[faces]
-    frames = [
-        pad_frame(model, base["robot"]["root_body"], p["geom"], p["outward_body"])
-        for p in config["pads"]
-    ]
+    frames, anchors = [], []
+    for i, pad in enumerate(config["pads"]):
+        direction = pad["outward_body"]
+        point_body_m = None
+        mode = pad.get("target_mode", "retained_target")
+        if mode == "simulated_contact_anchor":
+            gid = model.geom(pad["geom"]).id
+            obj = model.body("task_object").id
+            contacts = [
+                c
+                for c in data.contact
+                if gid in (c.geom1, c.geom2)
+                and model.geom_bodyid[c.geom2 if c.geom1 == gid else c.geom1] == obj
+                and -base["planning"]["max_penetration_m"] <= c.dist <= 0
+            ]
+            if not contacts:
+                raise ValueError(
+                    "Requested collision pad has no admissible object contact anchor"
+                )
+            contact = min(contacts, key=lambda c: c.dist)
+            hand_normal = np.asarray(contact.frame).reshape(3, 3)[0] * (
+                1 if contact.geom1 == gid else -1
+            )
+            body = model.geom_bodyid[gid]
+            point_body_m = data.xmat[body].reshape(3, 3).T @ (
+                contact.pos - data.xpos[body]
+            )
+            direction = (data.xmat[body].reshape(3, 3).T @ hand_normal).tolist()
+            near, distance, face = trimesh.proximity.closest_point(mesh, [contact.pos])
+            if distance[0] > 0.003:
+                raise ValueError(
+                    "Contact anchor exceeds 3 mm reconstructed-surface agreement"
+                )
+            targets[i] = near[0]
+            normals[i] = -mesh.face_normals[face[0]]
+            anchors.append(
+                dict(
+                    pad=pad["geom"],
+                    source="saved-pose collision witness, not independent observation",
+                    contact_position_world_m=contact.pos.tolist(),
+                    contact_distance_m=float(contact.dist),
+                    source_mesh_projection_m=float(distance[0]),
+                )
+            )
+        elif mode != "retained_target":
+            raise ValueError("Unknown pad target mode")
+        frames.append(
+            pad_frame(
+                model,
+                base["robot"]["root_body"],
+                pad["geom"],
+                direction,
+                point_body_m=point_body_m,
+            )
+        )
+    shift = np.asarray(config.get("target_shift_world_m", [0, 0, 0]), float)
+    if (
+        shift.shape != (3,)
+        or not np.isfinite(shift).all()
+        or np.linalg.norm(shift) > 0.03
+    ):
+        raise ValueError("Explicit contact-layout shift bounded to 30 mm required")
+    if np.any(shift):
+        targets, projection, face = trimesh.proximity.closest_point(
+            mesh, targets + shift
+        )
+        if projection.max() > 0.005:
+            raise ValueError("Shifted contact proposal exceeds 5 mm surface projection")
+        normals = -mesh.face_normals[face]
     fixed_wrist = rebase_wrist(model, data, base, idx, names)
     limits = model.jnt_range[idx["joints"]].copy()
     # Match existing pad fitter's fixture planning envelope, while freezing it.
@@ -130,19 +251,10 @@ def run(config):
     if (measured < limits[:, 0] - 0.01).any() or (measured > limits[:, 1] + 0.01).any():
         raise ValueError("Loaded pose exceeds allowed joint envelope")
     seed = np.clip(measured, limits[:, 0] + 1e-6, limits[:, 1] - 1e-6)
-    bounds = {
-        name: [
-            max(
-                limits[i, 0],
-                seed[i] - (config["maximum_offset_rad"] if name in active else 1e-7),
-            ),
-            min(
-                limits[i, 1],
-                seed[i] + (config["maximum_offset_rad"] if name in active else 1e-7),
-            ),
-        ]
-        for i, name in enumerate(names)
-    }
+    wrist = config.get("wrist_search")
+    bounds, movable = joint_search_bounds(
+        names, limits, seed, active, config["maximum_offset_rad"], wrist
+    )
     fit = fit_pad_contacts(
         model,
         data,
@@ -173,10 +285,17 @@ def run(config):
         schema="real2sim2real.loaded-finger-replan/1",
         config=config,
         joint_offsets_rad=offsets,
+        joint_names=names,
+        fitted_q=fit["q"].tolist(),
+        seed_q=seed.tolist(),
+        wrist_search=wrist,
         target_world_m=targets.tolist(),
         fixed_wrist_world=fixed_wrist.tolist(),
         target_pad_normals=normals.tolist(),
         pad_frames=frames,
+        simulated_contact_anchors=anchors,
+        target_shift_world_m=shift.tolist(),
+        shifted_targets_are_proposals=bool(np.any(shift)),
         sample_time_s=parent["records"][sample]["time_s"],
         site_errors_m=fit["site_errors_m"].tolist(),
         normal_errors_deg=fit["normal_errors_deg"].tolist(),
@@ -184,9 +303,12 @@ def run(config):
         nfev=fit["nfev"],
         maximum_frozen_joint_change_rad=float(
             max(
-                abs(fit["q"][i] - seed[i])
-                for i, name in enumerate(names)
-                if name not in active
+                (
+                    abs(fit["q"][i] - seed[i])
+                    for i, name in enumerate(names)
+                    if name not in movable
+                ),
+                default=0.0,
             )
         ),
         loaded_seed_projection_rad=(seed - measured).tolist(),

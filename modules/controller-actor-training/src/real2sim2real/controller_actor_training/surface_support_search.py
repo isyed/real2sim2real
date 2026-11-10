@@ -88,12 +88,30 @@ def search(config):
     world_from_object = np.asarray(plan["settling"]["settled_world_from_object"])
     physics = plan["candidates"][0]["pad_plan"]["point_wrench_baseline"]
     mode = config.get("sampling_mode", "whole_surface")
-    if mode not in ["whole_surface", "upward_force"]:
+    if mode not in ["whole_surface", "upward_force", "inner_wall"]:
         raise ValueError("Unknown surface sampling mode")
     capacity = contact_site_search.upward_force_capacity(
         mesh.face_normals @ world_from_object[:3, :3].T, physics["friction"]
     )
     eligible = capacity > 0 if mode == "upward_force" else None
+    opening_source = None
+    if mode == "inner_wall":
+        region = config["opening_region"]
+        opening_source = Path(region["report"])
+        if digest(opening_source) != region["sha256"]:
+            raise ValueError("Pinned opening geometry changed")
+        opening = json.loads(opening_source.read_text())
+        if opening["config"]["plan_sha256"] != config["plan_sha256"]:
+            raise ValueError("Opening region belongs to another task/settled world")
+        index = region["index"]
+        if type(index) is not int or not 0 <= index < len(opening["openings"]):
+            raise ValueError("Explicit valid opening index required")
+        eligible = contact_site_search.inner_wall_faces(
+            mesh,
+            world_from_object,
+            opening["openings"][index]["center_xy_m"],
+            **region["parameters"],
+        )
     sites = contact_site_search.sample_sites(
         mesh, eligible_faces=eligible, **config["sampling"]
     )
@@ -110,6 +128,8 @@ def search(config):
         str(source.path(k)): digest(source.path(k))
         for k in ["geometry.npz", "timeline.json", "mesh/metric.glb", "artifact.json"]
     }
+    if opening_source is not None:
+        hashes[str(opening_source)] = digest(opening_source)
     shortlist = []
     for split, frames in [("discovery", discovery), ("validation", validation)]:
         indices = list(range(len(sites))) if split == "discovery" else shortlist

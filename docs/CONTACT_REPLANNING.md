@@ -74,3 +74,55 @@ contact time does not establish broader load-bearing contact across fingers.
 `arm_clearance_audit` now records both actual table penetration witnesses and
 per-hand conservative positive-clearance minima by phase from saved arm states.
 Neither this audit nor a successful IK path infers contact forces or reruns physics.
+
+## Coupled wrist and pad hypotheses
+
+`loaded_finger_replan` accepts optional `wrist_search` with `translation_m` (up to
+30 mm) and `rotation_rad` (up to 0.35 rad **per fixture axis**). These bounds
+intersect native joint limits. Declared finger changes may extend to 0.7 rad for
+this coupled search; the fixed-wrist default retains its 0.35 rad bound. These
+are search ranges, not changed actuator limits or acceptance tolerances.
+
+A pad can use `target_mode: simulated_contact_anchor` to select its deepest
+admissible object contact in the saved pose. The reconstructed surface must lie
+within 3 mm of the collision witness. The contact point is expressed in the
+owning body frame and projected onto its actual compiled convex collision hull
+within 1 mm, with a compatible surface normal. This supports curved thumb pads
+and palm bearing patches whose active contact lies away from a center ray.
+It is privileged simulation geometry, **not independent observation or measured
+force**. No object contact may be substituted with a table or self-contact.
+
+`retargeting.pad_contacts.pad_frame(..., point_body_m=...)` supports the same
+explicit surface patch. The original center-ray behavior remains the default.
+`pad_grasp_planning` preserves explicit patch points through subsequent fitting;
+it must not silently recreate the patch from a ray through the pad center.
+
+Optional `target_shift_world_m` proposes a bounded contact-layout translation
+(up to 30 mm); shifted targets are projected to the reconstructed surface within
+5 mm. These are new geometry proposals, not evidence of existing contact.
+
+`controller_actor_training.coupled_grasp_transfer` takes pinned `parent_trial`
+and `loaded_fit` paths/hashes. The parent must be a successful retained fixture
+trial; the fit must pass its geometry checks. It transports the fitted wrist
+back to the settled initial task using world-from-body matrices:
+
+`T_world_object_initial @ inv(T_world_object_loaded) @ T_world_wrist_loaded`.
+The object-relative grasp is preserved; no loaded object state is copied into
+physics. It then fits opening and bounded preload paths, optionally searches up
+to eight declared approach offsets (150 mm maximum), and checks collision,
+position, normal alignment and static gravity balance before a fresh rollout.
+`preloads_m` supplies up to three values; `opening_gap_m`,
+`maximum_normal_force_n`, `fidelity_limits`, and `output` are explicit.
+
+```sh
+python -m real2sim2real.controller_actor_training.coupled_grasp_transfer --config CONFIG.json
+```
+
+The static force budget is a declared per-contact planning assumption; failure
+under it does not prove that torque-limited hardware cannot hold the object.
+Finite contact-patch reassessment can reuse `object_grasp_pilot --phase pad-patches`:
+samples on one pad must share its budget. A position-error pass alone does not
+establish a bearing patch. Missing near-surface samples remain rejected, even
+when an aggregate IK residual looks small. New pad plans use their explicit
+closing path rather than adding the legacy undirected flexion offset; physical
+acceptance criteria and actuator limits remain unchanged.

@@ -15,9 +15,8 @@ from real2sim2real.artifacts import digest, write_json
 from .object_grasp_scene import quaternion
 
 
-def load_scene(config):
-    import mujoco
-
+def verify_scene_assets(config):
+    """Verify a prepared scene without importing or initializing a simulator."""
     root = Path(config["output"]) / "scene"
     receipt = json.loads((root / "receipt.json").read_text())
     task_source = receipt["config"]["task"]
@@ -47,6 +46,13 @@ def load_scene(config):
         for name, sha in records.items():
             if digest(folder / name) != sha:
                 raise ValueError("Scene assets changed")
+    return root, receipt
+
+
+def load_scene(config):
+    import mujoco
+
+    root, _ = verify_scene_assets(config)
     model = mujoco.MjModel.from_xml_path(str(root / "scene.xml"))
     verify_unassisted_model(model)
     return (

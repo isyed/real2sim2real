@@ -357,3 +357,9 @@ Contact-region audits and paired contact-arrangement diagnostics are documented
 in [CONTACT_REGION_AUDIT.md](../../docs/CONTACT_REGION_AUDIT.md). These preserve
 rejected plans and distinguish force balance from observed contact support and
 validated two-hand robot execution.
+
+Before fitting a handle hook or underbody support grasp, use
+`handle_access_audit` to check opening geometry and swept tool clearance against
+the source mesh, convex proxy and finite table. See
+[HANDLE_INSERTION.md](../../docs/HANDLE_INSERTION.md) for the bounded probe
+templates, browser review, uncertainty limits and integration with contact IK.

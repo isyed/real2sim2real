@@ -156,3 +156,7 @@ The bilateral route can add [pad-force feedback](CONTACT_FORCE_FEEDBACK.md).
 Moving-reference tests pin a complete passing stationary result, unchanged control
 settings and the original fidelity limits. Lift-offset ownership is explicit so
 clearance regulation does not silently override the demonstrated center trajectory.
+Optional common object-pose feedback rotates/translates the wrist pair about the
+independent goal without changing their commanded relative frames. Its world-pose
+accuracy and both wrist-frame grasp-drift checks remain separate: improving one
+can worsen the other. A nominal fixture pass must precede arm revalidation.

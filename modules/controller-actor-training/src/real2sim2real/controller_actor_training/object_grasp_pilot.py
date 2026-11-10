@@ -748,6 +748,32 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
             world_mesh,
         )
     support_geoms = set(support.idx["geoms"]) if support else set()
+    pose_feedback = None
+    pose_hold_goal = None
+    if config.get("object_pose_feedback") is not None:
+        if (
+            not force_servo
+            or coordination
+            or rotation_feedback
+            or not freeze_lift_at_hold
+        ):
+            raise ValueError(
+                "Pose feedback requires bilateral force control and exclusive hold pose ownership"
+            )
+        from .wrist_coordination import ObjectFrameCoordinator
+
+        pose_feedback = ObjectFrameCoordinator(
+            model,
+            [
+                (config["robot"]["root_body"], "fixture_"),
+                (
+                    config["support_robot"]["root_body"],
+                    config["support_robot"]["fixture_prefix"],
+                ),
+            ],
+            config["object_pose_feedback"],
+            initial_rotation,
+        )
     all_robot_geoms = hand_geoms | support_geoms
     table = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "table")
     sample_every = max(1, round(0.02 / model.opt.timestep))
@@ -859,6 +885,20 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
                     except ValueError as error:
                         aborted = str(error)
                         break
+            if pose_feedback and phase == "hold":
+                current_pose = object_transform(model, data)
+                if pose_hold_goal is None:
+                    pose_hold_goal = current_pose.copy()
+                target = pose_feedback.target(
+                    model,
+                    target,
+                    current_pose,
+                    model.opt.timestep,
+                    desired_pose=guidance.goal if guidance else pose_hold_goal,
+                )
+                if pose_feedback.rejection:
+                    aborted = pose_feedback.rejection
+                    break
             if force_servo:
                 activation = (
                     settings["approach_s"]
@@ -997,6 +1037,11 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
                     **(surface.diagnostics() if surface else {}),
                     **(force_servo.diagnostics() if force_servo else {}),
                     **(
+                        dict(object_pose_feedback=pose_feedback.diagnostics())
+                        if pose_feedback
+                        else {}
+                    ),
+                    **(
                         dict(primary_contact_force_by_geom_n=patch_forces)
                         if config.get("contact_patch_logging", False)
                         else {}
@@ -1051,6 +1096,11 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
         failures.extend(support_rejections(extra, support.rejection))
     if guidance and guidance.max_command_error_m > 1e-6:
         failures.append("reference_command_pose_error")
+    if pose_feedback and (
+        pose_feedback.max_position_residual_m > 1e-6
+        or pose_feedback.max_rotation_residual_rad > 1e-6
+    ):
+        failures.append("object_pose_feedback_command_error")
     if coordination:
         from .wrist_coordination import hold_world_motion
 
@@ -1100,6 +1150,15 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
             for i, value in enumerate(peak_forces)
         },
         controller=dict(
+            **{
+                key: config[key]
+                for key in (
+                    "contact_force_feedback",
+                    "object_pose_feedback",
+                    "freeze_lift_at_hold",
+                )
+                if key in config
+            },
             clearance_feedback=feedback,
             contact_feedback=contact_feedback,
             orientation_feedback=rotation_feedback,
@@ -1139,6 +1198,17 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
         object_assistance=False,
         arm_reachability_validated=False,
         physical_hardware_validated=False,
+        **(
+            dict(
+                object_pose_feedback=config["object_pose_feedback"],
+                object_pose_feedback_final=pose_feedback.diagnostics(),
+                object_pose_feedback_observations="privileged simulator object pose; immutable hold/reference goal",
+                object_pose_feedback_max_position_residual_m=pose_feedback.max_position_residual_m,
+                object_pose_feedback_max_rotation_residual_rad=pose_feedback.max_rotation_residual_rad,
+            )
+            if pose_feedback
+            else {}
+        ),
         **(
             dict(
                 reference_mode="world_increment_after_grasp",
@@ -1277,8 +1347,14 @@ def verify_frozen_controller(config, selected):
         "finger_surface_feedback",
         "reference_guidance",
         "grasp_retention",
+        "contact_force_feedback",
+        "object_pose_feedback",
+        "freeze_lift_at_hold",
     ):
-        if config.get(key) != selected["controller"].get(key):
+        recorded = selected["controller"].get(
+            key, selected.get("configuration", {}).get(key)
+        )
+        if config.get(key) != recorded:
             raise ValueError("Frozen validation cannot change controller feedback")
     if config.get("support_controller") != selected.get("support_controller"):
         raise ValueError("Frozen validation cannot change second-hand support control")

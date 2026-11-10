@@ -125,6 +125,8 @@ def run(config):
         "support_control.py",
         "object_grasp_pilot.py",
         "contact_force_control.py",
+        "wrist_coordination.py",
+        "guided_motion.py",
     ):
         (out / "implementation" / filename).write_bytes(
             Path(__file__).with_name(filename).read_bytes()
@@ -155,6 +157,10 @@ def run(config):
         base["contact_force_feedback"] = config["contact_force_feedback"]
     if "freeze_lift_at_hold" in config:
         base["freeze_lift_at_hold"] = config["freeze_lift_at_hold"]
+    if "object_pose_feedback" in config:
+        if profile != "rigid_bilateral" or not config.get("contact_force_feedback"):
+            raise ValueError("Pose feedback requires rigid bilateral pad-force control")
+        base["object_pose_feedback"] = config["object_pose_feedback"]
     if config.get("physics_step_s") is not None:
         base["physics_step_s"] = config["physics_step_s"]
     candidates = []

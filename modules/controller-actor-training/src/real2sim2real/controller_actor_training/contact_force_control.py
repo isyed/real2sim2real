@@ -8,7 +8,17 @@ import numpy as np
 
 
 def normal_force_step(
-    nominal, offset, normal_jacobian, force_n, target_n, dt, limits, settings
+    nominal,
+    offset,
+    normal_jacobian,
+    force_n,
+    target_n,
+    dt,
+    limits,
+    settings,
+    *,
+    tangent_jacobian=None,
+    tangent_velocity=None,
 ):
     """Map a signed force error into a bounded normal pressing velocity.
 
@@ -41,13 +51,36 @@ def normal_force_step(
         -settings["max_normal_speed_m_s"],
         settings["max_normal_speed_m_s"],
     )
-    velocity = desired * jac / (jac @ jac + settings["damping_m2"])
+    if tangent_jacobian is None:
+        matrix, task_velocity = jac[None, :].copy(), np.array([desired])
+    else:
+        tangent_jacobian = np.asarray(tangent_jacobian, float)
+        tangent_velocity = np.asarray(tangent_velocity, float)
+        if (
+            tangent_jacobian.shape != (3, len(q))
+            or tangent_velocity.shape != (3,)
+            or not np.isfinite(tangent_jacobian).all()
+            or not np.isfinite(tangent_velocity).all()
+        ):
+            raise ValueError("Finite projected tangent Jacobian and velocity required")
+        matrix = np.vstack([jac, tangent_jacobian])
+        task_velocity = np.r_[desired, tangent_velocity]
+
+    def solve(j):
+        if tangent_jacobian is None:
+            # Preserve the archived scalar-normal controller exactly.
+            return desired * j[0] / (j[0] @ j[0] + settings["damping_m2"])
+        return np.linalg.solve(
+            j.T @ j + settings["damping_m2"] * np.eye(len(q)), j.T @ task_velocity
+        )
+
+    velocity = solve(matrix)
     current = np.clip(q + delta, *limits.T)
     blocked = ((current <= limits[:, 0] + 1e-8) & (velocity < 0)) | (
         (current >= limits[:, 1] - 1e-8) & (velocity > 0)
     )
-    jac = np.where(blocked, 0, jac)
-    velocity = desired * jac / (jac @ jac + settings["damping_m2"])
+    matrix[:, blocked] = 0
+    velocity = solve(matrix)
     velocity *= min(
         1, settings["max_joint_speed_rad_s"] / max(np.linalg.norm(velocity), 1e-12)
     )
@@ -71,7 +104,12 @@ def validate_settings(settings):
         "maximum_tangent_gap_m",
         "close_activation_fraction",
     }
-    optional = {"normal_observation", "minimum_observed_force_n"}
+    optional = {
+        "normal_observation",
+        "minimum_observed_force_n",
+        "tangent_gain_s_inv",
+        "max_tangent_speed_m_s",
+    }
     if (set(settings) - optional) != required or set(settings["target_force_n"]) != {
         "thumb",
         "index",
@@ -89,6 +127,13 @@ def validate_settings(settings):
         raise ValueError("Unknown force-normal observation mode")
     if not 0 < settings.get("minimum_observed_force_n", 0.1) <= 1:
         raise ValueError("Finite positive observed-contact threshold required")
+    if "tangent_gain_s_inv" in settings or "max_tangent_speed_m_s" in settings:
+        if (
+            not 0 < settings.get("tangent_gain_s_inv", 0) <= 5
+            or not 0 < settings.get("max_tangent_speed_m_s", 0) <= 0.01
+            or settings.get("normal_observation", "planned") != "planned"
+        ):
+            raise ValueError("Bounded planned-surface tangent control required")
     caps = dict(
         gain_m_per_n_s=0.01,
         max_normal_speed_m_s=0.01,
@@ -355,6 +400,18 @@ class BilateralContactForce:
             if valid:
                 jac = np.zeros((3, model.nv))
                 mujoco.mj_jac(model, data, jac, None, p, pad["body"])
+                tangent = {}
+                if "tangent_gain_s_inv" in self.settings:
+                    from .wrist_coordination import bounded_vector
+
+                    projection = np.eye(3) - np.outer(normal, normal)
+                    tangent = dict(
+                        tangent_jacobian=projection @ jac[:, pad["dofs"]],
+                        tangent_velocity=bounded_vector(
+                            -self.settings["tangent_gain_s_inv"] * (projection @ error),
+                            self.settings["max_tangent_speed_m_s"],
+                        ),
+                    )
                 command, offset = normal_force_step(
                     q,
                     pad["offset"],
@@ -364,6 +421,7 @@ class BilateralContactForce:
                     dt,
                     pad["limits"],
                     self.settings,
+                    **tangent,
                 )
                 output[ids] = command
                 pad["offset"] = offset

@@ -345,9 +345,9 @@ def review_trials(
             )
         )
         verdict = (
-            "Pass"
+            "Physical gates passed"
             if result["success"]
-            else "Rejected: " + ", ".join(result["rejected_for"])
+            else "Physical gates rejected: " + ", ".join(result["rejected_for"])
         )
         motion_condition = (
             "Demonstrated object-motion increments"
@@ -355,6 +355,25 @@ def review_trials(
             else "Stationary lift/hold diagnostic"
         )
         support_note = f"<p>Motion condition: {motion_condition}.</p>"
+        protocol_path = directory.parent / "protocol.json"
+        if (
+            result.get("configuration", {}).get("reference_guidance")
+            and protocol_path.exists()
+        ):
+            protocol = json.loads(protocol_path.read_text())
+            limits = protocol.get("fidelity_limits")
+            if limits:
+                from .retention_experiment import assess
+
+                assessment = assess(result, limits)
+                score = assessment["fidelity"]
+                support_note += f"<p>Complete physical plus reference acceptance: {'pass' if assessment['combined_pass'] else 'fail'}.</p>"
+                if score:
+                    support_note += (
+                        f"<p>Peak reference position error {score['maximum_position_error_m'] * 1000:.2f} mm "
+                        f"(limit {limits['position_m'] * 1000:g} mm); rotation error "
+                        f"{score['maximum_rotation_error_deg']:.2f} degrees (limit {limits['rotation_deg']:g}).</p>"
+                    )
         if "support_load_fraction" in result:
             drift = result["support_wrist_drift_m"]
             support_note += (

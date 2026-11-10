@@ -58,6 +58,14 @@ not all be achieved: retain individual measurements, geometry gaps, offsets,
 update/freeze counters and normal-source labels. An aggregate thumb/opposing-group
 contact pass does not mean every finger maintains its goal.
 
+An optional planned-surface tangent controller adds `tangent_gain_s_inv` and
+`max_tangent_speed_m_s`. It combines normal pressing velocity and projected
+surface-position error through a damped finger Jacobian, under the same joint
+rate/travel/native limits. It is a hypothesis to test, not a default improvement:
+the admitted geometric site can differ from the loaded contact patch, and trying
+to recover that site can disrupt pressure or lose the grasp. Measured-normal mode
+cannot be combined with this planned-site tangent objective.
+
 ## Stationary admission and moving-reference tests
 
 Run the stationary condition first. A demonstrated-motion force-feedback run
@@ -81,6 +89,31 @@ and native clock. This can prevent the clearance servo from adding an independen
 vertical correction as the held object tilts: bottom clearance and object-center
 reference position are different quantities. Apply the same ownership choice in
 both stationary and moving tests, and retain the full physical/reference gates.
+
+## Common object-pose feedback
+
+Optional `object_pose_feedback` adds a bounded common rigid wrist correction after
+the nominal hold/reference command. It uses the checked Cartesian fixture
+contract in `wrist_coordination`; it is not arm IK. Specify
+`translation_gain_s_inv`, `rotation_gain_s_inv`,
+`max_translation_speed_m_s`, `max_rotation_speed_rad_s`, `max_translation_m`,
+`max_rotation_rad`, and optionally `joint_limit_policy: project_common`.
+
+The stationary goal is frozen at hold entry. In motion trials the desired pose
+comes from the unmodified demonstrated object increments and native clock.
+Corrections orbit both wrists about that desired object position, preserve their
+commanded relative transform, and leave finger targets to the force controller.
+All three translation axes can be corrected; this requires
+`freeze_lift_at_hold: true` and excludes the older independent orientation and
+fixed-world coordination loops. The latter retains its original XY-only behavior
+when no explicit desired pose is supplied.
+
+An accurate world-frame object pose does not establish grasp retention. Common
+wrist rotation can reduce orientation error while increasing object-to-wrist
+drift. Evaluate both wrists' relative drift, force/load support, clearance,
+penetration and duration alongside position/rotation error. A failing stationary
+candidate cannot advance to motion, and a passing reference metric cannot erase a
+failed physical grasp. Simulator pose feedback remains privileged observation.
 
 ## Review and validation
 

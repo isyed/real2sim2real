@@ -1,5 +1,11 @@
 # Testing the reusable modules
 
+Contact-force and wrist-coordination tests also cover optional tangent/normal
+velocity control, joint stops, immutable externally supplied pose goals, bounded
+3D corrections, robot-only ownership and rejection of controller retuning between
+stationary and moving trials. Actual grasp retention remains a downstream physics
+test; improved object orientation alone is not a passing grasp.
+
 `test_control_pipelines.py` validates typed recipes, copied evidence, configuration
 hashes, upstream rebinding and rejected grasp/arm admission.
 `test_reference_extension.py` preserves native frames, prefix poses, clock and

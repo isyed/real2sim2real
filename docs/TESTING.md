@@ -1,5 +1,10 @@
 # Testing the reusable modules
 
+`tests/test_contact_site_search.py` covers observation-first surface sampling,
+discovery-only shortlists, lifting-force direction, provenance, deduplication and
+exclusion of failed validation from combined contact screening. Existing furniture
+support reconstruction remains covered by `tests/test_surface_support.py`.
+
 `tests/test_stereo_contact_evidence.py` checks sparse stereo correspondence and
 triangulation against known synthetic disparities, including ambiguous, textureless,
 reverse-inconsistent and search-boundary cases. No GPU or private images are needed.

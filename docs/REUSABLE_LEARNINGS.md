@@ -97,3 +97,10 @@ and textured-image controls are implemented in
 [Stereo contact evidence](STEREO_CONTACT_EVIDENCE.md). Successful background
 matches do not validate contact surfaces; absent contact matches cannot justify
 fitting geometry toward a controller's acceptance threshold.
+
+Better observation does not necessarily produce a useful contact: a visible upper
+surface can only push the object down under its allowed friction cone. Search
+surface coverage first, freeze an observation-supported shortlist, and test force
+directions and gravity balance before spending time fitting hands. See
+[Contact site search](CONTACT_SITE_SEARCH.md). Preserve failures and keep point
+depth support separate from verified surface normals and finite contact area.

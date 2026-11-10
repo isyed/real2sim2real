@@ -1,5 +1,11 @@
 # Retargeting
 
+`object_grasp` and `grasp_kinematics` provide a separate object-centric path:
+surface contact proposals and bounded hand IK from calibrated scene geometry,
+without a human finger reference. See the
+[grasp pilot workflow](../../docs/OBJECT_CENTRIC_GRASPS.md) for supported hand
+conventions, optional CPU MuJoCo dependencies and physical validation limits.
+
 This is the actual constrained IK retargeter, not a learned motion generator.
 It converts native human MHR predictions to SOMA while retaining per-frame
 identity, then uses Pink/Pinocchio tasks and robot joint limits to fit the

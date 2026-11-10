@@ -746,6 +746,8 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
             candidate,
             settled["settled_world_from_object"],
             world_mesh,
+            scene_sha256=digest(Path(config["output"]) / "scene/scene.xml"),
+            allowed_penetration_m=config["planning"]["max_penetration_m"],
         )
     support_geoms = set(support.idx["geoms"]) if support else set()
     pose_feedback = None

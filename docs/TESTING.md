@@ -1,5 +1,11 @@
 # Testing the reusable modules
 
+`tests/test_payload_posture.py` checks nominal/heavy deadband, continuous load
+interpolation, joint/fraction speed bounds, observation freezes, finger-only
+command ownership, return to the original pad point and rejection of failed,
+incomplete or nonfinite endpoint evidence. Endpoint geometry and transition
+retention still require scene checks and complete downstream physical rollouts.
+
 `test_contact_patch_motion.py` separates normal motion, tangential material slip
 and patch-centroid migration; verifies gap-safe integration and common-motion
 invariance; and checks optional MuJoCo point-velocity telemetry without physical

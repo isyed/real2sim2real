@@ -258,3 +258,14 @@ reference tests still fail grasp drift or rotation. Freeze the grasp, gains,
 physical settings and fidelity limits before promotion. Distinguish measured
 current contact normals from planned contact labels, and keep per-pad failures
 visible beneath aggregate contact/load statistics.
+
+## Validate posture changes during acquisition, not just their endpoints
+
+Different fixed finger postures can pass different payloads. Do not pool their
+successful cases into one robustness claim. A supported-load-driven transition
+needs its own frozen policy, bounded owned-joint changes, intermediate collision
+checks and fresh acquisition/hold/reference tests across the complete matrix.
+Keep simulator force/acceleration observations explicit; neither case identity
+nor actual simulator mass should select the posture. Retain pressure limits,
+object targets, grasp anchors, reference timing and acceptance criteria. See
+[supported-load posture transitions](PAYLOAD_POSTURE.md).

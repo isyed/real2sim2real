@@ -110,6 +110,7 @@ def validate_settings(settings):
         "tangent_gain_s_inv",
         "max_tangent_speed_m_s",
         "payload_adaptation",
+        "posture_transition",
     }
     if (set(settings) - optional) != required or set(settings["target_force_n"]) != {
         "thumb",
@@ -132,6 +133,12 @@ def validate_settings(settings):
         from .payload_pressure import validate_settings as validate_payload
 
         validate_payload(settings["payload_adaptation"])
+    if "posture_transition" in settings:
+        from .payload_posture import validate_settings as validate_posture
+
+        if "payload_adaptation" not in settings:
+            raise ValueError("Posture transitions require supported-load observations")
+        validate_posture(settings["posture_transition"])
     if "tangent_gain_s_inv" in settings or "max_tangent_speed_m_s" in settings:
         if (
             not 0 < settings.get("tangent_gain_s_inv", 0) <= 5
@@ -208,7 +215,18 @@ def object_pad_forces(model, data, object_id, pad_ids):
 class BilateralContactForce:
     """Own only independent finger joints in two explicit grasp-hand subtrees."""
 
-    def __init__(self, model, data, settings, candidate, world_from_object, world_mesh):
+    def __init__(
+        self,
+        model,
+        data,
+        settings,
+        candidate,
+        world_from_object,
+        world_mesh,
+        *,
+        scene_sha256=None,
+        allowed_penetration_m=None,
+    ):
         import mujoco
         import trimesh
         from real2sim2real.retargeting.grasp_kinematics import robot_indices
@@ -358,6 +376,19 @@ class BilateralContactForce:
         all_q = [int(q) for pad in self.pads for q in pad["qids"]]
         if len(set(all_q)) != len(all_q):
             raise ValueError("Independent per-pad finger joints required")
+        self.posture = None
+        if "posture_transition" in settings:
+            from .payload_posture import PayloadPosture
+
+            self.posture = PayloadPosture(
+                model,
+                data,
+                settings["posture_transition"],
+                candidate,
+                self.pads,
+                scene_sha256=scene_sha256,
+                allowed_penetration_m=allowed_penetration_m,
+            )
 
     def target(self, model, data, nominal, *, active, dt):
         import mujoco
@@ -392,6 +423,7 @@ class BilateralContactForce:
                 if not owned:
                     isolated = False
             dof = int(model.joint("task_object_free").dofadr[0])
+            previous_updates = self.payload.valid_updates
             self.payload.update(
                 forces,
                 data.qacc[dof + 2],
@@ -408,6 +440,14 @@ class BilateralContactForce:
                     for role in ("primary", "secondary")
                 ),
             )
+            if self.posture:
+                output = self.posture.apply(
+                    output,
+                    self.pads,
+                    self.payload.weight_n / self.payload.settings["reference_weight_n"],
+                    dt,
+                    active=active and self.payload.valid_updates > previous_updates,
+                )
         # Refresh only positions/Jacobians. Do not assign a physical coordinate.
         mujoco.mj_kinematics(model, data)
         mujoco.mj_comPos(model, data)
@@ -488,6 +528,9 @@ class BilateralContactForce:
 
     def diagnostics(self):
         return dict(
+            **(
+                dict(payload_posture=self.posture.diagnostics()) if self.posture else {}
+            ),
             **(
                 dict(payload_pressure=self.payload.diagnostics())
                 if self.payload

@@ -87,3 +87,8 @@ if the stationary task succeeds.
 Always retain failed rollouts, solver/clock health, source hashes and contact
 forces. Advance a new grasp to arm dynamics only after a complete physical and
 reference pass; test payload/friction and timestep sensitivity before promotion.
+
+For bounded per-pad pressure regulation, stationary-to-reference promotion and
+lift-offset ownership, see [contact-force feedback](CONTACT_FORCE_FEEDBACK.md).
+A passing stationary diagnostic does not imply that grasp drift or reference
+rotation will satisfy the moving task.

@@ -238,3 +238,17 @@ reference tracking. Label that diagnostic separately so it cannot qualify the
 original task. A brief lift or a static force budget is not evidence of sustained
 contact-force realization. Independent wrist corrections inherited from a staged
 support controller may need a coordinated controller for opposing grasps.
+
+## Assign one owner to the lift offset during reference following
+
+Once a grasp has achieved its initial lift, continuing to regulate the lowest
+object vertex can raise the object center as the object tilts. This may conflict
+with the demonstrated center trajectory even while the grasp remains loaded.
+An explicit frozen hold offset keeps reference motion in charge; evaluate it
+under the same physical and pose criteria as the unfrozen controller.
+
+Contact-force feedback can stabilize a complete stationary hold while moving
+reference tests still fail grasp drift or rotation. Freeze the grasp, gains,
+physical settings and fidelity limits before promotion. Distinguish measured
+current contact normals from planned contact labels, and keep per-pad failures
+visible beneath aggregate contact/load statistics.

@@ -121,10 +121,13 @@ def panel(triangles, colors, azimuth, elevation, center, scale, *, depth_buffer=
     return image
 
 
-def render(config, directory, output):
+def render(config, directory, output, *, stem=None):
     import mujoco
     import imageio_ffmpeg
 
+    stem = directory.name if stem is None else stem
+    if not stem or Path(stem).name != stem or stem in (".", ".."):
+        raise ValueError("Local nonempty review media name required")
     report = json.loads((directory / "result.json").read_text())
     if digest(directory / "states.npz") != report["states_sha256"]:
         raise ValueError("Recorded trial changed")
@@ -164,7 +167,7 @@ def render(config, directory, output):
     count = len(states["qpos"])
     step = 2
     fps = 1 / float(np.median(np.diff(states["timestamps_s"]))) / step
-    path = output / (directory.name + ".mp4")
+    path = output / (stem + ".mp4")
     writer = imageio_ffmpeg.write_frames(
         str(path),
         (1040, 520),
@@ -195,7 +198,7 @@ def render(config, directory, output):
             row = report["records"][i]
             draw.text(
                 (15, 10),
-                f"Saved physics | {directory.name} | {row['phase']} | {row['time_s']:.2f}s",
+                f"Saved physics | {stem} | {row['phase']} | {row['time_s']:.2f}s",
                 fill=(20, 30, 45),
             )
             draw.text(
@@ -205,7 +208,7 @@ def render(config, directory, output):
             )
             writer.send(np.asarray(image))
             if i == indices[len(indices) // 2] or i == indices[-1]:
-                image.save(output / (directory.name + f"-{i:04d}.jpg"), quality=92)
+                image.save(output / (stem + f"-{i:04d}.jpg"), quality=92)
     finally:
         writer.close()
     reader = imageio_ffmpeg.read_frames(str(path))
@@ -216,7 +219,7 @@ def render(config, directory, output):
         raise ValueError("Rendered video incomplete")
     from real2sim2real.review_media import prepare
 
-    portable = prepare(path, output / (directory.name + ".playback"))
+    portable = prepare(path, output / (stem + ".playback"))
     return dict(
         path=path.name,
         frames=decoded,
@@ -308,6 +311,19 @@ def review(config):
     return videos
 
 
+def unique_trial_media_names(trials):
+    """Preserve unique stems and disambiguate repeated candidate names by study."""
+    paths = [Path(p).resolve() for p in trials]
+    if len(set(paths)) != len(paths):
+        raise ValueError("Duplicate review trial paths would overwrite media")
+    depth = 1
+    names = [p.name for p in paths]
+    while len(set(names)) != len(names):
+        depth += 1
+        names = ["--".join(p.parts[-depth:]) for p in paths]
+    return names
+
+
 def review_trials(
     config, trials, output, *, title="Fixed-grasp controller diagnostics"
 ):
@@ -317,9 +333,10 @@ def review_trials(
     output = Path(output)
     output.mkdir(parents=True, exist_ok=False)
     sections, videos = [], []
-    for directory in map(Path, trials):
+    trials = list(map(Path, trials))
+    for directory, stem in zip(trials, unique_trial_media_names(trials)):
         result = json.loads((directory / "result.json").read_text())
-        video = render(config, directory, output)
+        video = render(config, directory, output, stem=stem)
         videos.append(
             dict(
                 **video,
@@ -327,16 +344,20 @@ def review_trials(
                 source_result_sha256=digest(directory / "result.json"),
             )
         )
-        stem = directory.name
         verdict = (
             "Pass"
             if result["success"]
             else "Rejected: " + ", ".join(result["rejected_for"])
         )
-        support_note = ""
+        motion_condition = (
+            "Demonstrated object-motion increments"
+            if result.get("configuration", {}).get("reference_guidance")
+            else "Stationary lift/hold diagnostic"
+        )
+        support_note = f"<p>Motion condition: {motion_condition}.</p>"
         if "support_load_fraction" in result:
             drift = result["support_wrist_drift_m"]
-            support_note = (
+            support_note += (
                 f"<p>Second hand: mean upward force on the object {result['support_mean_upward_force_n']:.2f} N; "
                 f"at least 10% of object weight in {result['support_load_fraction'] * 100:.1f}% of hold samples; "
                 f"support-wrist drift {'unavailable' if drift is None else f'{drift * 1000:.1f} mm'}. "

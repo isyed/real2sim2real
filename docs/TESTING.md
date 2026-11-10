@@ -287,3 +287,11 @@ mutual-collision two-hand IK without moving the object, and FK-preserving closed
 wrist re-centering. It also prevents stationary diagnostics from being promoted
 as demonstrated-motion success. Optional MuJoCo tests exercise the actual compiled
 hand/fixture semantics; downstream free-object rollouts remain necessary.
+
+`tests/test_contact_force_control.py` checks signed pressure/release, rate and
+travel bounds, joint-stop anti-windup, object-specific solved force normals,
+finger-only command ownership and unchanged physical state/limits. It rejects
+failed/incomplete stationary promotion, changed control gains or relaxed reference
+limits, and verifies distinct media names for repeated candidate IDs across studies.
+Run the optional MuJoCo cases alongside the bilateral, support, guided-motion and
+contact-replan tests after changes to the shared fixture runner.

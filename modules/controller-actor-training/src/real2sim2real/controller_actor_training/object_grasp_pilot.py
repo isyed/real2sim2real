@@ -563,6 +563,13 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
     if candidate not in planning["candidates"] or not candidate["accepted"]:
         raise ValueError("Trial requires an unchanged accepted grasp plan")
     model, data, mesh = load_scene(config)
+    if config.get("physics_step_s") is not None:
+        step_s = config["physics_step_s"]
+        if not np.isfinite(step_s) or not 0.00025 <= step_s <= model.opt.timestep:
+            raise ValueError(
+                "Explicit timestep may refine the prepared scene down to 0.25 ms"
+            )
+        model.opt.timestep = step_s
     set_wrist_frame(
         model, data, config, candidate["base_position_m"], candidate["base_rotation"]
     )
@@ -628,6 +635,9 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
     if settings["hold_s"] < goal["hold_s"]:
         raise ValueError("Trial hold cannot be shorter than the task requirement")
     feedback = config.get("clearance_feedback")
+    freeze_lift_at_hold = config.get("freeze_lift_at_hold", False)
+    if type(freeze_lift_at_hold) is not bool:
+        raise ValueError("Explicit Boolean lift-offset ownership required")
     contact_feedback = config.get("contact_feedback")
     rotation_feedback = config.get("orientation_feedback")
     surface = None
@@ -712,6 +722,31 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
         from .grasp_retention import GraspRetention
 
         retention = GraspRetention(config["grasp_retention"])
+    force_servo = None
+    if config.get("contact_force_feedback") is not None:
+        if (
+            not support
+            or support.mode != "simultaneous_grasp"
+            or surface
+            or contact_feedback
+            or config.get("finger_closure")
+            or retention
+        ):
+            raise ValueError(
+                "Bilateral pad-force feedback requires exclusive simultaneous finger ownership"
+            )
+        from .contact_force_control import BilateralContactForce
+
+        world_mesh = mesh.copy()
+        world_mesh.apply_transform(settled["settled_world_from_object"])
+        force_servo = BilateralContactForce(
+            model,
+            data,
+            config["contact_force_feedback"],
+            candidate,
+            settled["settled_world_from_object"],
+            world_mesh,
+        )
     support_geoms = set(support.idx["geoms"]) if support else set()
     all_robot_geoms = hand_geoms | support_geoms
     table = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "table")
@@ -736,9 +771,14 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
             clearance = float(
                 (mesh.vertices @ pose[2, :3]).min() + pose[2, 3] - table_top
             )
-            displacement = clearance_feedback(
-                displacement, clearance, goal["lift_m"], model.opt.timestep, feedback
-            )
+            if not (freeze_lift_at_hold and phase == "hold"):
+                displacement = clearance_feedback(
+                    displacement,
+                    clearance,
+                    goal["lift_m"],
+                    model.opt.timestep,
+                    feedback,
+                )
             q[z_index] = closed[z_index] + displacement
         if contact_feedback and lifted:
             from .grasp_feedback import contact_closure
@@ -819,6 +859,19 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
                     except ValueError as error:
                         aborted = str(error)
                         break
+            if force_servo:
+                activation = (
+                    settings["approach_s"]
+                    + config["contact_force_feedback"]["close_activation_fraction"]
+                    * settings["close_s"]
+                )
+                target = force_servo.target(
+                    model,
+                    data,
+                    target,
+                    active=data.time >= activation,
+                    dt=model.opt.timestep,
+                )
             if support.settings.get("actuator_bias_compensation", False):
                 from .support_control import bias_compensated_target
 
@@ -942,6 +995,7 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
                     opposing_closure_correction_rad=closure_correction,
                     wrist_rotation_correction_rad=rotation_correction.tolist(),
                     **(surface.diagnostics() if surface else {}),
+                    **(force_servo.diagnostics() if force_servo else {}),
                     **(
                         dict(primary_contact_force_by_geom_n=patch_forces)
                         if config.get("contact_patch_logging", False)
@@ -1080,6 +1134,7 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
         mujoco_version=mujoco.__version__,
         solver_warning_counts=solver_warnings,
         simulation_final_time_s=float(data.time),
+        simulation_timestep_s=float(model.opt.timestep),
         simulation_requested_duration_s=float(duration),
         object_assistance=False,
         arm_reachability_validated=False,
@@ -1105,6 +1160,15 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
                 coordination_world_horizontal_limit_m=0.02,
             )
             if coordination
+            else {}
+        ),
+        **(
+            dict(
+                contact_force_feedback=config["contact_force_feedback"],
+                contact_force_feedback_observations="privileged solved simulator pad forces and object pose",
+                contact_force_feedback_final=force_servo.diagnostics(),
+            )
+            if force_servo
             else {}
         ),
         **(

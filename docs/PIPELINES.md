@@ -151,3 +151,8 @@ patches and shared-force budgets, then closes both hands before lifting. A
 stationary diagnostic is kept distinct from demonstrated-motion success. New
 planning or partial-lift success does not automatically start arm dynamics or
 policy training.
+
+The bilateral route can add [pad-force feedback](CONTACT_FORCE_FEEDBACK.md).
+Moving-reference tests pin a complete passing stationary result, unchanged control
+settings and the original fidelity limits. Lift-offset ownership is explicit so
+clearance regulation does not silently override the demonstrated center trajectory.

@@ -52,3 +52,49 @@ def test_implicit_pd_bias_and_velocity_feedforward_remain_force_limited():
         assert abs(d.actuator_force[0]) <= 2.000001
         assert not d.xfrc_applied.any() and not d.qfrc_applied.any()
     assert d.qpos[m.joint("object").qposadr[0] + 2] < before - 0.01
+
+
+def test_contact_diagnostic_keeps_table_and_nonadjacent_arm_collisions():
+    import xml.etree.ElementTree as ET
+    from real2sim2real.controller_actor_training.arm_replay_diagnostics import (
+        configure_contacts,
+    )
+
+    mujoco = pytest.importorskip("mujoco")
+    root = ET.fromstring("""<mujoco><worldbody>
+      <geom name="table" type="plane" size="1 1 .01"/>
+      <body name="base"><geom size=".1"/>
+        <body name="arm1"><joint/><geom size=".1"/>
+          <body name="arm2"><joint/><geom size=".1"/>
+            <body name="hand"><geom name="hand_geom" size=".05"/></body>
+          </body>
+        </body>
+      </body>
+      <body name="object"><freejoint/><geom name="object_geom" size=".03"/></body>
+      </worldbody></mujoco>""")
+    model = mujoco.MjModel.from_xml_string(ET.tostring(root, encoding="unicode"))
+    options = dict(
+        arm_bodies={model.body(n).id for n in ("base", "arm1", "arm2")},
+        hand_geoms={model.geom("hand_geom").id},
+        object_geoms={model.geom("object_geom").id},
+    )
+    evidence = configure_contacts(
+        root, model, condition="loaded", exclude_adjacent=True, **options
+    )
+    pairs = {frozenset(r["bodies"]) for r in evidence}
+    assert frozenset(["base", "arm1"]) in pairs
+    assert frozenset(["base", "arm2"]) not in pairs
+    assert all("object" not in p for p in pairs)
+    evidence = configure_contacts(
+        root, model, condition="no_hand_object_contact", **options
+    )
+    assert evidence == [
+        dict(bodies=["hand", "object"], reason="diagnostic_hand_object_isolation")
+    ]
+    model = mujoco.MjModel.from_xml_string(ET.tostring(root, encoding="unicode"))
+    data = mujoco.MjData(model)
+    mujoco.mj_forward(model, data)
+    pairs = [{int(c.geom1), int(c.geom2)} for c in data.contact]
+    obj, hand, table = [model.geom(n).id for n in ("object_geom", "hand_geom", "table")]
+    assert {obj, hand} not in pairs
+    assert {obj, table} in pairs

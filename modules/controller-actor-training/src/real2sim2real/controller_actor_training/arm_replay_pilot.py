@@ -1,8 +1,8 @@
 """Bounded two-arm joint control of a screened saved grasp trajectory on CPU.
 
-This is an initial transfer diagnostic. Finger commands replay the source trial;
-arm motors use bounded PD plus model bias compensation. Source fixture feedback
-is not reconstructed as a new object-feedback controller. The object is free.
+Finger commands replay the source trial; arm motors use bounded PD plus model
+bias compensation. Optional bounded feedback uses privileged object poses and
+contact forces. The object remains free in every condition.
 """
 
 import argparse
@@ -24,6 +24,8 @@ from .support_control import (
     support_hold_metrics,
     support_rejections,
 )
+from .arm_object_feedback import ArmObjectFeedback, joint_offset
+from .arm_replay_diagnostics import configure_contacts, wrist_errors, phase_maxima
 
 
 def motor_command(target, position, velocity, bias, kp, kd, limits):
@@ -69,6 +71,14 @@ def subtree_geoms(model, root):
 def run(config):
     import mujoco
 
+    implementation_sources = {
+        name: Path(__file__).with_name(name).read_bytes()
+        for name in (
+            "arm_replay_pilot.py",
+            "arm_object_feedback.py",
+            "arm_replay_diagnostics.py",
+        )
+    }
     audit_path = Path(config["audit"])
     if digest(audit_path) != config["audit_sha256"]:
         raise ValueError("Pinned arm audit changed")
@@ -112,6 +122,10 @@ def run(config):
         raise ValueError("Assembled scene changed")
     out = Path(config["output"])
     out.mkdir(parents=True, exist_ok=False)
+    snapshot = out / "implementation"
+    snapshot.mkdir()
+    for name, contents in implementation_sources.items():
+        (snapshot / name).write_bytes(contents)
     root = ET.parse(source_scene).getroot()
     actuator = root.find("actuator")
     names = [n for arm in arms for n in arm["joints"]]
@@ -134,6 +148,11 @@ def run(config):
     if option is None:
         option = ET.SubElement(root, "option")
     option.set("integrator", "implicitfast")
+    if "timestep_s" in config:
+        step = float(config["timestep_s"])
+        if not 0.0001 <= step <= 0.002:
+            raise ValueError("Diagnostic timestep must be between 0.1 and 2 ms")
+        option.set("timestep", str(step))
     scene = out / "scene.xml"
     ET.ElementTree(root).write(scene)
     model = mujoco.MjModel.from_xml_path(str(scene))
@@ -184,6 +203,46 @@ def run(config):
         g for g in range(model.ngeom) if int(model.geom_bodyid[g]) in arm_bodies
     }
     robot_geoms = arm_geoms | hands["left"] | hands["right"]
+    condition = config.get("contact_condition", "loaded")
+    contact_exclusions = configure_contacts(
+        root,
+        model,
+        condition=condition,
+        arm_bodies=arm_bodies,
+        hand_geoms=hands["left"] | hands["right"],
+        object_geoms=object_geoms,
+        exclude_adjacent=config.get("exclude_adjacent_arm_collisions", False),
+    )
+    if condition != "loaded" or config.get("exclude_adjacent_arm_collisions", False):
+        # Recompile once; preserve the placed bases and initial state. IDs must
+        # remain unchanged because only contact exclusions have been added.
+        initial_q = data.qpos.copy()
+        ET.ElementTree(root).write(scene)
+        model = mujoco.MjModel.from_xml_path(str(scene))
+        place_bases(model, audit["config"], row["placement"])
+        data = mujoco.MjData(model)
+        mujoco.mj_setConst(model, data)
+        mujoco.mj_saveLastXML(str(scene), model)
+        data.qpos[:] = initial_q
+        data.time = float(times[0])
+        mujoco.mj_forward(model, data)
+    desired = mujoco.MjData(model)
+    feedback = (
+        ArmObjectFeedback(config["object_feedback"], list(roots))
+        if config.get("object_feedback")
+        else None
+    )
+    if feedback and condition != "loaded":
+        raise ValueError("Object feedback requires real hand-object contacts")
+    previous_command = targets[0].copy()
+    reference_objects = []
+    for record in parent["records"]:
+        pose = np.eye(4)
+        pose[:3, :3] = record["object_rotation"]
+        pose[:3, 3] = record["object_position_m"]
+        reference_objects.append(pose)
+    reference_objects = np.array(reference_objects)
+    feedback_rate_limited_steps = 0
     records, qstates, controls, timestamps = [], [], [], []
     max_pen = max_arm_pen = max_error = 0.0
     max_speed_ratio, min_margin = 0.0, float("inf")
@@ -196,6 +255,97 @@ def run(config):
         i = min(np.searchsorted(times, data.time, side="right") - 1, len(times) - 2)
         alpha = np.clip((data.time - times[i]) / (times[i + 1] - times[i]), 0, 1)
         target = targets[i] * (1 - alpha) + targets[i + 1] * alpha
+        if feedback:
+            # Read the last solved contact forces before refreshing kinematics.
+            normal = dict.fromkeys(roots, 0.0)
+            opposed = {"thumb": 0.0, "fingers": 0.0}
+            upward = 0.0
+            for cid, contact in enumerate(data.contact):
+                pair = {int(contact.geom1), int(contact.geom2)}
+                if not pair & object_geoms:
+                    continue
+                for name, geoms in hands.items():
+                    if pair & geoms:
+                        force = np.zeros(6)
+                        mujoco.mj_contactForce(model, data, cid, force)
+                        normal[name] += max(0, float(force[0]))
+                        if name == "left":
+                            upward += contact_wrench_on_body(model, data, cid, obj)[0][
+                                2
+                            ]
+                        else:
+                            geom_name = model.geom(next(iter(pair & geoms))).name or ""
+                            if "thumb" in geom_name:
+                                opposed["thumb"] += max(0, float(force[0]))
+                            elif any(
+                                g in geom_name
+                                for g in ("index", "middle", "ring", "pinky")
+                            ):
+                                opposed["fingers"] += max(0, float(force[0]))
+            mujoco.mj_kinematics(model, data)
+            desired.qpos[:] = data.qpos
+            desired.qpos[qids] = target
+            mujoco.mj_kinematics(model, desired)
+            mujoco.mj_comPos(model, desired)
+            actual_object = object_transform(model, data)
+            reference_object = reference_objects[i].copy()
+            reference_object[:3, 3] = (1 - alpha) * reference_objects[
+                i, :3, 3
+            ] + alpha * reference_objects[i + 1, :3, 3]
+            delta = Rotation.from_matrix(
+                reference_objects[i + 1, :3, :3] @ reference_objects[i, :3, :3].T
+            ).as_rotvec()
+            reference_object[:3, :3] = (
+                Rotation.from_rotvec(alpha * delta).as_matrix()
+                @ reference_objects[i, :3, :3]
+            )
+            phase = parent["records"][i]["phase"]
+            start = 0
+            for arm in arms:
+                name = arm["name"]
+                body = roots[name]
+                width = len(arm["joints"])
+                indices = slice(start, start + width)
+                pose = np.eye(4)
+                pose[:3, :3] = desired.xmat[body].reshape(3, 3)
+                pose[:3, 3] = desired.xpos[body]
+                correction = feedback.update(
+                    name,
+                    actual_object,
+                    reference_object,
+                    pose,
+                    model.opt.timestep,
+                    contact_n=min(opposed.values())
+                    if name == "right"
+                    else normal[name],
+                    active=phase
+                    in config.get("feedback_phases", {}).get(
+                        name,
+                        ("lift", "support_approach", "support_seat", "hold")
+                        if name == "right"
+                        else ("support_seat", "hold"),
+                    ),
+                    support=name == "left",
+                    upward_force_n=upward,
+                    weight_n=float(model.body_mass[obj] * 9.81),
+                )
+                jp, jr = np.zeros((3, model.nv)), np.zeros((3, model.nv))
+                mujoco.mj_jacBody(model, desired, jp, jr, body)
+                target[indices] += joint_offset(
+                    np.vstack([jp, jr])[:, vids[indices]], correction
+                )
+                start += width
+            margin = audit["config"]["criteria"]["joint_margin_rad"]
+            target = np.clip(target, ranges[:, 0] + margin, ranges[:, 1] - margin)
+            delta = speed_limits * model.opt.timestep
+            bounded = np.clip(
+                target, previous_command - delta, previous_command + delta
+            )
+            feedback_rate_limited_steps += int(
+                not np.allclose(target, bounded, atol=1e-12, rtol=0)
+            )
+            target = bounded
+        previous_command = target.copy()
         velocity = (
             (targets[i + 1] - targets[i]) / (times[i + 1] - times[i])
             if config.get("velocity_feedforward", False)
@@ -299,6 +449,21 @@ def run(config):
                 support_object_force_world_n=support_force.tolist(),
                 table_contacts=table_contacts,
             )
+            # Measure Cartesian tracking against frozen audited arm commands;
+            # no desired state is ever written into the simulated robot.
+            desired.qpos[:] = data.qpos
+            desired.qpos[qids] = targets[sample_index]
+            mujoco.mj_kinematics(model, desired)
+            record["wrist_tracking"] = wrist_errors(data, desired, roots)
+            desired.qpos[qids] = target
+            mujoco.mj_kinematics(model, desired)
+            record["commanded_wrist_tracking"] = wrist_errors(data, desired, roots)
+            record["joint_tracking_error_rad"] = (
+                data.qpos[qids] - targets[sample_index]
+            ).tolist()
+            record["arm_torque_nm"] = data.actuator_force[aids].tolist()
+            if feedback:
+                record["object_feedback"] = feedback.diagnostics()
             if "reference_position_m" in source:
                 record["reference_position_error_m"] = float(
                     np.linalg.norm(pose[:3, 3] - source["reference_position_m"])
@@ -331,6 +496,8 @@ def run(config):
         aborted=aborted,
     )
     failures.extend(support_rejections(metrics))
+    if condition != "loaded":
+        failures.append("diagnostic_contact_condition")
     reference = [
         r for r in records if r["phase"] == "hold" and "reference_position_error_m" in r
     ]
@@ -365,9 +532,24 @@ def run(config):
         maximum_joint_tracking_error_rad=max_error,
         maximum_dynamic_velocity_ratio=max_speed_ratio,
         minimum_dynamic_joint_margin_rad=min_margin,
+        contact_exclusions=contact_exclusions,
+        wrist_tracking_by_phase=phase_maxima(records, "wrist_tracking"),
+        commanded_wrist_tracking_by_phase=phase_maxima(
+            records, "commanded_wrist_tracking"
+        ),
         torque_peak_nm=dict(zip(names, peaks.tolist())),
         saturation_fraction=dict(zip(names, (saturation / max(steps, 1)).tolist())),
-        control_mode="bounded joint PD plus bias compensation; archived finger commands; no online object feedback",
+        control_mode="bounded joint PD plus bias compensation; archived finger commands; "
+        + (
+            "bounded object-relative feedback"
+            if feedback
+            else "no online object feedback"
+        ),
+        object_feedback=None if feedback is None else feedback.diagnostics(),
+        feedback_command_rate_limited_steps=feedback_rate_limited_steps,
+        feedback_observation_source="privileged simulator poses and solved contact forces"
+        if feedback
+        else None,
         fixture_joints_removed=True,
         object_state_written_only_at_initialization=True,
         sources={
@@ -377,7 +559,11 @@ def run(config):
         },
         scene_sha256=digest(scene),
         states_sha256=digest(out / "states.npz"),
-        implementation_sha256=digest(Path(__file__)),
+        implementation_sha256=digest(snapshot / "arm_replay_pilot.py"),
+        diagnostics_implementation_sha256=digest(
+            snapshot / "arm_replay_diagnostics.py"
+        ),
+        feedback_implementation_sha256=digest(snapshot / "arm_object_feedback.py"),
     )
     write_json(out / "result.json", report)
     print(

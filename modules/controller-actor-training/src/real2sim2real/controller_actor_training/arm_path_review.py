@@ -9,8 +9,8 @@ import sys
 
 import numpy as np
 from PIL import Image, ImageDraw
-from scipy.spatial.transform import Rotation
 from real2sim2real.artifacts import digest, write_json
+from .arm_path_audit import place_bases, hand_name
 
 
 def review(path):
@@ -52,11 +52,18 @@ def review(path):
         sample = max(row["samples"], key=penetration)
         i = sample["source_index"]
         p = row["placement"]
-        model.body_pos[model.body(config["base_body"]).id] = p["position_m"]
-        model.body_quat[model.body(config["base_body"]).id] = Rotation.from_euler(
-            "z", p["yaw_rad"]
-        ).as_quat()[[3, 0, 1, 2]]
+        place_bases(model, config, p)
         data.qpos[:] = model.qpos0
+        if "assembly" in config:
+            for j in range(old.njnt):
+                ident = mujoco.mj_name2id(
+                    model, mujoco.mjtObj.mjOBJ_JOINT, old.joint(j).name
+                )
+                if ident >= 0 and old.jnt_type[j] in (
+                    mujoco.mjtJoint.mjJNT_HINGE,
+                    mujoco.mjtJoint.mjJNT_SLIDE,
+                ):
+                    data.qpos[model.jnt_qposadr[ident]] = states[i, old.jnt_qposadr[j]]
         for a in config["arms"]:
             for name, q in zip(a["joints"], sample["arms"][a["name"]]["q"]):
                 data.qpos[model.joint(name).qposadr[0]] = q
@@ -67,9 +74,9 @@ def review(path):
             )
             for name in names:
                 if "fixture_" not in name:
-                    data.qpos[
-                        model.joint(name.removeprefix(a["source_prefix"])).qposadr[0]
-                    ] = states[i, old.joint(name).qposadr[0]]
+                    data.qpos[model.joint(hand_name(a, name)).qposadr[0]] = states[
+                        i, old.joint(name).qposadr[0]
+                    ]
         oq = old.joint("task_object_free").qposadr[0]
         nq = model.joint("task_object_free").qposadr[0]
         data.qpos[nq : nq + 7] = states[i, oq : oq + 7]

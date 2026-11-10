@@ -136,3 +136,14 @@ parked/support insertion phases, native joint-speed limits and elbow clearance
 together. Individual-arm reachability is not a bimanual path. Preserve source
 motion while making robot grasp selection arm-aware. See
 [Arm path audit](ARM_PATH_AUDIT.md).
+## Arm assembly and two-arm transfer
+
+Keep mount documentation, exact assembly geometry, coordinated IK and dynamic
+contact retention as separate evidence. Reparenting a retained fixture requires
+copying its joint axes as well as its base transform. MuJoCo and SciPy lowercase
+Euler conventions differ. Fixed-base arm placement can admit a path that a shared
+torso cannot reproduce, but an IK pass does not validate actuator-driven tracking.
+Use implicit actuator damping and capped arm forces in a bounded transfer pilot;
+velocity feedforward must be evaluated rather than assumed beneficial. Reuse
+unchanged grasp/support gates and keep the free object unassisted. Details and
+entry points are in [ARM_HAND_INTEGRATION.md](ARM_HAND_INTEGRATION.md).

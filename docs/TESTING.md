@@ -1,5 +1,13 @@
 # Testing the reusable modules
 
+`tests/test_arm_hand_assembly.py` checks independent arm placement, retained
+finger/contact defaults, fixture removal, free-object preservation, source asset
+resolution, MuJoCo Euler mounting semantics and copied fixture axes.
+`tests/test_arm_replay_pilot.py` checks torque-bounded control, bias/velocity
+feedforward, contact ownership and a MuJoCo force-clipped actuator with an
+independently falling object. The actual two-arm path and grasp-transfer results
+remain downstream experiment evidence. See [arm integration](ARM_HAND_INTEGRATION.md).
+
 `tests/test_arm_path_audit.py` checks native-clock velocity ratios, clock-reset
 rejection, joint-neighbor classification through fixed mounts without hiding
 world or folded-arm collisions, and an optional MuJoCo body-pose IK fixture that

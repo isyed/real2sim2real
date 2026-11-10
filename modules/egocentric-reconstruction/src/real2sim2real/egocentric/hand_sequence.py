@@ -20,10 +20,13 @@ def sequence_options(options):
         max_step_s=0.1,
         anchor_data_weight=1.0,
         boundary_velocity_weight=0.0,
+        fit_all_supported=False,
     )
     if set(options) - set(defaults):
         raise ValueError("Unknown sequence fitting option")
     result = dict(defaults, **options)
+    if type(result["fit_all_supported"]) is not bool:
+        raise ValueError("fit_all_supported must be a boolean")
     for key, upper in [("context_frames", 10), ("correspondence_iterations", 10)]:
         minimum = 0 if key == "context_frames" else 1
         if type(result[key]) is not int or not minimum <= result[key] <= upper:

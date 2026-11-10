@@ -21,6 +21,7 @@ from .hand_sequence import (
 from .interaction_io import Reconstruction, fresh_directory
 from .mesh_surface import MeshSurfaceQuery
 from .hand_observation_policy import observation_reliability, policy_options
+from .hand_depth_support import load_boundaries, support_region, signed_support_distance
 
 
 def run(request, check=False):
@@ -29,6 +30,11 @@ def run(request, check=False):
 
     options = sequence_options(request.get("sequence_optimizer", {}))
     policy_config = request.get("observation_policy")
+    depth_support = request.get("hand_depth_support")
+    if depth_support:
+        if set(depth_support) - {"path", "margin_px"}:
+            raise ValueError("Unknown hand-depth support setting")
+        signed_support_distance([[0, 0]], [0, 0], [0, 1], depth_support["margin_px"])
     if policy_config is not None:
         policy_options(policy_config)
     model_path = Path(request["weights"]["hamer"]) / "_DATA/data/mano/MANO_RIGHT.pkl"
@@ -71,6 +77,14 @@ def run(request, check=False):
             data["timestamps_s"], source.times, atol=1e-8, rtol=0
         ):
             raise ValueError("Sequence inputs require the identical capture window")
+    boundaries, boundary_receipt = None, None
+    if depth_support:
+        boundaries, boundary_receipt = load_boundaries(
+            depth_support["path"],
+            source.frame_ids,
+            source.times,
+            request["diagnostic_frame_ids"],
+        )
     support = json.loads((inputs / "support.json").read_text())
     if not support["accepted"]:
         raise ValueError("Accepted support required")
@@ -80,7 +94,9 @@ def run(request, check=False):
     proximity = MeshSurfaceQuery(mesh)
     rays = ray_intersector(mesh, request.get("contacts", {}).get("ray_backend", "auto"))
     selected, components = select_components(
-        parent["geometry_supported"] & ~baseline["accepted"],
+        parent["geometry_supported"]
+        if options["fit_all_supported"]
+        else parent["geometry_supported"] & ~baseline["accepted"],
         parent["geometry_supported"],
         source.times,
         context_frames=options["context_frames"],
@@ -190,6 +206,7 @@ def run(request, check=False):
                 [],
                 [],
             )
+            original_heldout, support_info = [], []
             for i in ids:
                 anchor = bool(baseline["accepted"][i, h])
                 origin = anchors if anchor else raw
@@ -204,8 +221,35 @@ def run(request, check=False):
                 orient.append(origin["global_orient"][i, h])
                 betas.append(origin["fixed_betas"][h])
                 masks = [source.mask(i, x) for x in request["mask_ids"]]
+                depth = source.depth(i)
+                box = crops["boxes_xyxy"][i, h]
+                region = (
+                    None
+                    if boundaries is None
+                    else support_region(
+                        depth.shape, boundaries, i, h, depth_support["margin_px"]
+                    )
+                )
                 points, validation = measured_surface(
-                    source.depth(i), masks[h], crops["boxes_xyxy"][i, h], source.k
+                    depth, masks[h], box, source.k, support_mask=region
+                )
+                full_validation = (
+                    validation
+                    if region is None
+                    else measured_surface(depth, masks[h], box, source.k)[1]
+                )
+                original_heldout.append(full_validation)
+                support_info.append(
+                    dict(
+                        applied=boundaries is not None
+                        and bool(boundaries["available"][i, h]),
+                        fit_points=len(points),
+                        validation_points=len(validation),
+                        full_validation_points=len(full_validation),
+                        foreground_fraction_retained=1.0
+                        if region is None
+                        else float((masks[h] & region).sum() / max(1, masks[h].sum())),
+                    )
                 )
                 fit_points.append(points)
                 heldout_points.append(validation)
@@ -309,6 +353,30 @@ def run(request, check=False):
                     before_sequence=before,
                     sequence_proposed=True,
                 )
+                if depth_support:
+
+                    def full_depth_metrics(vertices):
+                        distances = MeshSurfaceQuery(
+                            trimesh.Trimesh(vertices, raw["faces"][h], process=False)
+                        ).closest(original_heldout[local])[1]
+                        return dict(
+                            median_m=float(np.median(distances))
+                            if len(distances)
+                            else None,
+                            p90_m=float(np.quantile(distances, 0.9))
+                            if len(distances)
+                            else None,
+                        )
+
+                    records[i][h]["hand_depth_support"] = dict(
+                        support_info[local],
+                        original_support_before=full_depth_metrics(
+                            parent["camera_vertices"][i, h]
+                        ),
+                        original_support_after=full_depth_metrics(
+                            fit["camera_vertices"][local]
+                        ),
+                    )
                 if rejected:
                     failures.append(
                         dict(frame_id=int(source.frame_ids[i]), reasons=rejected)
@@ -419,6 +487,8 @@ def run(request, check=False):
         exported_mano_geometry_checked=True,
         sequence_optimizer=options,
         observation_policy=None if reliability is None else reliability["options"],
+        hand_depth_support=depth_support,
+        hand_depth_support_receipt=boundary_receipt,
         observation_reliability_records=None
         if reliability is None
         else reliability["records"],

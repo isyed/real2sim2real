@@ -33,10 +33,15 @@ def crop_region(shape, box):
     return region
 
 
-def measured_surface(depth, mask, box, k, *, max_points=600):
+def measured_surface(depth, mask, box, k, *, max_points=600, support_mask=None):
     skin = cv2.erode(mask.astype(np.uint8), np.ones((5, 5), np.uint8)) > 0
     y, x = np.indices(depth.shape)
     region = skin & crop_region(depth.shape, box)
+    if support_mask is not None:
+        support_mask = np.asarray(support_mask)
+        if support_mask.shape != depth.shape or support_mask.dtype != bool:
+            raise ValueError("Boolean hand depth support must match the image")
+        region &= support_mask
     parity = (x // 3 + y // 3) % 2 == 0
     valid = region & np.isfinite(depth) & (depth > 0.15) & (depth < 1.5)
     xyz = unproject(depth, k)

@@ -173,20 +173,46 @@ def fit_pad_contacts(
     *,
     max_nfev=160,
     joint_bounds=None,
+    fixture_prefix="fixture_",
+    position_scale_m=0.006,
 ):
     """Fit pad points AND normals in scratch data; leave the caller state intact."""
     import mujoco
 
-    idx = robot_indices(model, root_name)
+    roots = [root_name] if isinstance(root_name, str) else list(root_name)
+    if not 1 <= len(roots) <= 2 or len(set(roots)) != len(roots):
+        raise ValueError("One or two distinct hand roots required")
+    groups = [robot_indices(model, root) for root in roots]
+    if len(groups) == 2 and groups[0]["bodies"] & groups[1]["bodies"]:
+        raise ValueError("Jointly fitted hands must have disjoint body subtrees")
+    idx = (
+        groups[0]
+        if len(groups) == 1
+        else dict(
+            joints=np.concatenate([g["joints"] for g in groups]),
+            q=np.concatenate([g["q"] for g in groups]),
+            dofs=np.concatenate([g["dofs"] for g in groups]),
+            geoms=np.concatenate([g["geoms"] for g in groups]),
+            bodies=set.union(*(g["bodies"] for g in groups)),
+        )
+    )
+    prefixes = (
+        [fixture_prefix] if isinstance(fixture_prefix, str) else list(fixture_prefix)
+    )
+    if len(prefixes) != len(roots) or any(
+        not isinstance(p, str) or not p for p in prefixes
+    ):
+        raise ValueError("One named fixture prefix per hand required")
     targets, normals = np.asarray(targets, float), np.asarray(normals, float)
     if (
-        not 1 <= len(frames) <= 5
+        not 1 <= len(frames) <= 5 * len(roots)
         or targets.shape != (len(frames), 3)
         or normals.shape != targets.shape
         or not np.isfinite(targets).all()
         or not np.isfinite(normals).all()
         or not np.allclose(np.linalg.norm(normals, axis=1), 1)
         or not 1 <= max_nfev <= 400
+        or not 0.0005 <= position_scale_m <= 0.006
     ):
         raise ValueError("Bounded finite pad targets and unit normals required")
     scratch = mujoco.MjData(model)
@@ -194,8 +220,9 @@ def fit_pad_contacts(
     lower, upper = model.jnt_range[idx["joints"]].T.copy()
     names = [model.joint(int(j)).name for j in idx["joints"]]
     for i, name in enumerate(names):
-        if name.startswith("fixture_"):
-            bound = 0.35 if name.startswith("fixture_r") else 0.06
+        prefix = next((p for p in prefixes if name.startswith(p)), None)
+        if prefix is not None:
+            bound = 0.35 if name.startswith(prefix + "r") else 0.06
             lower[i], upper[i] = max(lower[i], -bound), min(upper[i], bound)
     for name, pair in (joint_bounds or {}).items():
         if name not in names:
@@ -225,14 +252,14 @@ def fit_pad_contacts(
         p, n, a, b = observe_frames(model, scratch, frames, idx, jacobian=True)
         penetration, jac = contact_penetrations(model, scratch, idx, jacobian=True)
         residual = np.r_[
-            (p - targets).ravel() / 0.006,
+            (p - targets).ravel() / position_scale_m,
             (n - normals).ravel() / 0.35,
             (q - seed) * 0.03,
             np.maximum(penetration - 0.001, 0) / 0.002,
         ]
         derivative = np.vstack(
             [
-                a.reshape(-1, len(q)) / 0.006,
+                a.reshape(-1, len(q)) / position_scale_m,
                 b.reshape(-1, len(q)) / 0.35,
                 np.eye(len(q)) * 0.03,
                 jac * (penetration > 0.001)[:, None] / 0.002,

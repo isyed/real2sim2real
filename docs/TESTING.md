@@ -280,3 +280,10 @@ collision-pad patches, and inward-facing opening-wall selection in a declared
 world. Optional MuJoCo tests validate pad ownership, local/world transforms and
 normal/position Jacobians. Downstream contact rejection and baseline state-hash
 regression remain separate evidence from these tests.
+
+`tests/test_bilateral_grasp.py` checks inner/outer rim selection, both-hands-close
+before-lift timing, shared vertical feedback, equal namespaced fixture bounds,
+mutual-collision two-hand IK without moving the object, and FK-preserving closed
+wrist re-centering. It also prevents stationary diagnostics from being promoted
+as demonstrated-motion success. Optional MuJoCo tests exercise the actual compiled
+hand/fixture semantics; downstream free-object rollouts remain necessary.

@@ -85,6 +85,29 @@ def support_load_offset(offset, upward_force_n, weight_n, dt, settings):
     return float(np.clip(offset + dt * speed, 0, settings["max_offset_m"]))
 
 
+def simultaneous_target(
+    time, pre, opened, closed, xyz, primary_z, primary_closed_z, rollout
+):
+    """Close both hands on the same clock and share the primary's lift command."""
+    from .object_grasp_pilot import target_at
+
+    q = [np.asarray(v, float) for v in (pre, opened, closed)]
+    if (
+        not np.isfinite([time, primary_z, primary_closed_z]).all()
+        or time < 0
+        or any(v.shape != q[0].shape or not np.isfinite(v).all() for v in q)
+        or len(xyz) != 3
+        or len(set(xyz)) != 3
+    ):
+        raise ValueError(
+            "Finite synchronous commands and distinct world translation indices required"
+        )
+    target, phase = target_at(time, *q, xyz[2], rollout)
+    if phase in ("lift", "hold"):
+        target[xyz[2]] = q[2][xyz[2]] + primary_z - primary_closed_z
+    return target, phase
+
+
 class SupportMotion:
     """Park during the initial lift, insert, seat, then share vertical commands.
 
@@ -125,6 +148,22 @@ class SupportMotion:
             config["rollout"][k] for k in ("approach_s", "close_s", "lift_s")
         )
         self.duration = self.settings["approach_s"] + self.settings["seat_s"]
+        self.mode = self.settings.get("mode", "lift_then_insert")
+        if self.mode not in ("lift_then_insert", "simultaneous_grasp"):
+            raise ValueError("Unknown second-hand motion mode")
+        self.rollout = config["rollout"]
+        self.load_start = self.start + self.settings["approach_s"]
+        if getattr(self, "mode", "lift_then_insert") == "simultaneous_grasp":
+            self.primary_closed_z = candidate.get("q_closed", candidate["q_grasp"])[
+                candidate["joint_names"].index("fixture_z")
+            ]
+            if not self.enabled:
+                raise ValueError("Simultaneous grasp requires two enabled hands")
+            self.start, self.duration = 0.0, 0.0
+            self.load_start = sum(
+                self.rollout[k] for k in ("approach_s", "close_s", "lift_s")
+            )
+
         self.xyz = [
             self.plan["joint_names"].index(robot["fixture_prefix"] + a) for a in "xyz"
         ]
@@ -140,13 +179,22 @@ class SupportMotion:
             feedback
             and self.enabled
             and not self.rejection
-            and time >= self.start + self.settings["approach_s"]
+            and time
+            >= getattr(self, "load_start", self.start + self.settings["approach_s"])
         ):
             self.load_offset = support_load_offset(
                 self.load_offset, upward_force_n, weight_n, dt, feedback
             )
 
     def phase(self, time):
+        if getattr(self, "mode", "lift_then_insert") == "simultaneous_grasp":
+            if time < self.rollout["approach_s"]:
+                return "approach"
+            if time < self.rollout["approach_s"] + self.rollout["close_s"]:
+                return "close"
+            if time < self.load_start:
+                return "lift"
+            return "hold"
         if time < self.start:
             return None
         if time < self.start + self.settings["approach_s"]:
@@ -162,6 +210,25 @@ class SupportMotion:
         ]
         if time < self.start or not self.enabled or self.rejection:
             return pre
+        if getattr(self, "mode", "lift_then_insert") == "simultaneous_grasp":
+            closed = np.asarray(
+                self.plan.get("q_closed", self.plan["q_grasp"]), float
+            ).copy()
+            target, phase = simultaneous_target(
+                time,
+                pre,
+                opened,
+                closed,
+                self.xyz,
+                primary_z,
+                self.primary_closed_z,
+                self.rollout,
+            )
+            if phase == "hold":
+                target[self.xyz[2]] += self.load_offset
+            if (target < self.limits[:, 0]).any() or (target > self.limits[:, 1]).any():
+                self.rejection = "support_joint_command_limit"
+            return np.clip(target, self.limits[:, 0], self.limits[:, 1])
         if self.alignment is None:
             self.alignment = (
                 object_transform[:3, 3]

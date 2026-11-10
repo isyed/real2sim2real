@@ -5,6 +5,10 @@ repairing that reconstruction, retargeting it to a robot, and training a
 correction controller in simulation. Dataset-specific experiments and private
 configuration belong in downstream repositories.
 
+Choose a named recipe or compose stages using the [multiple-pipeline guide](docs/PIPELINES.md).
+It covers human-reference learning, calibrated interaction reconstruction, and
+robot contact planning followed by demonstrated object-motion control.
+
 For robot manipulation without a trusted human finger reference, see the
 [object-centric grasp workflow](docs/OBJECT_CENTRIC_GRASPS.md). The
 [reusable learning index](docs/REUSABLE_LEARNINGS.md) maps findings to modules,
@@ -41,6 +45,7 @@ their own retargeting and controller/embodiment configuration.
 python3.11 -m venv .venv
 .venv/bin/python -m pip install -e .
 .venv/bin/r2s2r modules
+.venv/bin/r2s2r pipelines
 .venv/bin/r2s2r plan --config examples/full-pipeline.json
 ```
 

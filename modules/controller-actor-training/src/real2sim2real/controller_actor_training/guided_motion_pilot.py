@@ -11,7 +11,7 @@ import numpy as np
 from scipy.spatial.transform import Rotation
 
 from real2sim2real.artifacts import digest, write_json
-from .guided_motion import MotionReference
+from .guided_motion import select_interval
 
 
 def fidelity(records, reference, start, anchor):
@@ -63,14 +63,7 @@ def run(config):
     out = Path(config["output"])
     out.mkdir(parents=True, exist_ok=False)
     with np.load(config["object_reference"]) as z:
-        select = (z["frame_ids"] >= config["first_frame"]) & (
-            z["frame_ids"] <= config["last_frame"]
-        )
-        reference = MotionReference(
-            z["timestamps_s"][select],
-            z["world_from_object"][select],
-            z["frame_ids"][select],
-        )
+        reference = select_interval(z, config["first_frame"], config["last_frame"])
     np.savez_compressed(
         out / "reference.npz",
         timestamps_s=reference.times,

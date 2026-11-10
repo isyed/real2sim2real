@@ -1,5 +1,11 @@
 # Controller and actor training
 
+The [pipeline guide](../../docs/PIPELINES.md) separates human-reference training
+from object-reference control. `object_control_stage` exposes arm-path screening
+and actuator-driven evaluation through the common artifact/deadline protocol.
+Reference extension preserves the admitted prefix; frozen-controller robustness
+is evaluated separately from nominal success.
+
 Optional [pad contact planning](../../docs/PAD_CONTACT_PLANNING.md) adds actual
 collision-pad frames, normal fitting, closing-path checks and static wrench
 diagnostics. Rejected hypotheses have their own static review; they are not

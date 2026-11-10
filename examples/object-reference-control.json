@@ -1,0 +1,18 @@
+{
+  "schema": "real2sim2real.pipeline/1",
+  "pipeline": "object-reference-control",
+  "input": "/data/artifacts/grasp",
+  "output": "/data/runs/object-control",
+  "modules": {
+    "arm-path-audit": {
+      "config": "/data/config/arm-audit.json",
+      "config_sha256": "REPLACE_WITH_SHA256",
+      "execution": {"python": "/data/envs/grasp/bin/python", "cpu_only": true, "timeout_seconds": 900}
+    },
+    "arm-replay": {
+      "config": "/data/config/arm-replay.json",
+      "config_sha256": "REPLACE_WITH_SHA256",
+      "execution": {"python": "/data/envs/grasp/bin/python", "cpu_only": true, "timeout_seconds": 900}
+    }
+  }
+}

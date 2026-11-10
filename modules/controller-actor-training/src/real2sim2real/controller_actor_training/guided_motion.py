@@ -9,6 +9,28 @@ from real2sim2real.artifacts import digest
 from .wrist_coordination import ObjectFrameCoordinator, rigid_wrist_targets
 
 
+def select_interval(archive, first_frame, last_frame):
+    """Require the entire requested capture interval; never silently truncate."""
+    ids = np.asarray(archive["frame_ids"])
+    if (
+        isinstance(first_frame, bool)
+        or isinstance(last_frame, bool)
+        or not isinstance(first_frame, int)
+        or not isinstance(last_frame, int)
+        or first_frame < 0
+        or last_frame <= first_frame
+    ):
+        raise ValueError("An increasing inclusive integer frame interval is required")
+    select = (ids >= first_frame) & (ids <= last_frame)
+    if not np.array_equal(ids[select], np.arange(first_frame, last_frame + 1)):
+        raise ValueError("Requested reference interval is incomplete")
+    return MotionReference(
+        archive["timestamps_s"][select],
+        archive["world_from_object"][select],
+        ids[select],
+    )
+
+
 class MotionReference:
     """Immutable metric capture interval; no rescaling, retiming or gap filling."""
 

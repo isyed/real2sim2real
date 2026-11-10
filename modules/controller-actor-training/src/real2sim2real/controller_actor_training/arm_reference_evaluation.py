@@ -56,6 +56,9 @@ def evaluate(directory):
             raise ValueError("Audit reference source changed")
     parent_path = Path(audit["config"]["trial"])
     parent = json.loads(parent_path.read_text())
+    from .reference_extension import effective_parent
+
+    parent = effective_parent(parent, audit)
     settings = parent["configuration"]["reference_guidance"]
     motion = Path(settings["path"])
     if digest(motion) != settings["sha256"]:

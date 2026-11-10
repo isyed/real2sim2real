@@ -27,6 +27,9 @@ from .support_control import (
 from .arm_object_feedback import ArmObjectFeedback, joint_offset
 from .arm_replay_diagnostics import configure_contacts, wrist_errors, phase_maxima
 from .arm_tracking_control import ArmTrackingCompensator, InertialFeedforward
+from .arm_robustness import validate_case, apply_case
+from .reference_extension import effective_parent
+from .simulation_health import step_rejection
 
 
 def motor_command(target, position, velocity, bias, kp, kd, limits):
@@ -72,6 +75,7 @@ def subtree_geoms(model, root):
 def run(config):
     import mujoco
 
+    simulation_case = validate_case(config)
     implementation_sources = {
         name: Path(__file__).with_name(name).read_bytes()
         for name in (
@@ -79,6 +83,9 @@ def run(config):
             "arm_object_feedback.py",
             "arm_replay_diagnostics.py",
             "arm_tracking_control.py",
+            "arm_robustness.py",
+            "reference_extension.py",
+            "simulation_health.py",
         )
     }
     audit_path = Path(config["audit"])
@@ -102,6 +109,7 @@ def run(config):
     if {a["name"] for a in arms} != {"left", "right"}:
         raise ValueError("Both hands must have arms")
     parent = json.loads(Path(audit["config"]["trial"]).read_text())
+    parent = effective_parent(parent, audit)
     old, _, mesh = load_scene(parent["configuration"])
     archive = Path(audit["config"]["trial"]).with_name("states.npz")
     if digest(archive) != parent["states_sha256"]:
@@ -235,6 +243,9 @@ def run(config):
         data.qpos[:] = initial_q
         data.time = float(times[0])
         mujoco.mj_forward(model, data)
+    if simulation_case is not None:
+        apply_case(model, data, simulation_case)
+        mujoco.mj_saveLastXML(str(scene), model)
     desired = mujoco.MjData(model)
     feedback = (
         ArmObjectFeedback(config["object_feedback"], list(roots))
@@ -269,6 +280,10 @@ def run(config):
     steps = 0
     sample_index = 0
     aborted = None
+    warning_names = [
+        n for n in mujoco.mjtWarning.__members__ if n.startswith("mjWARN_")
+    ]
+    solver_warnings = dict.fromkeys(warning_names, 0)
     while data.time < times[-1] - model.opt.timestep / 2:
         i = min(np.searchsorted(times, data.time, side="right") - 1, len(times) - 2)
         alpha = np.clip((data.time - times[i]) / (times[i + 1] - times[i]), 0, 1)
@@ -404,11 +419,29 @@ def run(config):
             data.ctrl[dst] = (
                 saved["ctrl"][i, src] * (1 - alpha) + saved["ctrl"][i + 1, src] * alpha
             )
+        before_step_time = float(data.time)
         mujoco.mj_step(model, data)
         steps += 1
+        solver_warnings = {
+            n: int(data.warning[getattr(mujoco.mjtWarning, n)].number)
+            for n in warning_names
+        }
+        health = step_rejection(
+            before_step_time,
+            float(data.time),
+            float(model.opt.timestep),
+            solver_warnings,
+        )
+        if health:
+            aborted = health
+            break
         saturation += abs(data.actuator_force[aids]) >= limits * 0.999
         peaks = np.maximum(peaks, abs(data.actuator_force[aids]))
-        if not np.isfinite(data.qpos).all() or np.max(abs(data.qvel)) > 100:
+        if (
+            not np.isfinite(data.qpos).all()
+            or not np.isfinite(data.qvel).all()
+            or np.max(abs(data.qvel)) > 100
+        ):
             aborted = "unstable_dynamics"
             break
         if np.any(data.xfrc_applied) or np.any(data.qfrc_applied):
@@ -575,7 +608,13 @@ def run(config):
         max_arm_penetration_m=max_arm_pen,
         maximum_joint_tracking_error_rad=max_error,
         maximum_dynamic_velocity_ratio=max_speed_ratio,
-        minimum_dynamic_joint_margin_rad=min_margin,
+        minimum_dynamic_joint_margin_rad=min_margin
+        if np.isfinite(min_margin)
+        else None,
+        solver_warning_counts=solver_warnings,
+        simulation_health_implementation_sha256=digest(
+            snapshot / "simulation_health.py"
+        ),
         contact_exclusions=contact_exclusions,
         wrist_tracking_by_phase=phase_maxima(records, "wrist_tracking"),
         commanded_wrist_tracking_by_phase=phase_maxima(
@@ -609,6 +648,8 @@ def run(config):
         states_sha256=digest(out / "states.npz"),
         implementation_sha256=digest(snapshot / "arm_replay_pilot.py"),
         tracking_implementation_sha256=digest(snapshot / "arm_tracking_control.py"),
+        robustness_implementation_sha256=digest(snapshot / "arm_robustness.py"),
+        simulation_case=simulation_case,
         diagnostics_implementation_sha256=digest(
             snapshot / "arm_replay_diagnostics.py"
         ),

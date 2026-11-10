@@ -185,6 +185,16 @@ def run(config):
         if digest(Path(p)) != s:
             raise ValueError("Arm audit source changed")
     parent = json.loads(Path(config["trial"]).read_text())
+    reference_changes, reference_overrides = None, None
+    if config.get("reference_extension"):
+        from .reference_extension import reference_transforms
+
+        reference_changes, reference_overrides = reference_transforms(
+            parent, config["reference_extension"]
+        )
+        path = config["reference_extension"]["path"]
+        if config["sources"].get(path) != digest(Path(path)):
+            raise ValueError("Pin the extended reference in audit sources")
     states_path = Path(config["trial"]).with_name("states.npz")
     if digest(states_path) != parent["states_sha256"]:
         raise ValueError("Saved states changed")
@@ -295,6 +305,17 @@ def run(config):
             od.qpos[:] = states["qpos"][i]
             mujoco.mj_forward(old, od)
             data.qpos[new_obj : new_obj + 7] = od.qpos[old_obj : old_obj + 7]
+            if reference_changes is not None:
+                obj_pose = np.eye(4)
+                obj_pose[:3, 3] = od.qpos[old_obj : old_obj + 3]
+                obj_pose[:3, :3] = Rotation.from_quat(
+                    od.qpos[old_obj + 3 : old_obj + 7][[1, 2, 3, 0]]
+                ).as_matrix()
+                obj_pose = reference_changes[i] @ obj_pose
+                data.qpos[new_obj : new_obj + 3] = obj_pose[:3, 3]
+                data.qpos[new_obj + 3 : new_obj + 7] = Rotation.from_matrix(
+                    obj_pose[:3, :3]
+                ).as_quat()[[3, 0, 1, 2]]
             for src, dst in pairs:
                 data.qpos[dst] = od.qpos[src]
             sample = dict(
@@ -309,6 +330,8 @@ def run(config):
                 target = np.eye(4)
                 target[:3, 3] = od.xpos[src]
                 target[:3, :3] = od.xmat[src].reshape(3, 3)
+                if reference_changes is not None:
+                    target = reference_changes[i] @ target
                 starts = (
                     arm.get("initial_seeds_rad", [arm["seed_rad"]])
                     if not samples
@@ -478,6 +501,7 @@ def run(config):
         placements=rows,
         sources={**config["sources"], **hashes, str(states_path): digest(states_path)},
         physics_run=False,
+        extended_reference_records=reference_overrides,
         hand_mount_validation="Hand-root frames, named joints and relative hand-body FK compared; manufactured mounts and dynamics not validated",
         base_placement_measured=False,
         torque_validated=False,

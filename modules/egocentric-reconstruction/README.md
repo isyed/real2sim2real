@@ -495,6 +495,47 @@ Sequence admission establishes relative consistency improvement, not readiness
 for control. Inspect absolute finger motion at joins, conflicting observations
 and held-out image checks before retargeting or physical replay.
 
+An optional `observation_policy` in the point-hand experiment config separates
+tracker confidence from fitting reliability. It flags distinct fingertip tracks
+within `ambiguity_radius_px` (default 8), multiplies their fitting weights by
+`ambiguous_weight` (0.1), and by default propagates that caution to the two
+finger chains (`propagate_to_finger: true`). Neither identity is reassigned and
+missing coordinates remain missing. The original confidence sum normalizes the
+image loss, so suppressing ambiguous terms does not amplify other terms against
+depth. Omit the policy to preserve existing fitting behavior.
+
+With `reassess_anchors: true`, previously accepted poses need at least
+`anchor_min_landmarks` (3) unambiguous fitting observations with initial median
+reprojection error ≤`anchor_max_median_px` (12) to retain a strong correction
+prior and supply a boundary-velocity target. Weak accepted poses inside the
+existing context window use `weak_anchor_prior_weight` (0.25); measured image
+and depth terms retain their original anchor data weight. Fixed endpoints
+outside that window remain fixed, and weak endpoints are reported explicitly.
+This reliability is an evidence check, not whole-hand accuracy certification.
+
+The worker saves original/effective weights, ambiguity masks, anchor reliability
+and its assessment records. All admission gates still use the original image
+observations, reserved depth, contacts and motion criteria. Suppressed points
+appear orange in the review. Visual annotations and cross-camera audit labels
+are not loaded by fitting. Compare weighting-only and anchor-reassessment
+variants separately before choosing a policy.
+
+`python -m real2sim2real.egocentric.hand_depth_audit --config audit.json` provides
+a separate CPU diagnostic for depth conflicts. Its config declares the metric
+`reconstruction`, `frame_start`/`frame_count`, `observations`, `crops`, two
+`mask_ids`, selected `cases` (`frame_id`, `hand`), named `regions` of landmark
+indices, `radius_px`, candidate `variants` (`path`, `vertices_key`) and a fresh
+`output`. Every candidate is compared with exactly the same reserved depth
+points and image regions; missing regions/poses remain explicit. It saves
+per-point residuals, source hashes, summaries and a visual review.
+
+Optional `wrist_observations` supplies a separate accepted 2D landmark file for
+a diagnostic wrist boundary. `wrist_margin_px` defaults to 10 pixels beyond the
+wrist opposite the observed palm direction. This is a detector-dependent image
+proxy, not anatomical segmentation. Neither regional scores nor wrist masks
+change fitting samples or acceptance thresholds. Use them to investigate
+unmodeled wrist/forearm support before designing a separate support policy.
+
 ### Cross-camera observation audit
 
 `python -m real2sim2real.egocentric.hand_anchor_audit --config audit.json` compares

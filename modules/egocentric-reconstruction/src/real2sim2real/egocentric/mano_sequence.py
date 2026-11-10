@@ -23,10 +23,14 @@ def fit_sequence(
     *,
     options,
     baseline_mask=None,
+    normalization_weights=None,
+    reliable_anchors=None,
+    weak_anchor_prior_weight=1.0,
 ):
     import torch
     import trimesh
     from .mesh_surface import MeshSurfaceQuery
+    from .hand_observation_policy import anchor_prior_weights, image_normalization_mass
 
     options = sequence_options(options)
     torch.set_num_threads(2)
@@ -46,12 +50,25 @@ def fit_sequence(
     evidence = [image_evidence(uv, w) for uv, w in zip(keypoints, weights)]
     target_uv = tensor(np.stack([x[0] for x in evidence]))
     image_weights = tensor(np.stack([x[1] for x in evidence]))
+    # Keep the original evidence mass as denominator: suppressing ambiguous
+    # observations must not amplify the remaining image terms against depth.
+    normalizer = tensor(image_normalization_mass(weights, normalization_weights))
     baseline_mask = (
         np.zeros(len(selected), bool)
         if baseline_mask is None
         else np.asarray(baseline_mask, bool)
     )
-    protected = protected_boundary_edges(selected, baseline_mask)
+    trusted = (
+        baseline_mask
+        if reliable_anchors is None
+        else np.asarray(reliable_anchors, bool)
+    )
+    if trusted.shape != baseline_mask.shape:
+        raise ValueError("Anchor reliability must match the sequence window")
+    protected = protected_boundary_edges(selected, baseline_mask & trusted)
+    prior_weights = tensor(
+        anchor_prior_weights(baseline_mask[ids], trusted[ids], weak_anchor_prior_weight)
+    )
     data_weights = tensor(
         np.where(baseline_mask[ids], options["anchor_data_weight"], 1)
     )
@@ -127,7 +144,7 @@ def fit_sequence(
             robust = lambda x: torch.sqrt(1 + x.square()) - 1
             image_by_frame = (
                 robust((uv - target_uv) / 5) * image_weights[..., None]
-            ).sum((1, 2)) / (2 * image_weights.sum(1))
+            ).sum((1, 2)) / (2 * normalizer)
             image_loss = (image_by_frame * data_weights).mean()
             surface_losses = []
             for i, (tri, bary, measured) in enumerate(correspondences):
@@ -150,10 +167,11 @@ def fit_sequence(
                 if protected.any()
                 else params.sum() * 0
             )
-            prior_loss = (local / np.deg2rad(20)).square().mean()
-            prior_loss += (rigid / np.deg2rad(10)).square().mean() + (
+            prior_by_frame = (local / np.deg2rad(20)).square().mean((1, 2))
+            prior_by_frame += (rigid / np.deg2rad(10)).square().mean(1) + (
                 offset / 0.02
-            ).square().mean()
+            ).square().mean(1)
+            prior_loss = (prior_by_frame * prior_weights).mean()
             loss = (
                 image_loss
                 + depth_loss

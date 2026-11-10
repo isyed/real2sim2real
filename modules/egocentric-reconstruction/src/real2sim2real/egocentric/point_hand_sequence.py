@@ -20,6 +20,7 @@ from .hand_sequence import (
 )
 from .interaction_io import Reconstruction, fresh_directory
 from .mesh_surface import MeshSurfaceQuery
+from .hand_observation_policy import observation_reliability, policy_options
 
 
 def run(request, check=False):
@@ -27,6 +28,9 @@ def run(request, check=False):
     from .mano_sequence import fit_sequence
 
     options = sequence_options(request.get("sequence_optimizer", {}))
+    policy_config = request.get("observation_policy")
+    if policy_config is not None:
+        policy_options(policy_config)
     model_path = Path(request["weights"]["hamer"]) / "_DATA/data/mano/MANO_RIGHT.pkl"
     model = ManoHand(model_path)
     if check:
@@ -82,6 +86,16 @@ def run(request, check=False):
         context_frames=options["context_frames"],
         max_step_s=options["max_step_s"],
     )
+    reliability = None
+    if policy_config is not None:
+        reliability = observation_reliability(
+            observations["keypoints_px"],
+            observations["weights"],
+            parent["camera_joints"],
+            source.k,
+            baseline["accepted"],
+            options=policy_config,
+        )
     out = fresh_directory(Path(request["output"]) / "hands_metric")
     result = {k: v.copy() for k, v in parent.items()}
     # Export complete MANO parameters, including the mixed HaMeR/HaWoR origins.
@@ -152,6 +166,20 @@ def run(request, check=False):
             anchor_frame_ids=source.frame_ids[np.setdiff1d(window, ids)].tolist(),
             accepted=False,
         )
+        if reliability is not None:
+            row["weak_baseline_frame_ids"] = source.frame_ids[
+                ids[
+                    baseline["accepted"][ids, h]
+                    & ~reliability["reliable_baseline"][ids, h]
+                ]
+            ].tolist()
+            fixed = np.setdiff1d(window, ids)
+            row["weak_fixed_anchor_frame_ids"] = source.frame_ids[
+                fixed[
+                    baseline["accepted"][fixed, h]
+                    & ~reliability["reliable_baseline"][fixed, h]
+                ]
+            ].tolist()
         try:
             pose, orient, betas, fit_points, heldout_points, masks_all, objects = (
                 [],
@@ -191,12 +219,24 @@ def run(request, check=False):
                 camera_joints=parent["camera_joints"][ids, h],
                 faces=raw["faces"][h],
             )
+            policy_kwargs = {}
+            image_weights = observations["weights"][ids, h]
+            if reliability is not None:
+                policy_kwargs["normalization_weights"] = image_weights
+                image_weights = reliability["weights"][ids, h]
+                if reliability["options"]["reassess_anchors"]:
+                    policy_kwargs.update(
+                        reliable_anchors=reliability["reliable_baseline"][window, h],
+                        weak_anchor_prior_weight=reliability["options"][
+                            "weak_anchor_prior_weight"
+                        ],
+                    )
             fit = fit_sequence(
                 model,
                 prior,
                 parent["fits"][ids, h],
                 observations["keypoints_px"][ids, h],
-                observations["weights"][ids, h],
+                image_weights,
                 fit_points,
                 source.k,
                 h,
@@ -206,6 +246,7 @@ def run(request, check=False):
                 source.times[window],
                 options=options,
                 baseline_mask=baseline["accepted"][window, h],
+                **policy_kwargs,
             )
             proposed_v[ids, h], proposed_j[ids, h] = (
                 fit["camera_vertices"],
@@ -361,6 +402,13 @@ def run(request, check=False):
         proposed_world_vertices=proposed_wv,
         proposed_world_joints=proposed_wj,
     )
+    if reliability is not None:
+        result.update(
+            original_observation_weights=observations["weights"],
+            effective_observation_weights=reliability["weights"],
+            observation_identity_ambiguous=reliability["ambiguous"],
+            baseline_anchor_reliable=reliability["reliable_baseline"],
+        )
     np.savez_compressed(out / "hypotheses.npz", **result)
     quality.update(
         schema="real2sim2real.point-hand-sequence/1",
@@ -370,6 +418,11 @@ def run(request, check=False):
         manual_annotations_loaded=False,
         exported_mano_geometry_checked=True,
         sequence_optimizer=options,
+        observation_policy=None if reliability is None else reliability["options"],
+        observation_reliability_records=None
+        if reliability is None
+        else reliability["records"],
+        validation_uses_original_observations=True,
         components=component_records,
         records=records,
         sequence_admitted_per_hand=admitted.sum(0).tolist(),

@@ -66,6 +66,62 @@ the admitted geometric site can differ from the loaded contact patch, and trying
 to recover that site can disrupt pressure or lose the grasp. Measured-normal mode
 cannot be combined with this planned-site tangent objective.
 
+## Payload-aware pressure and bilateral allocation
+
+An optional `contact_force_feedback.payload_adaptation` schedules pad-pressure
+goals from observed supported load and the two hands' signed upward forces.
+The embodiment-independent `payload_pressure.PayloadPressure` core receives
+forces, vertical acceleration, gravity and a clock; it receives no simulator mass
+or robustness-case identity. Its current MuJoCo adapter supplies exact solved
+object-contact wrenches and free-body vertical acceleration. These remain
+privileged observations, not a sensor calibration or vision-based mass estimate.
+
+Supply all fields explicitly, for example:
+
+```json
+{
+  "reference_weight_n": 5.0,
+  "weight_filter_s": 0.15,
+  "share_filter_s": 0.15,
+  "minimum_weight_ratio": 0.5,
+  "maximum_weight_ratio": 1.25,
+  "target_secondary_fraction": 0.5,
+  "share_gain": 0.5,
+  "maximum_share_correction": 0.15,
+  "maximum_scale_rate_s_inv": 1.0,
+  "maximum_acceleration_m_s2": 3.0
+}
+```
+
+The nominal prior applies during acquisition. Once both hands contact the object
+and external support contacts disappear, the estimator filters
+`weight = total_upward_force * gravity / (gravity + vertical_acceleration)`.
+Large acceleration or lost isolation freezes updates. This is a supported-load
+estimate under the adapter's rigid-body assumptions; changing/rolling contact
+and acceleration observation error can bias it.
+
+Filtered weight scales both hands' base targets. A bounded differential term
+raises requested pressure for the underloaded hand and lowers it for the other;
+`share_gain: 0` isolates payload scaling. Scale updates are rate limited and each
+pad target remains capped at 10 N. Normal admittance, native motor/joint limits,
+gap freezes and geometric ownership continue to apply. The sharing target is a
+controller objective, not proof of achieved load allocation or a replacement for
+the original physical gates. Per-sample receipts retain the supported-load
+estimate, observed forces, requested scales, capped requests and actual pad goals.
+
+Optional `minimum_group_ratio` declares a pressure floor for every anatomical
+group (`thumb`, `index`, `middle`, `ring`, `pinky`), each between 0.1 and 1 times
+its nominal goal. This can retain opposing-finger pressure while releasing a
+thumb under lower supported load. Floors apply after hand allocation and before
+the 10 N cap; they can change the pair's final pressure budget and must be evaluated
+as a new controller hypothesis. They do not reset a rolling contact patch or
+change a drift metric.
+
+The adapter changes finger commands only. It preserves the shared wrist path and
+does not apply forces to the object. An absent option preserves the fixed-pressure
+controller. Test a complete stationary hold and then freeze the same controller
+for reference motion and the declared sensitivity matrix.
+
 ## Stationary admission and moving-reference tests
 
 Run the stationary condition first. A demonstrated-motion force-feedback run

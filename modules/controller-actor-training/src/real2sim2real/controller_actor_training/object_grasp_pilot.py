@@ -1235,7 +1235,11 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
         **(
             dict(
                 contact_force_feedback=config["contact_force_feedback"],
-                contact_force_feedback_observations="privileged solved simulator pad forces and object pose",
+                contact_force_feedback_observations=(
+                    "privileged simulator pad forces, object pose, bilateral object wrenches and free-body vertical acceleration"
+                    if force_servo.payload
+                    else "privileged solved simulator pad forces and object pose"
+                ),
                 contact_force_feedback_final=force_servo.diagnostics(),
             )
             if force_servo

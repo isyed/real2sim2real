@@ -403,3 +403,8 @@ does not establish retained contact or arm feasibility.
 `grasp_sensitivity` performs frozen payload/friction tests from a pinned complete
 passing fixture trial. It requires identical nominal replay, preserves reference
 and physical criteria, and records each failed case before subsequent arm audits.
+
+`payload_pressure` adds optional supported-load estimation and bounded pressure
+allocation between hands. The core consumes force/acceleration observations;
+the current fixture adapter changes only finger targets, records its privileged
+inputs, and retains the original wrist path, actuator limits and acceptance gates.

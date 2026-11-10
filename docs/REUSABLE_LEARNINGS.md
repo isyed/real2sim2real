@@ -76,3 +76,16 @@ See [object-centric grasp workflow](OBJECT_CENTRIC_GRASPS.md) and
 [test instructions](TESTING.md) for interfaces and validation commands.
 The [task-first roadmap](OBJECT_CENTRIC_ROADMAP.md) separates physical success,
 optional skill-graph execution and later human-derived object-motion accuracy.
+
+## Contact evidence and paired support
+
+An accurate whole-object collision proxy can still misrepresent a thin contact
+wall. Check the local union boundary against wall thickness, then check the contact
+region against visible image/depth evidence. Missing visibility is not agreement.
+Depth-window sensitivity is essential when a wall occupies only a few pixels.
+
+Opposite-side contact sets can balance a gravity moment that defeats a single-hand
+grasp. That result does not validate simultaneous hand placement or establish that
+the reconstructed contact surface is observed. Keep static balance, observation
+support, paired robot IK/collisions and dynamic success as separate stages. See
+[Contact region audits](CONTACT_REGION_AUDIT.md) for the reusable implementations.

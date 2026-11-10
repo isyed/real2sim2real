@@ -352,3 +352,8 @@ matching checkpoint recipe, learner state and replay; changed buffer or optimize
 settings cannot silently reuse an old learner. `diagnostic_review` stops invalid
 execution or severe combined score/balance regression. It does not launch work,
 extend a run, certify task success or select a submission.
+
+Contact-region audits and paired contact-arrangement diagnostics are documented
+in [CONTACT_REGION_AUDIT.md](../../docs/CONTACT_REGION_AUDIT.md). These preserve
+rejected plans and distinguish force balance from observed contact support and
+validated two-hand robot execution.

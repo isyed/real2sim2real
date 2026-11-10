@@ -1,5 +1,10 @@
 # Testing the reusable modules
 
+`tests/test_contact_region_audit.py` and `tests/test_paired_contacts.py` cover
+visibility/depth evidence, local convex-union boundaries, per-pad force budgets,
+paired diagnostic provenance and rejection of unsupported contact regions.
+They run on CPU without private observations; they do not certify a grasp.
+
 `tests/test_pad_planning.py` covers pad frames/Jacobians, position-normal fits,
 intermediate path collisions, gravity moments, shared pad budgets, nearby opposed
 patch evidence and bounded microhole repair. Run it in the optional MuJoCo runtime

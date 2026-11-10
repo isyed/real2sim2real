@@ -129,3 +129,10 @@ original reconstruction. Compare both on identical image rays, report coverage,
 and inspect nearby background depth before changing the table or object. Raised
 visible upper surfaces do not prove usable underside support. See
 [Visible-region geometry](VISIBLE_REGION_GEOMETRY.md).
+
+Independent wrist fixtures can select a grasp that forces the full robot's arms
+to cross or exceed wrist limits. Check the mounted hand frames, both arms,
+parked/support insertion phases, native joint-speed limits and elbow clearance
+together. Individual-arm reachability is not a bimanual path. Preserve source
+motion while making robot grasp selection arm-aware. See
+[Arm path audit](ARM_PATH_AUDIT.md).

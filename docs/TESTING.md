@@ -1,5 +1,12 @@
 # Testing the reusable modules
 
+`tests/test_arm_path_audit.py` checks native-clock velocity ratios, clock-reset
+rejection, joint-neighbor classification through fixed mounts without hiding
+world or folded-arm collisions, and an optional MuJoCo body-pose IK fixture that
+leaves the free object's state unchanged. Run this with the existing pad,
+guided-motion, grasp, support and wrist tests in the MuJoCo runtime. Actual URDF
+mounting comparisons and real-scene arm-path failures remain separate evidence.
+
 `tests/test_grasp_retention.py` checks common-motion invariance, correction
 direction, contact/reference freezes, speed/travel limits and robot-only command
 ownership. `tests/test_visible_region_geometry.py` checks disjoint image regions,

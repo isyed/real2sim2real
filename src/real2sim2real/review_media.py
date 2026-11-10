@@ -106,7 +106,15 @@ def prepare(source, output, *, timeout_s=120):
     return result
 
 
-def player(mp4_url, webm_url, gif_url, *, poster_url=None, embedded_gif=None):
+def player(
+    mp4_url,
+    webm_url,
+    gif_url,
+    *,
+    poster_url=None,
+    embedded_gif=None,
+    embedded_webm=None,
+):
     """No JavaScript dependency; an embedded GIF also survives local URL restrictions."""
     escape = lambda value: html.escape(str(value), quote=True)
     poster = "" if poster_url is None else f' poster="{escape(poster_url)}"'
@@ -115,8 +123,12 @@ def player(mp4_url, webm_url, gif_url, *, poster_url=None, embedded_gif=None):
         fallback = "data:image/gif;base64," + base64.b64encode(
             Path(embedded_gif).read_bytes()
         ).decode("ascii")
+    direct_source = ""
+    if embedded_webm is not None:
+        video_data = base64.b64encode(Path(embedded_webm).read_bytes()).decode("ascii")
+        direct_source = f' src="data:video/webm;base64,{video_data}"'
     return (
-        f'<section class="review-player"><video controls muted loop playsinline preload="metadata"{poster}>'
+        f'<section class="review-player"><video controls muted loop playsinline preload="metadata"{poster}{direct_source}>'
         f'<source src="{escape(webm_url)}" type="video/webm">'
         f'<source src="{escape(mp4_url)}" type="video/mp4">'
         "</video><p>Open video: "

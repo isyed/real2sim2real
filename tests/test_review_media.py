@@ -31,3 +31,10 @@ def test_player_embeds_fallback_and_escapes_resource_names(tmp_path):
     assert "clip&quot;.mp4" in text
     assert 'type="video/webm"' in text
     assert "<details>" in text
+
+
+def test_ide_player_has_self_contained_primary_video(tmp_path):
+    webm = tmp_path / "video.webm"
+    webm.write_bytes(b"webm-bytes")
+    text = player("original.mp4", "video.webm", "preview.gif", embedded_webm=webm)
+    assert 'src="data:video/webm;base64,d2VibS1ieXRlcw=="' in text.split("</video>")[0]

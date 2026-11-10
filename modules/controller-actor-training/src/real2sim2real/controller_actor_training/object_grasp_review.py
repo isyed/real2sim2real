@@ -254,6 +254,7 @@ def review(config):
                 Path(v["path"]).stem + ".playback/video.webm",
                 Path(v["path"]).stem + ".playback/preview.gif",
                 embedded_gif=output / (Path(v["path"]).stem + ".playback/preview.gif"),
+                embedded_webm=output / (Path(v["path"]).stem + ".playback/video.webm"),
             )
             for v in videos
         )
@@ -305,6 +306,7 @@ def review_trials(
                 stem + ".playback/video.webm",
                 stem + ".playback/preview.gif",
                 embedded_gif=output / (stem + ".playback/preview.gif"),
+                embedded_webm=output / (stem + ".playback/video.webm"),
             )
         )
     (output / "review.html").write_text(

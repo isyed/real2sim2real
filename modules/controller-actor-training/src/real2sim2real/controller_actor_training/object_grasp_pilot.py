@@ -671,51 +671,16 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
             ):
                 aborted = "object_dropped_or_unstable"
                 break
-    hold = [r for r in records if r["phase"] == "hold"]
-    clearance = min(
-        (r["minimum_object_height_m"] - table_top for r in hold), default=-1.0
-    )
-    contacts = (
-        float(
-            np.mean(
-                [r["thumb_force_n"] > 0.1 and r["finger_force_n"] > 0.1 for r in hold]
-            )
-        )
-        if hold
-        else 0.0
-    )
-    relative = np.array(
-        [np.asarray(r["object_position_m"]) - r["wrist_position_m"] for r in hold]
-    )
-    legacy_displacement = (
-        float(np.linalg.norm(relative - relative[0], axis=1).max())
-        if len(relative)
-        else None
-    )
-    from .grasp_feedback import relative_translation_drift
+    from .grasp_hold import measure_hold, hold_rejections
 
-    slip = (
-        relative_translation_drift(
-            [r["object_position_m"] for r in hold],
-            [r["wrist_position_m"] for r in hold],
-            [r["wrist_rotation"] for r in hold],
-        )
-        if hold
-        else None
+    metrics = measure_hold(records, table_top_m=table_top)
+    failures = hold_rejections(
+        metrics,
+        minimum_clearance_m=goal["minimum_clearance_m"],
+        observed_max_penetration_m=max_pen,
+        allowed_max_penetration_m=config["planning"]["max_penetration_m"],
+        aborted=aborted,
     )
-    failures = []
-    if aborted:
-        failures.append(aborted)
-    if clearance < goal["minimum_clearance_m"]:
-        failures.append("insufficient_lift_hold")
-    if contacts < 0.8:
-        failures.append("missing_opposed_finger_contact")
-    if max_pen > config["planning"]["max_penetration_m"]:
-        failures.append("robot_penetration")
-    if slip is None or slip > 0.01:
-        failures.append("hold_slip")
-    if not hold or max(r["rotation_change_deg"] for r in hold) > 30:
-        failures.append("excess_object_rotation")
     output = Path(output)
     output.mkdir(exist_ok=False)
     np.savez_compressed(
@@ -732,11 +697,8 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
         friction=config["physics"]["friction"] if friction is None else friction,
         success=not failures,
         rejected_for=failures,
-        hold_minimum_clearance_m=clearance,
-        hold_opposed_contact_fraction=contacts,
-        hold_slip_m=slip,
+        **metrics,
         hold_slip_frame="wrist",
-        hold_relative_world_displacement_m=legacy_displacement,
         max_robot_penetration_m=max_pen,
         max_robot_table_penetration_m=max_table_pen,
         actuator_peak_forces={

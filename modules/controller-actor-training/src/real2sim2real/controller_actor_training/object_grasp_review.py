@@ -114,6 +114,18 @@ def render(config, directory, output):
     set_wrist_frame(
         model, data, config, candidate["base_position_m"], candidate["base_rotation"]
     )
+    if "support" in candidate:
+        from .object_grasp_pilot import set_root_frame
+
+        hand = candidate["support"]
+        set_root_frame(
+            model,
+            data,
+            hand["root_body"],
+            hand["fixture_prefix"],
+            hand["base_position_m"],
+            hand["base_rotation"],
+        )
     pieces = display_pieces(model)
     sample = []
     for i in np.linspace(0, len(states["qpos"]) - 1, 8).astype(int):
@@ -296,11 +308,22 @@ def review_trials(
             if result["success"]
             else "Rejected: " + ", ".join(result["rejected_for"])
         )
+        support_note = ""
+        if "support_load_fraction" in result:
+            drift = result["support_wrist_drift_m"]
+            support_note = (
+                f"<p>Second hand: mean upward force on the object {result['support_mean_upward_force_n']:.2f} N; "
+                f"at least 10% of object weight in {result['support_load_fraction'] * 100:.1f}% of hold samples; "
+                f"support-wrist drift {'unavailable' if drift is None else f'{drift * 1000:.1f} mm'}. "
+                f"Support enabled: {result['support_controller'].get('enabled', True)}. "
+                "Both wrists are force limited; no arms are modelled.</p>"
+            )
         sections.append(
             f"<h2>{html.escape(stem)}</h2><p>{html.escape(verdict)}. "
             f"Mass {config['physics']['mass_kg'] * result['mass_scale']:.2f} kg; friction {result['friction']:.2f}. "
             f"Minimum hold clearance {result['hold_minimum_clearance_m'] * 1000:.1f} mm; "
             f"hold drift {result['hold_slip_m'] * 1000:.1f} mm ({html.escape(result.get('hold_slip_frame', 'world-vector legacy metric'))} frame).</p>"
+            + support_note
             + player(
                 video["path"],
                 stem + ".playback/video.webm",

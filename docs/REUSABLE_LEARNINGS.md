@@ -17,6 +17,9 @@ It is not an assertion that a new scene, hand or robot has been validated.
 | A reconstructed pose may not be a stable physical start | Explicit reconstruction-preserving or gravity-settled task initialization | Displacement/rest checks retain the rejected pose and label a new task start; no silent reference repair |
 | A geometric contact plan is not a successful grasp | Separate contact IK, approach search, free-object simulation and hold evaluation | `test_object_grasp.py`; reject object actuators, welds, gravity assistance and stale inputs |
 | Five target fingertips do not imply five loaded fingers | `grasp_hold.contact_support` reports actual per-group normal force and active sample fraction, including palm/other geometry | `test_grasp_hold.py`; contact evidence is not a force-closure proof |
+| An underbody hand must have insertion space and transfer real load | `multi_hand_scene`, `support_planning`, `support_control`, `bimanual_grasp` add staged articulated support after the initial lift | `test_bimanual_support.py`; named state/fixture isolation, signed object force, bounded load feedback and parked-hand comparisons |
+| Geometric clearance can disappear under actuator tracking error | Optional support-hand bias compensation acts through existing force-limited position actuators | Gravity tracking and free-object regression tests; no direct object or applied-force assistance |
+| A force solve is unnecessary for rejected geometric hypotheses | Contact IK uses `mj_fwdPosition` for positions, Jacobians and collision witnesses | Real dynamics remains a separate bounded stage; invalid intermediate geometry is not a physical trial |
 | Wrist rotation can be confused with slip | `grasp_feedback.relative_translation_drift` uses the moving wrist frame; `object_grasp_audit` rescores retained states | Rigid-rotation invariance tests; original world-vector metric and historical verdicts remain available |
 | Brief lift success can hide later drift or changed support | `grasp_hold.measure_hold` / `hold_rejections` inspect all retained hold samples; `grasp_robustness` separates development and longer frozen checks | Later-sample failure, nonfinite evidence, missing hold and independent contact/penetration gates have regression tests |
 | More closure can cause penetration instead of improving grasp quality | Bounded `contact_closure` and `orientation_correction` under unchanged joint/force limits | Feedback tests verify direction, speed/travel bounds and singularity behavior; failed trials remain failed |
@@ -49,9 +52,11 @@ none alone establish independent reconstruction accuracy or hardware success.
 
 The need for new evidence or a new robot capability is recorded explicitly rather
 than represented as implemented functionality. Independently identified human
-joint/contact observations still need acquisition for faithful imitation. New
-bimanual contact planning, arm integration and a task-specific learning environment
-are not implemented by the wrist-fixture pilot. Exact simulator pose/contact
+joint/contact observations still need acquisition for faithful imitation. The
+[staged second-hand support adapter](BIMANUAL_SUPPORT.md) now supplies a limited
+underbody contact search and measured load sharing. General coupled bimanual
+motion planning, arm integration and a task-specific learning environment remain
+unimplemented. Exact simulator pose/contact
 feedback remains privileged until a deployable observation path is supplied.
 The existing training packages do not automatically make this new task ready for
 policy training.

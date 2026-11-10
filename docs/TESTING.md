@@ -129,3 +129,10 @@ the separation between diagnostic validation and development admission.
 `tests/test_review_media.py` exercises actual MP4-to-WebM/GIF conversion, complete
 frame decoding, unchanged source bytes, cache rejection and HTML fallback
 escaping. Browser playback/seek checks remain separate local review evidence.
+
+`tests/test_grasp_hold.py` checks that planned fingertips are not counted
+as observed support, later hold failures are retained, nonfinite/missing evidence
+cannot pass and contact/penetration gates remain distinct. `test_review_server.py`
+checks video byte-range parsing and rejects hidden files, private asset formats
+and paths/symlinks escaping the selected review directory. The portable-player
+tests also check a self-contained primary video for IDE previews.

@@ -1,5 +1,8 @@
 # Object-centric grasp pilots
 
+The [reusable learning index](REUSABLE_LEARNINGS.md) maps reconstruction/control
+findings to code, regression tests and remaining capabilities.
+
 This path plans robot contacts from a reconstructed object and finite tabletop,
 then evaluates a short grasp/lift/hold in CPU MuJoCo. Human finger trajectories
 are not control targets. Optional uncertain position cues can influence proposal
@@ -176,6 +179,20 @@ selected trials. Reviews provide VP8 WebM, the original MP4 and an embedded
 animated GIF fallback for local viewers. `real2sim2real.review_media` can also
 prepare portable media from an existing video, verifying complete decoding and
 source/cache hashes. This changes display files only; it never reruns physics.
+
+The primary WebM can be embedded directly in HTML for IDE previews that do not
+resolve sibling video paths. `python -m real2sim2real.review_server --directory
+/path/to/review-root --port 8765` provides an alternative browser URL on
+`http://127.0.0.1:8765/`, with HTTP byte ranges for seeking and no stale caching.
+It serves review/media formats only, rejects hidden/outside-root resources, and
+expires after eight hours by default (`--seconds`, maximum 24 hours). It does not
+publish the report externally. A working browser check does not replace checking
+the user's IDE preview.
+
+`grasp_hold.measure_hold` and `hold_rejections` centralize the measured
+hold criteria used by physical trials. `contact_support` summarizes observed
+normal force and active sample fractions separately for each named hand group.
+These summaries report actual support rather than inferring it from planned sites.
 
 ## Object tasks versus demonstration repair
 

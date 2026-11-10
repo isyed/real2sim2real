@@ -389,3 +389,6 @@ around a successful grasp before matched dynamics. `arm_path_audit` and
 including hand-frame compatibility, joint/speed limits and nonadjacent arm
 collisions. See [ARM_PATH_AUDIT.md](../../docs/ARM_PATH_AUDIT.md). These are
 kinematic integration diagnostics, not arm torque or physical execution claims.
+
+For bounded support insertion and opposing-pad proposals against a retained
+physical baseline, see [contact replanning](../../docs/CONTACT_REPLANNING.md).

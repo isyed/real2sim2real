@@ -194,3 +194,18 @@ Recent arm/contact planning extensions:
   chasing subsequent motion. `arm_clearance_audit` makes table intersections
   explicit; neither a small correction nor an IK pass establishes insertion
   access (`test_arm_object_feedback.py`, `test_arm_clearance_audit.py`).
+
+## Separate insertion clearance from contact retention
+
+Raise the support palm around its intended contact region while preserving the
+world insertion direction. Audit positive table clearance and the sweep beneath
+the object separately; a collision-free final pose does not make its approach
+safe. If payload sag is plausible, add insertion space below the object and seat
+upward only after insertion. Keep such geometry assumptions separate from fresh
+payload physics. See [contact replanning](CONTACT_REPLANNING.md).
+
+Use actual pad points, surface normals and individual finger loads to assess
+opposition. Tiny fingertip errors or improved aggregate contact fractions can
+coexist with an effectively single-finger grasp. A fixed-wrist finger fit that
+hits its bounds with large normal errors calls for a different wrist/contact
+layout, not relaxed acceptance criteria.

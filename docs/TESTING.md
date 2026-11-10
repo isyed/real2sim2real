@@ -136,3 +136,12 @@ cannot pass and contact/penetration gates remain distinct. `test_review_server.p
 checks video byte-range parsing and rejects hidden files, private asset formats
 and paths/symlinks escaping the selected review directory. The portable-player
 tests also check a self-contained primary video for IDE previews.
+
+`tests/test_contact_layout.py` checks gravity torque against a known lever,
+reversed thumb/finger surfaces (including legacy proposals), explicit missing
+surface rejection, and local solid spans on a hollow vessel without bridging its
+cavity. It rejects open geometry and invalid budgets. Frozen-controller tests
+allow a longer hold while rejecting changed gains, approach/lift timing and
+shortened holds. Run these alongside `test_object_grasp.py`, `test_grasp_hold.py`
+and `test_grasp_feedback.py` in the optional MuJoCo runtime. Geometric tests do
+not establish contact stability; saved-state physics trials supply that evidence.

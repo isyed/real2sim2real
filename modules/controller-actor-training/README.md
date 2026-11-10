@@ -12,6 +12,10 @@ load sharing and validates frozen candidates against parked-hand comparisons.
 Optional [common wrist coordination](../../docs/WRIST_COORDINATION.md) regulates
 object pose using a shared bounded correction and joint-limit projection. Its
 world-motion audit remains separate from contact and wrist-relative drift gates.
+[Contact/posture search](../../docs/GRASP_POSTURE_SEARCH.md) evaluates finger
+placement and reserved wrist travel against both retained controllers.
+See the [task-first roadmap](../../docs/OBJECT_CENTRIC_ROADMAP.md) for optional
+skill-graph integration and subsequent object-reference tracking.
 
 `collision_cache_similarity.reuse` is an explicit offline alternative to a cold
 collision decomposition when the new mesh is exactly the same triangulated

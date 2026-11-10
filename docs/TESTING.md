@@ -86,3 +86,10 @@ of sequence-worker mounts. It also checks that rejected context proposals are
 not displayed as accepted merely because their baseline frame was accepted.
 Optional MANO batching and fitted-pose export require a licensed-model runtime
 check; synthetic tests do not validate anatomical reconstruction.
+
+`tests/test_multiview_points.py` checks metric triangulation and extrinsic
+direction, sensitivity to baseline length, reciprocal appearance matches,
+rejection of repeated/textureless patches, calibration validation and explicit
+warnings for nearby fingertip identities. The synthetic translated-texture
+case supplies no hand model or predicted depth. These tests verify geometry
+and matching logic, not anatomical correctness on real images.

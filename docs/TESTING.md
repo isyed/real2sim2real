@@ -164,3 +164,8 @@ test checks nontrivially oriented wrist fixtures, shared joint-limit projection
 and unchanged object/physical coordinates. Run it alongside the grasp/support
 tests above in the optional runtime. Passing kinematic checks does not imply
 contact retention; compare actual force-limited trials against the pinned baseline.
+
+`test_grasp_posture_search.py` verifies narrowed robot-owned IK bounds without
+changes to physical joint ranges, explicit invalid-bound rejection, signed
+sampled wrist margins and all-case candidate admission. Run its optional MuJoCo
+checks in the grasp runtime; geometric feasibility does not certify loaded contact.

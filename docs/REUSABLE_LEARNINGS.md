@@ -22,6 +22,7 @@ It is not an assertion that a new scene, hand or robot has been validated.
 | A force solve is unnecessary for rejected geometric hypotheses | Contact IK uses `mj_fwdPosition` for positions, Jacobians and collision witnesses | Real dynamics remains a separate bounded stage; invalid intermediate geometry is not a physical trial |
 | Wrist rotation can be confused with slip | `grasp_feedback.relative_translation_drift` uses the moving wrist frame; `object_grasp_audit` rescores retained states | Rigid-rotation invariance tests; original world-vector metric and historical verdicts remain available |
 | Independent wrist corrections can disturb a two-hand grasp | `wrist_coordination` applies one bounded rigid correction about a fixed object pivot and projects it into both fixtures' limits | Relative-transform, optional MuJoCo mapping and no-object-state-write tests; joint feasibility alone does not preserve loaded contacts |
+| Initial wrist posture can spend travel needed during lifting | `grasp_posture_search` compares surface-supported finger layouts and restricted IK ranges against both retained controllers | Narrowed-bound/ownership and signed-margin tests; bases, physical limits and acceptance gates stay fixed |
 | Low world drift can coexist with poor grasp retention | Independent world-motion audit plus unchanged opposed-contact and both wrist-frame drift gates | A coordinated candidate cannot be promoted merely for reducing lateral motion; saturation and rejected trials remain explicit |
 | Brief lift success can hide later drift or changed support | `grasp_hold.measure_hold` / `hold_rejections` inspect all retained hold samples; `grasp_robustness` separates development and longer frozen checks | Later-sample failure, nonfinite evidence, missing hold and independent contact/penetration gates have regression tests |
 | More closure can cause penetration instead of improving grasp quality | Bounded `contact_closure` and `orientation_correction` under unchanged joint/force limits | Feedback tests verify direction, speed/travel bounds and singularity behavior; failed trials remain failed |
@@ -67,3 +68,5 @@ policy training.
 
 See [object-centric grasp workflow](OBJECT_CENTRIC_GRASPS.md) and
 [test instructions](TESTING.md) for interfaces and validation commands.
+The [task-first roadmap](OBJECT_CENTRIC_ROADMAP.md) separates physical success,
+optional skill-graph execution and later human-derived object-motion accuracy.

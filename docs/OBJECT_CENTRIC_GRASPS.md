@@ -14,6 +14,9 @@ reachability, whole-body balance, hardware execution or full-task success.**
 The [second-hand support extension](BIMANUAL_SUPPORT.md) adds another articulated
 hand after the initial lift, with collision checks, bounded load sharing and
 matched parked-hand comparisons. It retains the same primary task gates.
+Optional [wrist coordination](WRIST_COORDINATION.md) moves both commanded wrists
+about a fixed object pivot, with common joint-limit projection and an independent
+world-drift audit. Contact retention still requires physical evaluation.
 The default pose/closure convention uses anatomical joint suffixes from the
 Sharpa hand assets. Adding a different hand requires reviewing that mapping,
 site order, geometry/contact names, actuator limits and initial posture.

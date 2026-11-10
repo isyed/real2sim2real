@@ -156,3 +156,11 @@ timing, prevent following a falling object and reject frozen-controller changes.
 Use the optional grasp runtime to exercise MuJoCo tests. A matched-duration
 parked-hand study and exact single-hand state-archive regression remain separate
 experiment evidence.
+
+`tests/test_wrist_coordination.py` checks common rigid motion around an object
+pivot, relative wrist-frame preservation, feedback direction/speed/travel bounds,
+independent world drift and frozen coordination settings. Its optional MuJoCo
+test checks nontrivially oriented wrist fixtures, shared joint-limit projection
+and unchanged object/physical coordinates. Run it alongside the grasp/support
+tests above in the optional runtime. Passing kinematic checks does not imply
+contact retention; compare actual force-limited trials against the pinned baseline.

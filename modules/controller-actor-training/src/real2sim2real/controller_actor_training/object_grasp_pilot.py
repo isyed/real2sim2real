@@ -609,6 +609,24 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
     peak_forces = np.zeros(model.nu)
     aborted = None
     initial_rotation = np.asarray(settled["settled_world_from_object"])[:3, :3]
+    coordination = None
+    if config.get("object_frame_coordination") is not None:
+        if not support or not support.enabled:
+            raise ValueError("Object-frame coordination requires two enabled hands")
+        from .wrist_coordination import ObjectFrameCoordinator
+
+        coordination = ObjectFrameCoordinator(
+            model,
+            [
+                (config["robot"]["root_body"], "fixture_"),
+                (
+                    config["support_robot"]["root_body"],
+                    config["support_robot"]["fixture_prefix"],
+                ),
+            ],
+            config["object_frame_coordination"],
+            initial_rotation,
+        )
     object_geoms = set(np.flatnonzero(model.geom_bodyid == obj))
     hand_geoms = set(idx["geoms"])
     support_geoms = set(support.idx["geoms"]) if support else set()
@@ -639,7 +657,7 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
                 contact_feedback,
             )
             q[opposing_indices] += closure_correction
-        if rotation_feedback and lifted:
+        if rotation_feedback and lifted and not (coordination and phase == "hold"):
             from .grasp_feedback import orientation_correction
 
             jac = np.zeros((3, model.nv))
@@ -652,6 +670,10 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
                 model.opt.timestep,
                 rotation_feedback,
             )
+            q[rotation_indices] += rotation_correction
+        elif rotation_feedback and coordination and phase == "hold":
+            # Keep the entry setpoint; common object-frame correction now moves
+            # both wrists, replacing independent primary orientation updates.
             q[rotation_indices] += rotation_correction
         q = np.clip(q, limits[:, 0], limits[:, 1])
         target = data.qpos.copy()
@@ -666,6 +688,10 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
             target[support.idx["q"]] = support.target(
                 data.time, object_transform(model, data), q[z_index]
             )
+            if coordination and phase == "hold":
+                target = coordination.target(
+                    model, target, object_transform(model, data), model.opt.timestep
+                )
             if support.settings.get("actuator_bias_compensation", False):
                 from .support_control import bias_compensated_target
 
@@ -765,6 +791,7 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
                     normal_contact_force_by_group_n=group_forces,
                     opposing_closure_correction_rad=closure_correction,
                     wrist_rotation_correction_rad=rotation_correction.tolist(),
+                    **(coordination.diagnostics() if coordination else {}),
                     **(
                         dict(
                             support_object_force_world_n=support_force.tolist(),
@@ -812,6 +839,22 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
         extra = support_hold_metrics(records, float(model.body_mass[obj] * 9.81))
         metrics.update(extra)
         failures.extend(support_rejections(extra, support.rejection))
+    if coordination:
+        from .wrist_coordination import hold_world_motion
+
+        metrics.update(hold_world_motion(records))
+        if (
+            metrics["hold_world_horizontal_drift_m"] is None
+            or metrics["hold_world_horizontal_drift_m"] > 0.02
+        ):
+            failures.append("object_world_horizontal_drift")
+        if coordination.rejection:
+            failures.append(coordination.rejection)
+        if (
+            coordination.max_position_residual_m > 1e-6
+            or coordination.max_rotation_residual_rad > 1e-6
+        ):
+            failures.append("coordinated_command_pose_error")
     output = Path(output)
     output.mkdir(exist_ok=False)
     np.savez_compressed(
@@ -849,6 +892,11 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
             orientation_feedback=rotation_feedback,
             close_offset_rad=settings["close_offset_rad"],
             duration_s=duration,
+            **(
+                dict(object_frame_coordination=config["object_frame_coordination"])
+                if coordination
+                else {}
+            ),
         ),
         configuration=config,
         records=records,
@@ -858,6 +906,16 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
         object_assistance=False,
         arm_reachability_validated=False,
         physical_hardware_validated=False,
+        **(
+            dict(
+                coordination=coordination.diagnostics(),
+                coordination_max_command_position_error_m=coordination.max_position_residual_m,
+                coordination_max_command_rotation_error_rad=coordination.max_rotation_residual_rad,
+                coordination_world_horizontal_limit_m=0.02,
+            )
+            if coordination
+            else {}
+        ),
         **(
             dict(
                 support_controller=config["support_controller"],
@@ -955,7 +1013,12 @@ def evaluate(config):
 
 def verify_frozen_controller(config, selected):
     """Reject feedback or trajectory retuning disguised as fixed-grasp validation."""
-    for key in ("clearance_feedback", "contact_feedback", "orientation_feedback"):
+    for key in (
+        "clearance_feedback",
+        "contact_feedback",
+        "orientation_feedback",
+        "object_frame_coordination",
+    ):
         if config.get(key) != selected["controller"].get(key):
             raise ValueError("Frozen validation cannot change controller feedback")
     if config.get("support_controller") != selected.get("support_controller"):

@@ -9,6 +9,9 @@ For a second articulated hand supporting the lifted object's underside, see
 [staged bimanual support](../../docs/BIMANUAL_SUPPORT.md). It preserves the primary
 grasp and scene, checks insertion/parking collisions, measures actual upward
 load sharing and validates frozen candidates against parked-hand comparisons.
+Optional [common wrist coordination](../../docs/WRIST_COORDINATION.md) regulates
+object pose using a shared bounded correction and joint-limit projection. Its
+world-motion audit remains separate from contact and wrist-relative drift gates.
 
 `collision_cache_similarity.reuse` is an explicit offline alternative to a cold
 collision decomposition when the new mesh is exactly the same triangulated

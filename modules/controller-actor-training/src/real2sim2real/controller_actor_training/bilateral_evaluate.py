@@ -31,6 +31,55 @@ def assess_motion_condition(result, condition, limits):
     )
 
 
+def validate_stationary_promotion(config, base, candidate):
+    """Freeze contact controller and grasp after a complete stationary pass."""
+    import math
+
+    record = config.get("validated_stationary")
+    if not record:
+        raise ValueError(
+            "Demonstrated force-control trial requires a validated stationary hold"
+        )
+    path = Path(record["result"])
+    if digest(path) != record["sha256"]:
+        raise ValueError("Pinned stationary result changed")
+    parent = json.loads(path.read_text())
+    if (
+        not parent["success"]
+        or not math.isfinite(parent["simulation_final_time_s"])
+        or parent["simulation_final_time_s"]
+        < parent["simulation_requested_duration_s"] - 1e-6
+        or digest(path.with_name("states.npz")) != parent["states_sha256"]
+        or parent["candidate"] != candidate
+    ):
+        raise ValueError(
+            "Unchanged complete passing stationary grasp and states required"
+        )
+    protocol_path = path.parent.parent / "protocol.json"
+    protocol = json.loads(protocol_path.read_text())
+    if (
+        protocol.get("motion_condition") != "stationary_diagnostic"
+        or protocol.get("fidelity_limits") != config.get("fidelity_limits")
+        or (
+            record.get("protocol_sha256") is not None
+            and digest(protocol_path) != record["protocol_sha256"]
+        )
+    ):
+        raise ValueError(
+            "Promotion must retain the stationary protocol and reference acceptance limits"
+        )
+    before = parent["configuration"]
+    allowed = {"planning_directory", "reference_guidance"}
+    if {k: v for k, v in before.items() if k not in allowed} != {
+        k: v for k, v in base.items() if k not in allowed
+    }:
+        raise ValueError(
+            "Stationary-to-motion promotion cannot retune controller, scene or physics"
+        )
+    if before.get("reference_guidance") is not None:
+        raise ValueError("Pinned source must be the stationary input condition")
+
+
 def run(config):
     import numpy as np
     from .object_grasp_pilot import load_plan, trial, load_scene, set_root_frame
@@ -75,6 +124,7 @@ def run(config):
         "bilateral_grasp.py",
         "support_control.py",
         "object_grasp_pilot.py",
+        "contact_force_control.py",
     ):
         (out / "implementation" / filename).write_bytes(
             Path(__file__).with_name(filename).read_bytes()
@@ -97,6 +147,16 @@ def run(config):
     if motion_condition == "stationary_diagnostic":
         base.pop("reference_guidance", None)
         base.pop("grasp_retention", None)
+    if config.get("contact_force_feedback") is not None:
+        if profile != "rigid_bilateral":
+            raise ValueError(
+                "Use coordinated wrist commands with bilateral force feedback"
+            )
+        base["contact_force_feedback"] = config["contact_force_feedback"]
+    if "freeze_lift_at_hold" in config:
+        base["freeze_lift_at_hold"] = config["freeze_lift_at_hold"]
+    if config.get("physics_step_s") is not None:
+        base["physics_step_s"] = config["physics_step_s"]
     candidates = []
     for i in ids:
         proposed = source_candidates[i]
@@ -168,6 +228,8 @@ def run(config):
     write_json(out / "trial-config.json", base)
     rows = []
     for c in candidates:
+        if base.get("contact_force_feedback") and motion_condition == "demonstrated":
+            validate_stationary_promotion(config, base, c)
         result = trial(base, c, out / f"candidate-{c['candidate_id']}")
         score = assess_motion_condition(
             result, motion_condition, config["fidelity_limits"]

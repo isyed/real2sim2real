@@ -392,3 +392,7 @@ kinematic integration diagnostics, not arm torque or physical execution claims.
 
 For bounded support insertion and opposing-pad proposals against a retained
 physical baseline, see [contact replanning](../../docs/CONTACT_REPLANNING.md).
+
+[Contact-force feedback](../../docs/CONTACT_FORCE_FEEDBACK.md) adds bounded
+finger-only pressure regulation, stationary-to-motion admission and saved-state
+video comparison to the simultaneous bilateral fixture pipeline.

@@ -8,6 +8,100 @@ from real2sim2real.artifacts import digest, write_json
 from .hand_audit import intervals
 
 
+def sequence_assessment(hypotheses, quality, *, required_frame_ids, evidence):
+    """Audit admitted reference data, never confuse fallback coverage with success.
+
+    Evidence entries contain ``passed`` (True/False/None), a source and a reason.
+    They describe completed reference checks, not robot/controller approvals.
+    The caller supplies task-specific evidence; missing/uncertain checks block
+    promotion. This function cannot certify physical execution.
+    """
+    frames = np.asarray(hypotheses["frame_ids"])
+    required = np.asarray(required_frame_ids)
+    if frames.ndim != 1 or len(np.unique(frames)) != len(frames):
+        raise ValueError("Unique reference frame IDs required")
+    if (
+        required.ndim != 1
+        or not len(required)
+        or len(np.unique(required)) != len(required)
+    ):
+        raise ValueError("Nonempty unique requested frame IDs required")
+    masks = {
+        k: np.asarray(hypotheses[k], bool)
+        for k in ("geometry_supported", "sequence_selected", "sequence_admitted")
+    }
+    if any(v.shape != (len(frames), 2) for v in masks.values()):
+        raise ValueError("Matching Nx2 sequence masks required")
+    if (masks["sequence_admitted"] & ~masks["sequence_selected"]).any():
+        raise ValueError("Admitted frames must be selected")
+    if not quality.get("sequence_fitting"):
+        raise ValueError("Sequence quality record required")
+    for key in ("sequence_selected", "sequence_admitted"):
+        if masks[key].sum(0).tolist() != quality[key + "_per_hand"]:
+            raise ValueError("Sequence quality and artifact counts differ")
+    required_checks = (
+        "hand_identity",
+        "independent_alignment",
+        "depth_support",
+        "contact",
+    )
+    missing_checks = sorted(set(required_checks) - set(evidence))
+    for item in evidence.values():
+        if item.get("passed") is not None and type(item["passed"]) is not bool:
+            raise ValueError("Evidence status must be True, False or None")
+        if not item.get("source") or not item.get("reason"):
+            raise ValueError("Evidence must cite a source and reason")
+    active = np.isin(frames, required)
+    missing_frames = required[~np.isin(required, frames)].tolist()
+    failures = [
+        c
+        for c in quality["components"]
+        if not c["accepted"] and set(c["frame_ids"]) & set(required.tolist())
+    ]
+    blockers = []
+    if missing_frames:
+        blockers.append("requested_frames_not_assessed")
+    if not masks["geometry_supported"][active].all():
+        blockers.append("missing_metric_geometry")
+    if (
+        failures
+        or (
+            masks["sequence_selected"][active] & ~masks["sequence_admitted"][active]
+        ).any()
+    ):
+        blockers.append("rejected_sequence_components")
+    blockers.extend("missing_evidence:" + key for key in missing_checks)
+    blockers.extend(
+        "unvalidated_evidence:" + key
+        for key, value in evidence.items()
+        if value["passed"] is not True
+    )
+    ready = not blockers
+    return dict(
+        schema="real2sim2real.sequence-reference-readiness/1",
+        decision="ready_for_robot_specific_validation"
+        if ready
+        else "not_ready_for_imitation_control",
+        reference_ready_for_retargeting=ready,
+        control_ready=False,
+        requested_frame_ids=required.tolist(),
+        missing_frame_ids=missing_frames,
+        retained_geometry_frames_per_hand=masks["geometry_supported"][active]
+        .sum(0)
+        .tolist(),
+        selected_frames_per_hand=masks["sequence_selected"][active].sum(0).tolist(),
+        admitted_frames_per_hand=masks["sequence_admitted"][active].sum(0).tolist(),
+        rejected_components=failures,
+        blockers=blockers,
+        evidence=evidence,
+        remaining_robot_checks=[
+            "Robot-specific retargeting and kinematic feasibility",
+            "Dynamic contact replay and controller validation",
+        ],
+        limitation="Retained fallback geometry and complete coverage are not admission of a rejected proposal. A reference pass authorizes robot-specific validation only.",
+    )
+
+
 def coverage_assessment(accepted, detected, candidates, frame_ids, times):
     accepted, detected, candidates = [
         np.asarray(a, bool) for a in (accepted, detected, candidates)

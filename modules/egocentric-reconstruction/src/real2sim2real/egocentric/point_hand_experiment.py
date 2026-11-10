@@ -148,6 +148,9 @@ def runtime_config(config, phase):
             observation_policy=config.get("observation_policy"),
         )
         read_only.extend([options["sequence_parent"], options["anchor_priors"]])
+        if config.get("hand_depth_support"):
+            options["hand_depth_support"] = config["hand_depth_support"]
+            read_only.append(config["hand_depth_support"]["path"])
     return dict(
         config,
         output=str(out),

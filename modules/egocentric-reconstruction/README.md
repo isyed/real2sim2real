@@ -536,6 +536,65 @@ proxy, not anatomical segmentation. Neither regional scores nor wrist masks
 change fitting samples or acceptance thresholds. Use them to investigate
 unmodeled wrist/forearm support before designing a separate support policy.
 
+### Declared hand depth support and reference readiness
+
+`python -m real2sim2real.egocentric.hand_depth_support --config inputs.json`
+prepares a frozen image boundary from accepted wrist/palm detections. The config
+declares `landmarks` (NPZ), `blocked_frame_ids` and a fresh `output`. It writes
+`boundaries.npz` and a hash receipt; no pose, depth residual or manual label
+chooses the boundary. A missing or withheld detection retains the original
+support. Wrist-to-palm length must be 20–300 pixels; this heuristic is
+resolution-dependent and must be reviewed for each capture.
+
+Before fitting, inspect image-only boundaries with
+`python -m real2sim2real.egocentric.hand_support_review --config review.json`.
+Declare `reconstruction`, `frame_start`, `frame_count`, `boundaries`,
+`blocked_frame_ids`, `mask_ids`, `frame_ids`, `margins_px`, `probes` and `output`.
+The probe JSON contains `reviewer`, `human_verified` and `points`, each with
+`frame_id`, `hand` (0 left, 1 right), `xy_px`, `image_sha256`, `expected`
+(`retain_hand` or `exclude_forearm`) and `uncertainty_px`. Use separate frames
+for choosing a conservative margin and validating it. Sparse probes do not
+certify a complete anatomical segmentation.
+
+Sequence configs can then add:
+
+```json
+"hand_depth_support": {"path": "/data/prepared-boundaries", "margin_px": 30}
+```
+
+The margin extends from the detected wrist toward the forearm; larger values
+retain more proximal support. This example is not a universal calibrated value.
+Only the prepared boundary folder is added to inference mounts. Held-out
+detector frames must exactly match the sequence declaration. The image region
+filters depth before the existing fit/reserved-pixel split. Parent and candidate
+use identical reserved samples for admission; unchanged image, contact and
+motion gates still apply. Records also preserve residuals on the original depth
+support, preventing a domain change from being mistaken for an improvement on
+the original whole mask.
+
+`sequence_optimizer.fit_all_supported: true` fits all geometrically supported
+frames in the declared capture window. Missing observations or capture-time gaps
+still split components. It removes fixed interior boundary poses as a diagnostic
+variable; it does not invent observations or allow failed components to replace
+their parent. All-frame fits can expose previously untested baseline failures.
+
+After fitting, `python -m real2sim2real.egocentric.hand_support_sensitivity
+--config audit.json` evaluates frozen meshes at multiple margins plus original
+support. Declare the same capture/boundary fields, `frame_ids`, `margins_px`,
+`crops`, `raw` (including hand faces), `variants` (`path`, optional `vertices_key`)
+and fresh `output`. No refitting or score-based margin selection occurs. Compare
+residuals only within a declared support domain; reports include input hashes.
+Use finite process deadlines for these CPU preparation/review commands.
+
+`interaction_readiness.sequence_assessment` checks selected/admitted masks,
+component failures, requested frame coverage and explicit evidence for hand
+identity, independent alignment, depth support and contact diagnostics. Each
+evidence record needs `passed` (true/false/null), `source` and `reason`. It blocks
+promotion when evidence is missing or unresolved. Complete fallback geometry
+cannot conceal a rejected sequence. A successful reference assessment still
+requires robot-specific kinematics and dynamic-contact/controller validation;
+it never declares physical control success.
+
 ### Cross-camera observation audit
 
 `python -m real2sim2real.egocentric.hand_anchor_audit --config audit.json` compares

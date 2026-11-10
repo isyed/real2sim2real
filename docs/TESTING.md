@@ -101,3 +101,12 @@ image/depth loss normalization, bounded options and fixed image/wrist regions
 for post-fit depth diagnostics. The real MANO sequence worker separately checks
 that exported retained poses reproduce its retained geometry. Neither test
 suite nor regional residuals establish control readiness.
+
+`tests/test_hand_depth_support.py` checks image-only wrist support, withheld and
+missing boundary behavior, hash/timeline integrity, fit independence from
+reserved/excluded depth, complete-window fitting across missing/time boundaries
+and isolation of worker mounts. `tests/test_sequence_readiness.py` ensures that
+retained fallback coverage cannot hide rejected components, unknown evidence
+blocks reference promotion, requested-frame gaps stay explicit, and a passing
+reference never claims controller validation. Boundary uncertainty and actual
+finger identity still require capture-specific evaluation.

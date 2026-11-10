@@ -1,5 +1,15 @@
 # Testing the reusable modules
 
+`tests/test_arm_object_feedback.py` checks rigid object-relative rotation including
+its wrist lever arm, correction rate/travel bounds, contact/reference freezes,
+signed support-load response and singular-Jacobian behavior. The optional MuJoCo
+contact-isolation regression in `test_arm_replay_pilot.py` checks that table
+contacts and nonneighbor arm collisions remain enabled. Real loaded/unloaded
+comparisons and timestep sensitivity are downstream experiments, not unit-test
+claims of physical success.
+`tests/test_arm_replay_comparison.py` preserves missing-reference failures and
+hold-only maxima, including transient support-load corrections that return to zero.
+
 `tests/test_arm_hand_assembly.py` checks independent arm placement, retained
 finger/contact defaults, fixture removal, free-object preservation, source asset
 resolution, MuJoCo Euler mounting semantics and copied fixture axes.

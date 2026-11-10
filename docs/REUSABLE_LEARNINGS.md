@@ -147,3 +147,14 @@ Use implicit actuator damping and capped arm forces in a bounded transfer pilot;
 velocity feedforward must be evaluated rather than assumed beneficial. Reuse
 unchanged grasp/support gates and keep the free object unassisted. Details and
 entry points are in [ARM_HAND_INTEGRATION.md](ARM_HAND_INTEGRATION.md).
+
+Isolate wrist tracking with and without hand–object contact before blaming a
+grasp or changing embodiment. Imported neighboring collision meshes can jam a
+joint even when a path audit excludes those pairs from its reported collision
+score. Record explicit exclusions and retain all nonneighbor/environment checks.
+Report nominal-path and commanded-pose errors separately, and compare simulation
+timesteps before accepting a near-threshold result. Object-relative correction
+during acquisition can follow object lag downward; compare correction after grasp
+establishment, and record actual feedback engagement. A configured load-sharing
+option that never updates is not an effective load-sharing experiment. Keep the
+demonstrated motion, contact gates and torque budgets fixed throughout these tests.

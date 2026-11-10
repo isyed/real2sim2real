@@ -80,7 +80,7 @@ def render(directory):
             draw = ImageDraw.Draw(frame)
             draw.text(
                 (12, 10),
-                f"Two UR7e arms + Sharpa | saved PHYSICS | {times[i]:.2f}s | {report['records'][i]['phase']}",
+                f"Two articulated arms with grasp hands | saved PHYSICS | {times[i]:.2f}s | {report['records'][i]['phase']}",
                 fill="black",
             )
             draw.text(
@@ -112,6 +112,16 @@ def render(directory):
         "maximum_joint_tracking_error_rad",
     ]
     metrics = {key: report[key] for key in fields}
+    for key in (
+        "control_mode",
+        "wrist_tracking_by_phase",
+        "commanded_wrist_tracking_by_phase",
+        "object_feedback",
+        "feedback_observation_source",
+        "contact_exclusions",
+    ):
+        if key in report:
+            metrics[key] = report[key]
     (directory / "review.html").write_text(
         '<!doctype html><meta charset="utf-8"><style>body{font:17px system-ui;max-width:1100px;margin:30px auto}video{width:100%}pre{white-space:pre-wrap}</style><h1>Two-arm control transfer</h1><p>Saved simulated dynamics, not hardware execution. Both Cartesian wrist fixtures are removed. Torque-limited arm actuators and recorded finger commands act on a free object. The straight mounts are hypotheses; hardware assembly and policy readiness are not established.</p>'
         + media

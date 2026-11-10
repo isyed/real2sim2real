@@ -26,6 +26,7 @@ from .support_control import (
 )
 from .arm_object_feedback import ArmObjectFeedback, joint_offset
 from .arm_replay_diagnostics import configure_contacts, wrist_errors, phase_maxima
+from .arm_tracking_control import ArmTrackingCompensator, InertialFeedforward
 
 
 def motor_command(target, position, velocity, bias, kp, kd, limits):
@@ -77,6 +78,7 @@ def run(config):
             "arm_replay_pilot.py",
             "arm_object_feedback.py",
             "arm_replay_diagnostics.py",
+            "arm_tracking_control.py",
         )
     }
     audit_path = Path(config["audit"])
@@ -177,6 +179,13 @@ def run(config):
     targets = np.array(
         [np.concatenate([s["arms"][a["name"]]["q"] for a in arms]) for s in samples]
     )
+    accelerations = np.gradient(np.gradient(targets, times, axis=0), times, axis=0)
+    inertia_control = (
+        InertialFeedforward(config["inertial_feedforward"], limits)
+        if config.get("inertial_feedforward")
+        else None
+    )
+    mass_matrix = np.zeros((model.nv, model.nv))
     data.qpos[qids] = targets[0]
     for j in range(old.njnt):
         name = old.joint(j).name
@@ -235,6 +244,15 @@ def run(config):
     if feedback and condition != "loaded":
         raise ValueError("Object feedback requires real hand-object contacts")
     previous_command = targets[0].copy()
+    tracking = (
+        ArmTrackingCompensator(config["tracking_compensation"], speed_limits)
+        if config.get("tracking_compensation")
+        else None
+    )
+    if tracking and config.get("velocity_feedforward", False):
+        raise ValueError(
+            "Choose filtered tracking compensation or legacy velocity feedforward"
+        )
     reference_objects = []
     for record in parent["records"]:
         pose = np.eye(4)
@@ -351,9 +369,33 @@ def run(config):
             if config.get("velocity_feedforward", False)
             else 0.0
         )
+        if tracking:
+            target, velocity = tracking.update(
+                target,
+                data.qpos[qids],
+                (targets[i + 1] - targets[i]) / (times[i + 1] - times[i]),
+                data.actuator_force[aids],
+                limits,
+                model.opt.timestep,
+                active=parent["records"][i]["phase"]
+                in config.get("tracking_phases", ["hold"]),
+            )
+            margin = audit["config"]["criteria"]["joint_margin_rad"]
+            target = np.clip(target, ranges[:, 0] + margin, ranges[:, 1] - margin)
+        inertial_torque = 0.0
+        if inertia_control:
+            mujoco.mj_fullM(model, mass_matrix, data.qM)
+            acceleration = (1 - alpha) * accelerations[i] + alpha * accelerations[i + 1]
+            inertial_torque = inertia_control.update(
+                mass_matrix[np.ix_(vids, vids)],
+                acceleration,
+                model.opt.timestep,
+                active=parent["records"][i]["phase"]
+                in config.get("tracking_phases", ["hold"]),
+            )
         data.ctrl[aids] = bias_compensated_target(
             target,
-            data.qfrc_bias[vids],
+            data.qfrc_bias[vids] + inertial_torque,
             config["kp_nm_per_rad"],
             target_velocity=velocity,
             kd=config["kd_nm_s_per_rad"],
@@ -462,6 +504,8 @@ def run(config):
                 data.qpos[qids] - targets[sample_index]
             ).tolist()
             record["arm_torque_nm"] = data.actuator_force[aids].tolist()
+            if tracking:
+                record["tracking_compensation"] = tracking.diagnostics()
             if feedback:
                 record["object_feedback"] = feedback.diagnostics()
             if "reference_position_m" in source:
@@ -547,6 +591,10 @@ def run(config):
         ),
         object_feedback=None if feedback is None else feedback.diagnostics(),
         feedback_command_rate_limited_steps=feedback_rate_limited_steps,
+        tracking_compensation=None if tracking is None else tracking.diagnostics(),
+        inertial_feedforward_peak_nm=None
+        if inertia_control is None
+        else inertia_control.peak.tolist(),
         feedback_observation_source="privileged simulator poses and solved contact forces"
         if feedback
         else None,
@@ -560,6 +608,7 @@ def run(config):
         scene_sha256=digest(scene),
         states_sha256=digest(out / "states.npz"),
         implementation_sha256=digest(snapshot / "arm_replay_pilot.py"),
+        tracking_implementation_sha256=digest(snapshot / "arm_tracking_control.py"),
         diagnostics_implementation_sha256=digest(
             snapshot / "arm_replay_diagnostics.py"
         ),

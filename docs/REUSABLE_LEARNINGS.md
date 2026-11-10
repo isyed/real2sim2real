@@ -158,3 +158,20 @@ during acquisition can follow object lag downward; compare correction after gras
 establishment, and record actual feedback engagement. A configured load-sharing
 option that never updates is not an effective load-sharing experiment. Keep the
 demonstrated motion, contact gates and torque budgets fixed throughout these tests.
+
+A transient tracking error can come from acceleration demands rather than a
+constant offset. Bounded filtered inertial feedforward can reduce that error
+without increasing torque limits or retiming the motion. Integral correction
+must earn its place through grasp checks: lower tracking error can coexist with
+worse second-hand drift. Preserve a frozen baseline, reject unsuccessful
+ablations, repeat the candidate and test a finer integration step. A short pilot
+pass does not establish full-sequence or material/observation robustness.
+
+Object-trajectory fidelity and human-hand imitation are separate objectives.
+Use demonstrated object motion as the task target, robot-specific planning for
+feasible grasps, and uncertain human contact observations as cues. Object ADD-AUC
+and MPPE can improve without finger imitation; measure them on an explicitly
+declared reference, geometry and time interval. Report moving intervals separately
+from stationary padding. In lifted-object observation audits, an image-context
+region labelled `nearby_table` is not necessarily the tabletop: verify its actual
+contents before interpreting depth as table height.

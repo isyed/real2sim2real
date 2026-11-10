@@ -98,6 +98,9 @@ def compare(paths, output):
         "kp_nm_per_rad",
         "kd_nm_s_per_rad",
         "torque_limits_nm",
+        "tracking_compensation",
+        "inertial_feedforward",
+        "tracking_phases",
         *defaults,
     )
     differing = [

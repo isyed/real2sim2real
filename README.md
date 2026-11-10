@@ -10,6 +10,11 @@ For robot manipulation without a trusted human finger reference, see the
 [reusable learning index](docs/REUSABLE_LEARNINGS.md) maps findings to modules,
 tests and explicit limitations.
 
+[Demonstrated object-motion transfer](docs/GUIDED_MOTION.md) and
+[bounded grasp retention](docs/GRASP_RETENTION.md) keep trajectory fidelity and
+physical acceptance separate. [Visible-region geometry](docs/VISIBLE_REGION_GEOMETRY.md)
+checks observation agreement before accepting a physically settled pose.
+
 Original project contributions are licensed under [Apache License 2.0](LICENSE).
 Bundled third-party components and upstream documentation retain their own
 terms; see [NOTICE](NOTICE) and [component licenses](docs/THIRD_PARTY.md).

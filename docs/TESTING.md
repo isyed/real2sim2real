@@ -1,5 +1,13 @@
 # Testing the reusable modules
 
+`tests/test_grasp_retention.py` checks common-motion invariance, correction
+direction, contact/reference freezes, speed/travel limits and robot-only command
+ownership. `tests/test_visible_region_geometry.py` checks disjoint image regions,
+occluder exclusion, first-visible ray depth and missing-ray preservation. Run the
+guided-motion, object-grasp, bimanual-support and wrist-coordination tests in the
+optional MuJoCo runtime after changing the shared runner. Baseline state-archive
+identity and actual longer/slippery validation are separate experiment evidence.
+
 `tests/test_guided_motion.py` checks timestamp-preserving motion transfer,
 feedback coordinates, missing intervals and fidelity independently of stationary
 task success. Its optional MuJoCo test checks wrist limits and no object-state

@@ -117,3 +117,15 @@ requirements. Transfer from an achieved grasp is not replay of a reconstructed
 floating start. Review actual human contact strategy before selecting insertion
 templates, and compare the same object-local surfaces before/after settling.
 See [Reference-guided motion and strategy](GUIDED_MOTION.md).
+
+Bounded wrist correction can pass a nominal retention test while saturating and
+failing a longer hold. Check actual loaded fingers as well as wrist-relative
+displacement and reference fidelity; following an object does not prove a stable
+contact layout. Freeze candidates before altered-duration/material cases. See
+[Grasp retention](GRASP_RETENTION.md).
+
+A settled pose can satisfy gravity while fitting observed surfaces worse than the
+original reconstruction. Compare both on identical image rays, report coverage,
+and inspect nearby background depth before changing the table or object. Raised
+visible upper surfaces do not prove usable underside support. See
+[Visible-region geometry](VISIBLE_REGION_GEOMETRY.md).

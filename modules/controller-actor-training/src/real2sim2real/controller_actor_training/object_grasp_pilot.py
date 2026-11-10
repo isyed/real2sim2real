@@ -704,6 +704,13 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
                 "Reference transfer must leave the required final hold duration"
             )
     hand_geoms = set(idx["geoms"])
+    retention = None
+    if config.get("grasp_retention") is not None:
+        if not guidance:
+            raise ValueError("Retention requires an independently fixed motion target")
+        from .grasp_retention import GraspRetention
+
+        retention = GraspRetention(config["grasp_retention"])
     support_geoms = set(support.idx["geoms"]) if support else set()
     all_robot_geoms = hand_geoms | support_geoms
     table = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "table")
@@ -790,6 +797,27 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
                 if guidance.rejection:
                     aborted = guidance.rejection
                     break
+                if retention:
+                    current_pose = object_transform(model, data)
+                    retention.update(
+                        current_pose[:3, 3],
+                        data.xpos[idx["root"]],
+                        data.xmat[idx["root"]].reshape(3, 3),
+                        model.opt.timestep,
+                        thumb_force_n=previous_group_forces.get("thumb", 0),
+                        opposing_force_n=previous_opposing_force,
+                        reference_error_m=float(
+                            np.linalg.norm(current_pose[:3, 3] - guidance.goal[:3, 3])
+                        ),
+                    )
+                    hand = guidance.hands[0]  # verified world-aligned scalar slides
+                    try:
+                        target = retention.apply(
+                            target, hand["q"][:3], hand["limits"][:3]
+                        )
+                    except ValueError as error:
+                        aborted = str(error)
+                        break
             if support.settings.get("actuator_bias_compensation", False):
                 from .support_control import bias_compensated_target
 
@@ -902,6 +930,7 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
                     object_position_m=transform[:3, 3].tolist(),
                     object_rotation=transform[:3, :3].tolist(),
                     **(guidance.observation(transform, data.time) if guidance else {}),
+                    **(retention.diagnostics() if retention else {}),
                     wrist_position_m=data.xpos[idx["root"]].tolist(),
                     wrist_rotation=data.xmat[idx["root"]].reshape(3, 3).tolist(),
                     rotation_change_deg=tilt,
@@ -1021,6 +1050,7 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
             orientation_feedback=rotation_feedback,
             close_offset_rad=settings["close_offset_rad"],
             duration_s=duration,
+            **(dict(grasp_retention=config["grasp_retention"]) if retention else {}),
             **(
                 dict(reference_guidance=config["reference_guidance"])
                 if guidance
@@ -1181,6 +1211,7 @@ def verify_frozen_controller(config, selected):
         "finger_closure",
         "finger_surface_feedback",
         "reference_guidance",
+        "grasp_retention",
     ):
         if config.get(key) != selected["controller"].get(key):
             raise ValueError("Frozen validation cannot change controller feedback")

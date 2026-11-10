@@ -1,5 +1,15 @@
 # Testing the reusable modules
 
+`test_control_pipelines.py` validates typed recipes, copied evidence, configuration
+hashes, upstream rebinding and rejected grasp/arm admission.
+`test_reference_extension.py` preserves native frames, prefix poses, clock and
+relative grasp while rejecting truncation and insufficient duration.
+`test_arm_robustness.py` freezes controller settings and uses an optional MuJoCo
+fixture to check that physical perturbations preserve initialized robot state.
+`test_evidence_assessment.py` rejects empty cohorts, missing/false claims,
+changed evidence and truthy non-Boolean values. These tests do not establish
+physical robustness; downstream matched trials remain required.
+
 `tests/test_arm_tracking_control.py` covers causal velocity/acceleration bounds,
 integral rate/travel limits, torque anti-windup and bounded inertial coupling.
 `tests/test_arm_reference_evaluation.py` checks that object translation and

@@ -10,6 +10,10 @@ force budget per pad; failed balance is not a control success.
 
 | Finding | Reusable implementation | Verification / interpretation |
 | --- | --- | --- |
+| Different imitation and task-control strategies need explicit boundaries | `pipeline_profiles`, `object_control_stage`, `control_artifacts` | Typed recipes, pinned configuration, source-preserving adoption and failed-audit admission tests; see [pipelines](PIPELINES.md) |
+| A short nominal pass does not establish a longer or robust controller | `reference_extension`, `arm_robustness`, `evidence_assessment` | Preserve reference prefix/clock and frozen controller; reject missing evidence and changed physical gates; keep perturbation failures |
+| Rebuilding MuJoCo constants can reset initialized robot state | `arm_robustness.apply_case`, shared `simulation_health` in arm replay | MuJoCo state-preservation regression; nominal archive equality is downstream evidence |
+| A requested reference horizon may exceed an old export | `guided_motion.select_interval` | Reject truncated ends, gaps and duplicate frame IDs instead of silently shortening the experiment |
 | A moving camera cannot define the simulation world | `egocentric` calibration, camera motion and upright support; `object_task` metric scene export | Explicit units, source hashes and world transforms; finite observed table extent remains an assumption |
 | Crop localization and pose-model improvements must be compared separately | `hand_experiment`, `hand_tracks`, shared-crop HaMeR/HaWoR workers | `test_video_hand_observations.py`; common fitter and matched observations |
 | Appearance tracks do not guarantee finger identity | `hand_point_tracks`, `hand_observation_policy`, `multiview_points`, `hand_anchor_audit` | Point-track and observation-policy tests; ambiguity/unknown evidence remains explicit |

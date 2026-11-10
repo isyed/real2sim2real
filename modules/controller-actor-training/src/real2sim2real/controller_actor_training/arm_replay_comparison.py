@@ -100,6 +100,7 @@ def compare(paths, output):
         "torque_limits_nm",
         "tracking_compensation",
         "inertial_feedforward",
+        "simulation_case",
         "tracking_phases",
         *defaults,
     )

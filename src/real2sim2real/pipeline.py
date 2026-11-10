@@ -8,8 +8,19 @@ from pathlib import Path
 import sys
 
 from .artifacts import digest, load, write_json
+from .pipeline_profiles import profile
 
 STAGES = {
+    "arm-path-audit": (
+        "real2sim2real.controller_actor_training.object_control_stage",
+        {"grasp-trial"},
+        "arm-path-audit",
+    ),
+    "arm-replay": (
+        "real2sim2real.controller_actor_training.object_control_stage",
+        {"arm-path-audit"},
+        "object-control-evaluation",
+    ),
     "reconstruction": (
         "real2sim2real.reconstruction.stage",
         {"video"},
@@ -59,10 +70,11 @@ def read_config(path):
 
 
 def plan(config, base, *, selected=None):
-    selected = selected or config.get("stages")
+    recipe = profile(config["pipeline"]) if "pipeline" in config else None
+    selected = selected or config.get("stages") or (recipe and recipe["stages"])
     if not selected or len(set(selected)) != len(selected):
         raise ValueError("Select a nonempty stage list without duplicates")
-    kind = config.get("input_kind", "video")
+    kind = config.get("input_kind", recipe["input_kind"] if recipe else "video")
     previous = (base / config["input"]).resolve()
     output = (base / config["output"]).resolve()
     if output == previous or output.is_relative_to(previous) and previous.is_dir():
@@ -80,7 +92,8 @@ def plan(config, base, *, selected=None):
             raise ValueError("Missing module configuration: " + name)
         target = output / f"{index:02d}-{name}"
         execution = options.get("execution", {})
-        timeout = execution.get("timeout_seconds", 10800)
+        default_timeout = 900 if name in {"arm-path-audit", "arm-replay"} else 10800
+        timeout = execution.get("timeout_seconds", default_timeout)
         if (
             isinstance(timeout, bool)
             or not isinstance(timeout, (int, float))

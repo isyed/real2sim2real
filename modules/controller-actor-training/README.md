@@ -1,5 +1,10 @@
 # Controller and actor training
 
+Optional [pad contact planning](../../docs/PAD_CONTACT_PLANNING.md) adds actual
+collision-pad frames, normal fitting, closing-path checks and static wrench
+diagnostics. Rejected hypotheses have their own static review; they are not
+shown as successful physics rollouts.
+
 For a CPU grasp/lift pilot driven by object geometry rather than a human motion
 reference, see [object-centric grasp planning](../../docs/OBJECT_CENTRIC_GRASPS.md).
 It provides a force-limited wrist/hand fixture, collision/approach checks, an

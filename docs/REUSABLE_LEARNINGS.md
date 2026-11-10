@@ -4,6 +4,10 @@ The implementation keeps capture-specific data and outcomes downstream. This
 index maps findings to reusable mechanisms, checks and explicit remaining work.
 It is not an assertion that a new scene, hand or robot has been validated.
 
+[Pad contact planning](PAD_CONTACT_PLANNING.md) adds collision-pad geometry,
+orientation, closing paths and static balance. Finite patch samples share one
+force budget per pad; failed balance is not a control success.
+
 | Finding | Reusable implementation | Verification / interpretation |
 | --- | --- | --- |
 | A moving camera cannot define the simulation world | `egocentric` calibration, camera motion and upright support; `object_task` metric scene export | Explicit units, source hashes and world transforms; finite observed table extent remains an assumption |

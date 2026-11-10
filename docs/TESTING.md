@@ -1,5 +1,10 @@
 # Testing the reusable modules
 
+`tests/test_pad_planning.py` covers pad frames/Jacobians, position-normal fits,
+intermediate path collisions, gravity moments, shared pad budgets, nearby opposed
+patch evidence and bounded microhole repair. Run it in the optional MuJoCo runtime
+as well as the lightweight suite. Synthetic checks do not certify a physical grasp.
+
 Run these commands from the repository root with Python 3.11 or 3.12:
 
 ```bash

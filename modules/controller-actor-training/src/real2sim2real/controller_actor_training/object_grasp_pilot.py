@@ -293,6 +293,14 @@ def plan(config):
             opened = np.clip(opened, limits[:, 0], limits[:, 1])
             pre = opened.copy()
             pre[z_index] += config["rollout"]["approach_offset_m"]
+            pad_extra = {}
+            if config.get("pad_planning") is not None:
+                from .pad_grasp_planning import fit_candidate
+
+                fit, opened, pre, pad_extra, targets = fit_candidate(
+                    model, data, config, world, targets, seed, idx, z_index
+                )
+                q = fit["q"]
             approach_penetration = 0.0
             for fraction in np.linspace(0, 1, 15):
                 data.qpos[idx["q"]] = (1 - fraction) * pre + fraction * opened
@@ -302,6 +310,8 @@ def plan(config):
                     float(contact_penetrations(model, data, idx).max(initial=0)),
                 )
             reasons = []
+            if pad_extra:
+                reasons.extend(pad_extra["pad_plan"]["rejected_for"])
             if fit["site_errors_m"].max() > settings["contact_error_m"]:
                 reasons.append("contact_target_error")
             if fit["penetration_m"].max(initial=0) > settings["max_penetration_m"]:
@@ -310,6 +320,7 @@ def plan(config):
                 reasons.append("approach_penetration")
             row = dict(
                 candidate_id=number,
+                **pad_extra,
                 thumb_side_direction=direction,
                 pair=pair,
                 targets_m=targets.tolist(),
@@ -577,6 +588,9 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
         config["rollout"]["close_offset_rad"],
         config.get("finger_closure"),
     )
+    from .pad_grasp_planning import closing_target
+
+    closed = closing_target(config, candidate, closed)
     limits = model.jnt_range[idx["joints"]]
     closed = np.clip(closed, limits[:, 0], limits[:, 1])
     from .finger_closure import closure_geometry
@@ -592,6 +606,10 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
         if "targets_m" in candidate
         else candidate["pair"]["targets_m"],
     )
+    if 'pad_plan' in candidate:
+        from .pad_grasp_planning import pad_closure_geometry
+
+        closure_audit = pad_closure_geometry(model, data, idx, candidate, closed)
     data.qpos[idx["q"]] = pre
     if support:
         data.qpos[support.idx["q"]] = candidate["support"]["q_pregrasp"]
@@ -1191,7 +1209,7 @@ def main():
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument(
         "--phase",
-        choices=["prepare", "plan", "approach", "evaluate", "validate", "review"],
+        choices=["prepare", "plan", "approach", "pad-patches", "evaluate", "validate", "review"],
         required=True,
     )
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
@@ -1227,6 +1245,10 @@ def main():
         return prepare(config)
     if args.phase == "plan":
         return plan(config)
+    if args.phase == "pad-patches":
+        from .pad_grasp_planning import reassess_patches
+
+        return reassess_patches(config)
     if args.phase == "approach":
         return refine_approaches(config)
     if args.phase == "evaluate":

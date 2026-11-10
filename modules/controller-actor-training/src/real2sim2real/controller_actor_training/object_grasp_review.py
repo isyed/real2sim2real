@@ -72,7 +72,7 @@ def world_triangles(data, pieces):
     return np.concatenate(triangles), np.concatenate(colors)
 
 
-def panel(triangles, colors, azimuth, elevation, center, scale):
+def panel(triangles, colors, azimuth, elevation, center, scale, *, depth_buffer=False):
     az, el = np.deg2rad([azimuth, elevation])
     view = np.array([np.cos(az) * np.cos(el), np.sin(az) * np.cos(el), np.sin(el)])
     right = np.array([-np.sin(az), np.cos(az), 0])
@@ -89,6 +89,31 @@ def panel(triangles, colors, azimuth, elevation, center, scale):
         255,
     ).astype(np.uint8)
     image = Image.new("RGB", (520, 460), (231, 236, 243))
+    if depth_buffer:
+        # Thin geometry near a large table triangle cannot be ordered correctly
+        # by triangle centroids. Use orthographic per-pixel depth for plan views.
+        pixels = np.asarray(image).copy()
+        depth = np.full((460, 520), -np.inf)
+        for t, z, color in zip(xy, camera_tri[:, :, 2], shade):
+            lo = np.maximum(np.floor(t.min(0)).astype(int), [0, 0])
+            hi = np.minimum(np.ceil(t.max(0)).astype(int), [519, 459])
+            if (hi < lo).any():
+                continue
+            a, b, c = t
+            denom = (b[1] - c[1]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[1] - c[1])
+            if abs(denom) < 1e-10:
+                continue
+            y, x = np.mgrid[lo[1] : hi[1] + 1, lo[0] : hi[0] + 1]
+            x, y = x + 0.5, y + 0.5
+            u = ((b[1] - c[1]) * (x - c[0]) + (c[0] - b[0]) * (y - c[1])) / denom
+            v = ((c[1] - a[1]) * (x - c[0]) + (a[0] - c[0]) * (y - c[1])) / denom
+            w = 1 - u - v
+            values = u * z[0] + v * z[1] + w * z[2]
+            region = np.s_[lo[1] : hi[1] + 1, lo[0] : hi[0] + 1]
+            keep = (u >= 0) & (v >= 0) & (w >= 0) & (values > depth[region])
+            depth[region][keep] = values[keep]
+            pixels[region][keep] = color
+        return Image.fromarray(pixels)
     draw = ImageDraw.Draw(image)
     polygons = xy.reshape(-1, 6).tolist()
     for i in np.argsort(camera_tri[:, :, 2].mean(1)):

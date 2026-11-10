@@ -11,6 +11,9 @@ ranking; they cannot override geometric or physical admission checks.
 The current pilot supports an articulated hand on a six-joint, force-limited
 Cartesian wrist fixture. **It does not include a robot arm or establish arm
 reachability, whole-body balance, hardware execution or full-task success.**
+The [second-hand support extension](BIMANUAL_SUPPORT.md) adds another articulated
+hand after the initial lift, with collision checks, bounded load sharing and
+matched parked-hand comparisons. It retains the same primary task gates.
 The default pose/closure convention uses anatomical joint suffixes from the
 Sharpa hand assets. Adding a different hand requires reviewing that mapping,
 site order, geometry/contact names, actuator limits and initial posture.

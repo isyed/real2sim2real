@@ -145,3 +145,14 @@ allow a longer hold while rejecting changed gains, approach/lift timing and
 shortened holds. Run these alongside `test_object_grasp.py`, `test_grasp_hold.py`
 and `test_grasp_feedback.py` in the optional MuJoCo runtime. Geometric tests do
 not establish contact stability; saved-state physics trials supply that evidence.
+
+`tests/test_bimanual_support.py` checks namespaced MJCF defaults/references,
+bottom-surface ray targets, named state transfer and isolation of each wrist's
+axes. Optional MuJoCo tests verify upward contact-force signs for both geometry
+orders and robot-only bias compensation under actuator limits while a separate
+unactuated object falls. Additional tests reject lateral-force-only support,
+measure support-wrist drift, bound load feedback, preserve parked/insert/seat
+timing, prevent following a falling object and reject frozen-controller changes.
+Use the optional grasp runtime to exercise MuJoCo tests. A matched-duration
+parked-hand study and exact single-hand state-archive regression remain separate
+experiment evidence.

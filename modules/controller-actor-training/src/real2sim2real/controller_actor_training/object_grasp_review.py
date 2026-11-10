@@ -1,0 +1,322 @@
+"""CPU review of saved grasp states; never reruns dynamics for a video."""
+
+import html
+import json
+from pathlib import Path
+
+import numpy as np
+from PIL import Image, ImageDraw
+import trimesh
+
+from real2sim2real.artifacts import digest, write_json
+from .object_grasp_pilot import load_scene, set_wrist_frame
+
+
+def display_pieces(model, *, scene_only=False):
+    import mujoco
+
+    cache, pieces = {}, []
+    for g in range(model.ngeom):
+        name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, g) or ""
+        if not (model.geom_group[g] == 1 or name == "table"):
+            continue
+        if scene_only and name not in ("table", "object_visual"):
+            continue
+        mesh_id = model.geom_dataid[g]
+        if mesh_id < 0:
+            continue
+        if mesh_id not in cache:
+            va, fa = model.mesh_vertadr[mesh_id], model.mesh_faceadr[mesh_id]
+            mesh = trimesh.Trimesh(
+                model.mesh_vert[va : va + model.mesh_vertnum[mesh_id]],
+                model.mesh_face[fa : fa + model.mesh_facenum[mesh_id]],
+                process=True,
+            )
+            budget = 2500 if name == "object_visual" else 200
+            if len(mesh.faces) > budget:
+                source = mesh
+                for faces in (
+                    [2500, 6000, 12000, 24000] if name == "object_visual" else [budget]
+                ):
+                    candidate = source.simplify_quadric_decimation(
+                        face_count=min(faces, len(source.faces))
+                    )
+                    if (
+                        name != "object_visual"
+                        or candidate.is_watertight == source.is_watertight
+                    ):
+                        mesh = candidate
+                        break
+            cache[mesh_id] = mesh.triangles.copy()
+        color = (
+            np.array([175, 185, 205])
+            if name != "object_visual"
+            else np.array([235, 235, 235])
+        )
+        if name == "table":
+            color = np.array([155, 104, 60])
+        if "elastomer" in name:
+            color = np.array([45, 165, 100])
+        pieces.append((g, cache[mesh_id], color))
+    return pieces
+
+
+def world_triangles(data, pieces):
+    triangles = []
+    colors = []
+    for geom, local, color in pieces:
+        triangles.append(
+            local @ data.geom_xmat[geom].reshape(3, 3).T + data.geom_xpos[geom]
+        )
+        colors.append(np.tile(color, (len(local), 1)))
+    return np.concatenate(triangles), np.concatenate(colors)
+
+
+def panel(triangles, colors, azimuth, elevation, center, scale):
+    az, el = np.deg2rad([azimuth, elevation])
+    view = np.array([np.cos(az) * np.cos(el), np.sin(az) * np.cos(el), np.sin(el)])
+    right = np.array([-np.sin(az), np.cos(az), 0])
+    camera = np.stack([right, np.cross(view, right), view])
+    camera_tri = (triangles - center) @ camera.T
+    xy = camera_tri[:, :, :2] * [scale, -scale] + [260, 235]
+    normal = np.cross(
+        triangles[:, 1] - triangles[:, 0], triangles[:, 2] - triangles[:, 0]
+    )
+    normal /= np.maximum(np.linalg.norm(normal, axis=1, keepdims=True), 1e-12)
+    shade = np.clip(
+        colors * (0.5 + 0.5 * np.abs(normal @ np.array([0.3, -0.4, 0.866])))[:, None],
+        0,
+        255,
+    ).astype(np.uint8)
+    image = Image.new("RGB", (520, 460), (231, 236, 243))
+    draw = ImageDraw.Draw(image)
+    polygons = xy.reshape(-1, 6).tolist()
+    for i in np.argsort(camera_tri[:, :, 2].mean(1)):
+        draw.polygon(polygons[i], fill=tuple(shade[i]))
+    return image
+
+
+def render(config, directory, output):
+    import mujoco
+    import imageio_ffmpeg
+
+    report = json.loads((directory / "result.json").read_text())
+    if digest(directory / "states.npz") != report["states_sha256"]:
+        raise ValueError("Recorded trial changed")
+    if (
+        digest(Path(config["output"]) / "scene/scene.xml")
+        != report["source_scene_sha256"]
+    ):
+        raise ValueError("Recorded trial belongs to another scene")
+    states = dict(np.load(directory / "states.npz"))
+    model, data, _ = load_scene(config)
+    candidate = report["candidate"]
+    set_wrist_frame(
+        model, data, config, candidate["base_position_m"], candidate["base_rotation"]
+    )
+    pieces = display_pieces(model)
+    sample = []
+    for i in np.linspace(0, len(states["qpos"]) - 1, 8).astype(int):
+        data.qpos[:] = states["qpos"][i]
+        mujoco.mj_forward(model, data)
+        sample.append(world_triangles(data, pieces)[0].reshape(-1, 3))
+    bounds = np.array([np.concatenate(sample).min(0), np.concatenate(sample).max(0)])
+    center = bounds.mean(0)
+    center[2] -= 0.015
+    scale = min(850.0, 440.0 / max(np.ptp(bounds, axis=0)))
+    count = len(states["qpos"])
+    step = 2
+    fps = 1 / float(np.median(np.diff(states["timestamps_s"]))) / step
+    path = output / (directory.name + ".mp4")
+    writer = imageio_ffmpeg.write_frames(
+        str(path),
+        (1040, 520),
+        fps=fps,
+        codec="libx264",
+        quality=7,
+        macro_block_size=1,
+        output_params=[
+            "-threads",
+            "1",
+            "-preset",
+            "veryfast",
+            "-movflags",
+            "+faststart",
+        ],
+    )
+    writer.send(None)
+    indices = list(range(0, count, step))
+    try:
+        for i in indices:
+            data.qpos[:] = states["qpos"][i]
+            mujoco.mj_forward(model, data)
+            triangles, colors = world_triangles(data, pieces)
+            image = Image.new("RGB", (1040, 520), (248, 250, 252))
+            draw = ImageDraw.Draw(image)
+            image.paste(panel(triangles, colors, -60, 28, center, scale), (0, 40))
+            image.paste(panel(triangles, colors, 125, 55, center, scale), (520, 40))
+            row = report["records"][i]
+            draw.text(
+                (15, 10),
+                f"Saved physics | {directory.name} | {row['phase']} | {row['time_s']:.2f}s",
+                fill=(20, 30, 45),
+            )
+            draw.text(
+                (15, 502),
+                f"Object bottom {row['minimum_object_height_m'] * 1000:.1f} mm | wrist fixture, arm not modelled | no object assistance",
+                fill=(20, 30, 45),
+            )
+            writer.send(np.asarray(image))
+            if i == indices[len(indices) // 2] or i == indices[-1]:
+                image.save(output / (directory.name + f"-{i:04d}.jpg"), quality=92)
+    finally:
+        writer.close()
+    reader = imageio_ffmpeg.read_frames(str(path))
+    meta = next(reader)
+    decoded = sum(1 for _ in reader)
+    reader.close()
+    if decoded != len(indices):
+        raise ValueError("Rendered video incomplete")
+    from real2sim2real.review_media import prepare
+
+    portable = prepare(path, output / (directory.name + ".playback"))
+    return dict(
+        path=path.name,
+        frames=decoded,
+        fps=fps,
+        size=meta["size"],
+        sha256=digest(path),
+        state_sha256=report["states_sha256"],
+        display_only_decimation=True,
+        dynamics_rerun=False,
+        portable_media=portable,
+    )
+
+
+def review(config):
+    import mujoco
+    from real2sim2real.review_media import player
+
+    root = Path(config["output"])
+    output = root / config.get("review_directory", "review")
+    output.mkdir(exist_ok=False)
+    evaluation_root = root / config.get("evaluation_directory", "evaluation")
+    evaluation = json.loads((evaluation_root / "evaluation.json").read_text())
+    videos = []
+    selected = evaluation.get("selected_trial")
+    nominal = evaluation["trials"]
+    chosen = next((r for r in nominal if r["directory"] == selected), None)
+    if chosen is None and nominal:
+        chosen = max(nominal, key=lambda r: r["hold_minimum_clearance_m"])
+    render_rows = ([] if chosen is None else [chosen]) + evaluation["variants"]
+    failed = next((r for r in nominal if not r["success"] and r is not chosen), None)
+    if failed is not None:
+        render_rows.append(failed)
+    for row in render_rows:
+        videos.append(render(config, evaluation_root / row["directory"], output))
+    model, data, _ = load_scene(config)
+    pieces = display_pieces(model, scene_only=True)
+    settled = json.loads((root / "settling.json").read_text())
+    j = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, "task_object_free")
+    qid = model.jnt_qposadr[j]
+    initial = Image.new("RGB", (1040, 500), (248, 250, 252))
+    draw = ImageDraw.Draw(initial)
+    for col, label in enumerate(
+        ["Reconstructed initial pose", "Gravity-settled task start"]
+    ):
+        if col:
+            data.qpos[qid : qid + 7] = settled["object_qpos"]
+        mujoco.mj_forward(model, data)
+        triangles, colors = world_triangles(data, pieces)
+        initial.paste(
+            panel(triangles, colors, -60, 25, np.array([0.025, 0.065, 0.04]), 850),
+            (col * 520, 40),
+        )
+        draw.text((col * 520 + 15, 10), label, fill=(20, 30, 45))
+    initial.save(output / "initialization.jpg", quality=95)
+    rows = []
+    for row in [*evaluation["trials"], *evaluation["variants"]]:
+        rows.append(
+            f"<tr><td>{html.escape(row['directory'])}</td><td>{row['success']}</td><td>{row['hold_minimum_clearance_m'] * 1000:.1f}</td><td>{row['max_robot_penetration_m'] * 1000:.2f}</td><td>{html.escape(', '.join(row['rejected_for']))}</td></tr>"
+        )
+    (output / "review.html").write_text(
+        '<!doctype html><meta charset="utf-8"><title>Object-centric grasp pilot</title><style>body{font:17px system-ui;max-width:1100px;margin:30px auto;background:#18202b;color:#eee}a{color:#8cf}video,img{width:100%}td,th{padding:8px;text-align:left}pre{white-space:pre-wrap}</style><h1>Object-centric grasp and lift</h1><p>Actual saved CPU MuJoCo states. Force-limited wrist fixture and articulated Sharpa hand; arm reachability and hardware execution are not validated. Human finger trajectories are not targets. The object has no actuator, weld, external force or gravity assistance.</p><h2>'
+        + html.escape(evaluation["decision"])
+        + "</h2><table><tr><th>Trial</th><th>Pass</th><th>Hold clearance, mm</th><th>Max robot penetration, mm</th><th>Failures</th></tr>"
+        + "".join(rows)
+        + "</table><h2>Starting state</h2><p>The gravity-settled task start differs from the reconstructed pose by "
+        + f"{settled['translation_m'] * 1000:.1f} mm and {settled['rotation_deg']:.1f} degrees. The original reconstruction is preserved."
+        + '</p><img src="initialization.jpg">'
+        + "".join(
+            f"<h2>{html.escape(v['path'])}</h2>"
+            + player(
+                v["path"],
+                Path(v["path"]).stem + ".playback/video.webm",
+                Path(v["path"]).stem + ".playback/preview.gif",
+                embedded_gif=output / (Path(v["path"]).stem + ".playback/preview.gif"),
+                embedded_webm=output / (Path(v["path"]).stem + ".playback/video.webm"),
+            )
+            for v in videos
+        )
+        + f'<p><a href="../{evaluation_root.name}/evaluation.json">Evaluation</a> | <a href="../scene/collision_audit.json">Collision proxy audit</a> | <a href="../settling.json">Settling</a></p>'
+    )
+    write_json(
+        output / "review.json",
+        dict(
+            videos=videos,
+            evaluation_sha256=digest(evaluation_root / "evaluation.json"),
+            config=config,
+        ),
+    )
+    return videos
+
+
+def review_trials(
+    config, trials, output, *, title="Fixed-grasp controller diagnostics"
+):
+    """Compare named saved trials across bounded studies without rerunning them."""
+    from real2sim2real.review_media import player
+
+    output = Path(output)
+    output.mkdir(parents=True, exist_ok=False)
+    sections, videos = [], []
+    for directory in map(Path, trials):
+        result = json.loads((directory / "result.json").read_text())
+        video = render(config, directory, output)
+        videos.append(
+            dict(
+                **video,
+                source_result=str(directory / "result.json"),
+                source_result_sha256=digest(directory / "result.json"),
+            )
+        )
+        stem = directory.name
+        verdict = (
+            "Pass"
+            if result["success"]
+            else "Rejected: " + ", ".join(result["rejected_for"])
+        )
+        sections.append(
+            f"<h2>{html.escape(stem)}</h2><p>{html.escape(verdict)}. "
+            f"Mass {config['physics']['mass_kg'] * result['mass_scale']:.2f} kg; friction {result['friction']:.2f}. "
+            f"Minimum hold clearance {result['hold_minimum_clearance_m'] * 1000:.1f} mm; "
+            f"hold drift {result['hold_slip_m'] * 1000:.1f} mm ({html.escape(result.get('hold_slip_frame', 'world-vector legacy metric'))} frame).</p>"
+            + player(
+                video["path"],
+                stem + ".playback/video.webm",
+                stem + ".playback/preview.gif",
+                embedded_gif=output / (stem + ".playback/preview.gif"),
+                embedded_webm=output / (stem + ".playback/video.webm"),
+            )
+        )
+    (output / "review.html").write_text(
+        '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+        f"<title>{html.escape(title)}</title><style>body{{font:17px/1.5 system-ui;max-width:1100px;margin:30px auto;padding:0 20px;background:#18202b;color:#eee}}a{{color:#8cf}}video,img{{width:100%}}details{{padding:12px;background:#293745}}</style>"
+        f"<h1>{html.escape(title)}</h1><p>Actual saved CPU physics. Articulated hand and force-limited wrist fixture; no arm or object assistance. Human finger trajectories are not targets. Short passes do not erase longer hold failures.</p>"
+        + "".join(sections)
+        + "</html>"
+    )
+    write_json(
+        output / "review.json", dict(videos=videos, config=config, physics_rerun=False)
+    )
+    return videos

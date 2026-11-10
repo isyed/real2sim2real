@@ -122,3 +122,10 @@ inside the optional grasp runtime to exercise those tests instead of skipping
 them. Real-scene settling, collision approximation, nominal lift and fixed-grasp
 parameter trials remain separate experiments; a nominal pass is not robustness
 or hardware validation.
+
+`tests/test_grasp_feedback.py` checks the direction and bounds of contact and
+orientation corrections, wrist-frame drift invariance under rigid rotation, and
+the separation between diagnostic validation and development admission.
+`tests/test_review_media.py` exercises actual MP4-to-WebM/GIF conversion, complete
+frame decoding, unchanged source bytes, cache rejection and HTML fallback
+escaping. Browser playback/seek checks remain separate local review evidence.

@@ -376,3 +376,10 @@ and physical criteria, then compares matched nominal and validation cases.
 `retention_review` renders saved states with separate physical/fidelity outcomes.
 See [GRASP_RETENTION.md](../../docs/GRASP_RETENTION.md) for privileged observations,
 contact freezes, saturation and the distinction between retention and pad slip.
+
+`retained_pad_search` reuses pad position/normal fits and closing-path checks
+around a successful grasp before matched dynamics. `arm_path_audit` and
+`arm_path_review` check an explicit local URDF against saved wrist paths,
+including hand-frame compatibility, joint/speed limits and nonadjacent arm
+collisions. See [ARM_PATH_AUDIT.md](../../docs/ARM_PATH_AUDIT.md). These are
+kinematic integration diagnostics, not arm torque or physical execution claims.

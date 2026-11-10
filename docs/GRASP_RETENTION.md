@@ -58,3 +58,26 @@ reference outcomes separately. Identical state archives may share one video.
 
 See [guided motion](GUIDED_MOTION.md), [wrist coordination](WRIST_COORDINATION.md)
 and [testing](TESTING.md).
+
+## Pad replanning around the retained grasp
+
+`retained_pad_search --config /data/pad-search.json` reuses the existing actual
+collision-pad planner around a hash-pinned successful `parent_trial`. Declare up
+to four named `variants` with `finger_offsets_m`, explicit `pad_planning`
+settings, `fidelity_limits`, finite `deadline_s`, fresh `output` and longer or
+altered-material `validation` cases. Pose, scene, support controller and source
+motion are retained. Position/normal pad IK fits grasp, opening and preload
+commands; the original lateral approach is resampled against collisions.
+
+The planner preserves a separate vertical-path diagnostic, then gates the actual
+retained approach and closing path. Single-hand gravity balance remains relevant
+when the second hand arrives only after lift. Its per-pad normal-force budget is
+an explicit conservative assumption, not inferred actuator capacity. Passing
+this point-contact screen does not establish force closure or dynamic stability.
+
+Only geometrically admitted candidates run physics. Their fitted closing path
+replaces the uniform finger closing offset; the original controller remains an
+exact-state baseline. No physical threshold changes. Only a complete nominal
+physical/fidelity pass can enter frozen matched validation. Geometric rejections
+are retained even if position/normal IK errors are small; failed candidates are
+not sent to dynamics merely to generate a rollout.

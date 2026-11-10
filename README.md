@@ -14,6 +14,8 @@ tests and explicit limitations.
 [bounded grasp retention](docs/GRASP_RETENTION.md) keep trajectory fidelity and
 physical acceptance separate. [Visible-region geometry](docs/VISIBLE_REGION_GEOMETRY.md)
 checks observation agreement before accepting a physically settled pose.
+[Arm path audits](docs/ARM_PATH_AUDIT.md) check explicit embodiments against saved
+wrist trajectories before dynamic integration.
 
 Original project contributions are licensed under [Apache License 2.0](LICENSE).
 Bundled third-party components and upstream documentation retain their own

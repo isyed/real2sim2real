@@ -136,3 +136,43 @@ cannot pass and contact/penetration gates remain distinct. `test_review_server.p
 checks video byte-range parsing and rejects hidden files, private asset formats
 and paths/symlinks escaping the selected review directory. The portable-player
 tests also check a self-contained primary video for IDE previews.
+
+`tests/test_contact_layout.py` checks gravity torque against a known lever,
+reversed thumb/finger surfaces (including legacy proposals), explicit missing
+surface rejection, and local solid spans on a hollow vessel without bridging its
+cavity. It rejects open geometry and invalid budgets. Frozen-controller tests
+allow a longer hold while rejecting changed gains, approach/lift timing and
+shortened holds. Run these alongside `test_object_grasp.py`, `test_grasp_hold.py`
+and `test_grasp_feedback.py` in the optional MuJoCo runtime. Geometric tests do
+not establish contact stability; saved-state physics trials supply that evidence.
+
+`tests/test_bimanual_support.py` checks namespaced MJCF defaults/references,
+bottom-surface ray targets, named state transfer and isolation of each wrist's
+axes. Optional MuJoCo tests verify upward contact-force signs for both geometry
+orders and robot-only bias compensation under actuator limits while a separate
+unactuated object falls. Additional tests reject lateral-force-only support,
+measure support-wrist drift, bound load feedback, preserve parked/insert/seat
+timing, prevent following a falling object and reject frozen-controller changes.
+Use the optional grasp runtime to exercise MuJoCo tests. A matched-duration
+parked-hand study and exact single-hand state-archive regression remain separate
+experiment evidence.
+
+`tests/test_wrist_coordination.py` checks common rigid motion around an object
+pivot, relative wrist-frame preservation, feedback direction/speed/travel bounds,
+independent world drift and frozen coordination settings. Its optional MuJoCo
+test checks nontrivially oriented wrist fixtures, shared joint-limit projection
+and unchanged object/physical coordinates. Run it alongside the grasp/support
+tests above in the optional runtime. Passing kinematic checks does not imply
+contact retention; compare actual force-limited trials against the pinned baseline.
+
+`test_grasp_posture_search.py` verifies narrowed robot-owned IK bounds without
+changes to physical joint ranges, explicit invalid-bound rejection, signed
+sampled wrist margins and all-case candidate admission. Run its optional MuJoCo
+checks in the grasp runtime; geometric feasibility does not certify loaded contact.
+
+`test_finger_closure.py` verifies named closing-offset ownership and bounds,
+frozen settings, scratch command kinematics without physical state writes,
+bounded independent finger tracking/force offsets, and rejection of solver clock
+resets or warnings. Run it with the grasp/support tests in the optional MuJoCo
+runtime. Model contact evidence and unchanged baseline state archives remain
+separate experiment checks.

@@ -11,6 +11,12 @@ ranking; they cannot override geometric or physical admission checks.
 The current pilot supports an articulated hand on a six-joint, force-limited
 Cartesian wrist fixture. **It does not include a robot arm or establish arm
 reachability, whole-body balance, hardware execution or full-task success.**
+The [second-hand support extension](BIMANUAL_SUPPORT.md) adds another articulated
+hand after the initial lift, with collision checks, bounded load sharing and
+matched parked-hand comparisons. It retains the same primary task gates.
+Optional [wrist coordination](WRIST_COORDINATION.md) moves both commanded wrists
+about a fixed object pivot, with common joint-limit projection and an independent
+world-drift audit. Contact retention still requires physical evaluation.
 The default pose/closure convention uses anatomical joint suffixes from the
 Sharpa hand assets. Adding a different hand requires reviewing that mapping,
 site order, geometry/contact names, actuator limits and initial posture.
@@ -139,6 +145,40 @@ results. Nominal lift success does not validate uncertain human fingers, a full
 episode reference or a physical robot.
 
 ## Feedback and robustness experiments
+
+### Alternative contact layouts
+
+Set `planning.surface_search: local_spans` to use
+`retargeting.contact_layout.surface_layouts`. Unlike the default outermost-ray
+search, this pairs consecutive entry/exit intersections through solid material,
+so a vessel wall can be proposed without treating the cavity as solid. It requires
+a closed, consistently oriented volume. `yaw_samples` (2–16, default 8) bounds
+horizontal directions; existing width, height, finger-spacing and candidate
+limits still apply. Both thumb-side layouts must have nearby opposing-finger
+surfaces. This is a limited proposal family, not an exhaustive feasibility test.
+
+`gravity_lever_weight` (default 1) weights the horizontal distance from a contact
+centre to the uniform-density mesh centre of mass. `gravity_lever` also reports
+the gravity torque per kilogram about that centre. A shorter lever reduces this
+static torque demand; it does not certify force closure, actual finger loading,
+stability or the object's true mass distribution. Thin reconstructed walls may
+be comparable to collision-proxy error and should not be treated as reliable
+grasp features merely because ray intersections exist.
+
+New plans exchange the thumb and opposing contact surfaces when reversing the
+wrist orientation. Anatomical finger order is handled separately. Saved plans
+and previous results are unchanged. `surface_pairs.json` records the search
+method and, for local spans, sampled width/lever diagnostics and missing finger
+surfaces. Plans retain rejected target hypotheses. Search all admitted layouts
+through contact IK, approach collision checks and sustained free-object holds
+before promotion. Keep nominal selection separate from frozen parameter checks;
+longer holds can reveal failures hidden by shorter trials.
+
+Fixed-grasp validation rejects feedback changes. For trials carrying a full
+configuration receipt it also rejects changed approach/lift schedules and shorter
+holds; it restores the closure from the selected result. Legacy results without
+that receipt cannot provide the same trajectory comparison. A new contact layout
+must be evaluated as a new experiment, not substituted into an old selection.
 
 Optional `contact_feedback` integrates an extra, bounded closure command for the
 opposing fingers from their summed normal contact force. Its config declares

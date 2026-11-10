@@ -114,6 +114,18 @@ def render(config, directory, output):
     set_wrist_frame(
         model, data, config, candidate["base_position_m"], candidate["base_rotation"]
     )
+    if "support" in candidate:
+        from .object_grasp_pilot import set_root_frame
+
+        hand = candidate["support"]
+        set_root_frame(
+            model,
+            data,
+            hand["root_body"],
+            hand["fixture_prefix"],
+            hand["base_position_m"],
+            hand["base_rotation"],
+        )
     pieces = display_pieces(model)
     sample = []
     for i in np.linspace(0, len(states["qpos"]) - 1, 8).astype(int):
@@ -296,11 +308,63 @@ def review_trials(
             if result["success"]
             else "Rejected: " + ", ".join(result["rejected_for"])
         )
+        support_note = ""
+        if "support_load_fraction" in result:
+            drift = result["support_wrist_drift_m"]
+            support_note = (
+                f"<p>Second hand: mean upward force on the object {result['support_mean_upward_force_n']:.2f} N; "
+                f"at least 10% of object weight in {result['support_load_fraction'] * 100:.1f}% of hold samples; "
+                f"support-wrist drift {'unavailable' if drift is None else f'{drift * 1000:.1f} mm'}. "
+                f"Support enabled: {result['support_controller'].get('enabled', True)}. "
+                "Both wrists are force limited; no arms are modelled.</p>"
+            )
+        from .wrist_coordination import hold_world_motion
+
+        world_drift = hold_world_motion(result["records"])[
+            "hold_world_horizontal_drift_m"
+        ]
+        hold = [r for r in result["records"] if r["phase"] == "hold"]
+        rotation = max((r["rotation_change_deg"] for r in hold), default=None)
+        motion_note = (
+            "<p>Independent world-frame horizontal drift: "
+            + ("unavailable" if world_drift is None else f"{world_drift * 1000:.2f} mm")
+            + "; maximum object rotation: "
+            + ("unavailable" if rotation is None else f"{rotation:.2f} degrees")
+            + f"; opposing-finger contact in {result['hold_opposed_contact_fraction'] * 100:.1f}% of hold samples.</p>"
+        )
+        contact_note = ""
+        if result.get("hold_contact_support"):
+            contact_note = "<table><tr><th>Primary contact group</th><th>Mean normal force (N)</th><th>Active hold samples</th></tr>"
+            for group, evidence in result["hold_contact_support"].items():
+                contact_note += (
+                    f"<tr><td>{html.escape(group)}</td><td>{evidence['mean_normal_force_n']:.3f}</td>"
+                    f"<td>{evidence['active_sample_fraction'] * 100:.1f}%</td></tr>"
+                )
+            contact_note += "</table><p>Active means normal force above 0.1 N. Normal force is not vertical load share.</p>"
+        if result.get("closure_target_geometry"):
+            error = max(
+                result["closure_target_geometry"]["closed_command_target_error_m"]
+            )
+            contact_note += (
+                f"<p>Largest unconstrained closed-command fingertip error: {error * 1000:.1f} mm. "
+                "This kinematic command audit is separate from actual loaded contacts above.</p>"
+            )
+        if "coordination" in result:
+            diag = result["coordination"]
+            motion_note += (
+                "<p>Common wrist correction active; joint-limit projection used in "
+                f"{diag.get('coordination_projected_steps', 'unrecorded')} of {diag.get('coordination_update_steps', 'unrecorded')} updates. "
+                "Exact simulated object pose is a privileged feedback input. "
+                "Reduced drift alone does not establish stable contact.</p>"
+            )
         sections.append(
             f"<h2>{html.escape(stem)}</h2><p>{html.escape(verdict)}. "
             f"Mass {config['physics']['mass_kg'] * result['mass_scale']:.2f} kg; friction {result['friction']:.2f}. "
             f"Minimum hold clearance {result['hold_minimum_clearance_m'] * 1000:.1f} mm; "
             f"hold drift {result['hold_slip_m'] * 1000:.1f} mm ({html.escape(result.get('hold_slip_frame', 'world-vector legacy metric'))} frame).</p>"
+            + support_note
+            + motion_note
+            + contact_note
             + player(
                 video["path"],
                 stem + ".playback/video.webm",

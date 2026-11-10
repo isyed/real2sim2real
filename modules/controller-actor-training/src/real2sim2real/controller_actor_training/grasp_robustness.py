@@ -33,6 +33,13 @@ def summary(result, directory):
     ]
     return dict(
         directory=str(directory),
+        **{
+            k: v
+            for k, v in result.items()
+            if k.startswith("support_")
+            or k.startswith("coordination_")
+            or k == "hold_world_horizontal_drift_m"
+        },
         **{k: result[k] for k in keys},
         hold_max_rotation_deg=max(
             (r["rotation_change_deg"] for r in hold), default=None
@@ -83,9 +90,16 @@ def compare(config):
         ):
             raise ValueError("Use a local trial name")
     for controller in controllers:
-        if set(controller) - {"name", "contact_feedback", "orientation_feedback"}:
+        if set(controller) - {
+            "name",
+            "contact_feedback",
+            "orientation_feedback",
+            "object_frame_coordination",
+            "finger_closure",
+            "finger_surface_feedback",
+        }:
             raise ValueError(
-                "Only declared contact/orientation controller corrections may vary"
+                "Only declared contact/orientation/coordination corrections may vary"
             )
     output.mkdir(parents=True, exist_ok=False)
     write_json(output / "protocol.json", config)
@@ -94,7 +108,13 @@ def compare(config):
     base["rollout"]["close_offset_rad"] = selected["controller"]["close_offset_rad"]
     for controller in controllers:
         current = deepcopy(base)
-        for name in ("contact_feedback", "orientation_feedback"):
+        for name in (
+            "contact_feedback",
+            "orientation_feedback",
+            "object_frame_coordination",
+            "finger_closure",
+            "finger_surface_feedback",
+        ):
             current[name] = controller.get(name)
         group = []
         for case in cases:
@@ -142,7 +162,13 @@ def compare(config):
         controller = next(c for c in controllers if c["name"] == chosen["name"])
         current = deepcopy(base)
         current["rollout"]["hold_s"] = settings["validation_hold_s"]
-        for name in ("contact_feedback", "orientation_feedback"):
+        for name in (
+            "contact_feedback",
+            "orientation_feedback",
+            "object_frame_coordination",
+            "finger_closure",
+            "finger_surface_feedback",
+        ):
             current[name] = controller.get(name)
         for case in validation_cases:
             name = "validation--" + case["name"]
@@ -217,7 +243,13 @@ def validate_fixed(config):
     current = deepcopy(source)
     current["rollout"]["close_offset_rad"] = selected["controller"]["close_offset_rad"]
     current["rollout"]["hold_s"] = validation["hold_s"]
-    for key in ("contact_feedback", "orientation_feedback"):
+    for key in (
+        "contact_feedback",
+        "orientation_feedback",
+        "object_frame_coordination",
+        "finger_closure",
+        "finger_surface_feedback",
+    ):
         current[key] = controllers[0].get(key)
     cases = validation["cases"]
     if not 1 <= len(cases) <= 12:

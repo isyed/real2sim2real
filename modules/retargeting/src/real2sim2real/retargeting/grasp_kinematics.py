@@ -74,6 +74,8 @@ def fit_contacts(
     *,
     max_nfev=160,
     penetration_tolerance_m=0.001,
+    fixture_prefix="fixture_",
+    joint_bounds=None,
 ):
     import mujoco
 
@@ -85,9 +87,27 @@ def fit_contacts(
     weights = np.full(len(initial), 0.03)
     for i, j in enumerate(idx["joints"]):
         name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_JOINT, int(j))
-        if name.startswith("fixture_"):
-            limit = 0.45 if name.startswith("fixture_r") else 0.06
+        if name.startswith(fixture_prefix):
+            limit = 0.45 if name.startswith(fixture_prefix + "r") else 0.06
             lower[i], upper[i], weights[i] = -limit, limit, 0.05 / limit
+    # Optional posture search may reserve travel, never enlarge physical or IK
+    # bounds. Keeping the default unchanged preserves existing saved plans.
+    names = [model.joint(int(j)).name for j in idx["joints"]]
+    for name, bounds in (joint_bounds or {}).items():
+        if name not in names:
+            raise ValueError("Posture bound must name a robot-owned joint")
+        i = names.index(name)
+        values = np.asarray(bounds, float)
+        physical = model.jnt_range[idx["joints"][i]]
+        if (
+            values.shape != (2,)
+            or not np.isfinite(values).all()
+            or values[0] >= values[1]
+            or values[0] < max(lower[i], physical[0])
+            or values[1] > min(upper[i], physical[1])
+        ):
+            raise ValueError("Posture bounds must narrow existing joint limits")
+        lower[i], upper[i] = values
     initial = np.clip(initial, lower + 1e-7, upper - 1e-7)
     cache = {}
 
@@ -95,7 +115,9 @@ def fit_contacts(
         if "q" in cache and np.array_equal(q, cache["q"]):
             return cache["r"], cache["j"]
         data.qpos[idx["q"]] = q
-        mujoco.mj_forward(model, data)
+        # IK needs positions, Jacobians and collision witnesses, not a force
+        # solve on intermediate (possibly deeply intersecting) hypotheses.
+        mujoco.mj_fwdPosition(model, data)
         r = [(data.site_xpos[sites] - targets).ravel() / 0.006, (q - initial) * weights]
         rows = []
         for site in sites:

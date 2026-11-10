@@ -143,3 +143,11 @@ for contact/force-sharing investigation against the frozen controller. Missing
 bearing geometry calls for better observations or measurements. Substantial
 policy training follows an explicit complete acceptance decision for its intended
 scope; it is not a way to conceal failures in the physical scene or command path.
+
+The object-reference-control route also supports an optional simultaneous
+bilateral grasp search before arm-path admission. See [bilateral body/rim
+grasps](BILATERAL_GRASPS.md). It verifies both complete hand paths, finite pad
+patches and shared-force budgets, then closes both hands before lifting. A
+stationary diagnostic is kept distinct from demonstrated-motion success. New
+planning or partial-lift success does not automatically start arm dynamics or
+policy training.

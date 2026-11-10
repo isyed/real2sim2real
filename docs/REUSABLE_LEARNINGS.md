@@ -223,3 +223,18 @@ transfer, opening, approach, preload, force balance and finite patch support can
 all reject an otherwise convincing local fit. Small pose residuals do not imply
 that every intended pad actually touches the object. Planning failures do not
 replace an already passing physical baseline.
+
+## Bilateral grasp admission requires retention under load
+
+Opposing rim contacts can substantially shorten the combined contact lever and
+pass static gravity balance while still slipping during a real simulated lift.
+Verify both hands together; separately valid hand fits can have intersecting
+palms. Explicit hand-axis and inner/outer-wall conventions matter for wrist
+initialization. Fixture re-centering can recover planning travel without moving
+waypoints, but requires a fresh interpolation/collision check.
+
+Use a stationary hold to distinguish acquisition/retention problems from moving
+reference tracking. Label that diagnostic separately so it cannot qualify the
+original task. A brief lift or a static force budget is not evidence of sustained
+contact-force realization. Independent wrist corrections inherited from a staged
+support controller may need a coordinated controller for opposing grasps.

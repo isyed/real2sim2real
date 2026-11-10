@@ -9,6 +9,36 @@ import numpy as np
 from .hand_observation_fit import visible_landmarks
 
 
+def close_fingertip_pairs(points, weights, *, separation_px=8.0):
+    """Flag distinct fingertip identities sharing a small image neighborhood.
+
+    This is an observability warning, not proof of a mislabeled point: distinct
+    fingers can overlap in projection. Such pairs need extra identity evidence
+    before being treated as two independently observed anatomical targets.
+    """
+    points, weights = np.asarray(points), np.asarray(weights)
+    if points.shape != (21, 2) or weights.shape != (21,):
+        raise ValueError("One 21-joint hand observation required")
+    if not np.isfinite(separation_px) or separation_px <= 0:
+        raise ValueError("Positive finite image separation required")
+    tips = [
+        j for j in (4, 8, 12, 16, 20) if weights[j] > 0 and np.isfinite(points[j]).all()
+    ]
+    pairs = []
+    for i, a in enumerate(tips):
+        for b in tips[i + 1 :]:
+            distance = float(np.linalg.norm(points[a] - points[b]))
+            if distance <= separation_px:
+                pairs.append(
+                    dict(
+                        joints=[a, b],
+                        separation_px=distance,
+                        requires_identity_review=True,
+                    )
+                )
+    return pairs
+
+
 def select_seeds(observations, masks, frame_ids, seed_ids, heldout_ids):
     """Use only explicitly selected detector frames, never evaluation frames."""
     if set(seed_ids) & set(heldout_ids):

@@ -494,3 +494,40 @@ retained meshes; old pointwise deltas are renamed `parent_local_delta_rad`.
 Sequence admission establishes relative consistency improvement, not readiness
 for control. Inspect absolute finger motion at joins, conflicting observations
 and held-out image checks before retargeting or physical replay.
+
+### Cross-camera observation audit
+
+`python -m real2sim2real.egocentric.hand_anchor_audit --config audit.json` compares
+existing hand hypotheses with synchronized undistorted review images. It runs
+on CPU and writes a fresh `audit.json` and `review.html`; it never updates poses.
+Generate review inputs with `hand_review_inputs.prepare_review_inputs`, using
+the original capture manifest alongside its videos. Source video hashes,
+capture timestamps and the accepted reconstruction calibration are checked
+during preparation. Video decoding requires the declared `av` dependency.
+
+The audit config declares `views` (directory containing `views.json`),
+`observations` (point-track NPZ), optional evaluation-only `annotations`,
+`frame_ids`, two `secondary_views`, a fresh `output`, and `variants` mapping
+display names to `{ "path": "/data/hypotheses.npz", "joints_key": "camera_joints" }`.
+Use `diagnostic_camera_joints` explicitly to inspect a rejected proposal.
+Candidate arrays must share the observation frame IDs and capture timestamps.
+Example configurations and image assets for individual experiments belong in
+downstream private repositories.
+
+The generic `multiview_points` helpers search along calibrated epipolar lines
+over a declared depth interval, using normalized patch correlation, uniqueness
+and reciprocal matches. Defaults are 0.2–1.5 metres, patch radius 6 pixels,
+correlation ≥0.85, uniqueness margin ≥0.08 and cycle error ≤2 pixels. Two
+secondary matches are required for a three-view surface hypothesis; inconsistent
+pair depths (>30 mm), reprojection (>2 px), small ray angles (<1 degree) or
+high one-pixel depth sensitivity (>20 mm) reject it. These are explicit
+diagnostic thresholds, not calibrated confidence estimates. `matching` can
+override the search/patch parameters.
+
+The audit also flags distinct observed fingertips within 8 pixels, which can
+indicate occlusion or ambiguous identity. It does not relabel those fingers or
+turn missing fingers into measurements. Appearance matches establish neither
+anatomical joint centres nor control readiness. Secondary views overlap with
+the stereo-depth source; this is a consistency audit, not independent 3D ground
+truth. Approximate visual labels stay separate from automatic matching. Source
+image, input-array and implementation hashes accompany every report.

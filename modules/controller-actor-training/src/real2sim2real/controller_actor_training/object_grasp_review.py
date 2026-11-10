@@ -332,6 +332,23 @@ def review_trials(
             + ("unavailable" if rotation is None else f"{rotation:.2f} degrees")
             + f"; opposing-finger contact in {result['hold_opposed_contact_fraction'] * 100:.1f}% of hold samples.</p>"
         )
+        contact_note = ""
+        if result.get("hold_contact_support"):
+            contact_note = "<table><tr><th>Primary contact group</th><th>Mean normal force (N)</th><th>Active hold samples</th></tr>"
+            for group, evidence in result["hold_contact_support"].items():
+                contact_note += (
+                    f"<tr><td>{html.escape(group)}</td><td>{evidence['mean_normal_force_n']:.3f}</td>"
+                    f"<td>{evidence['active_sample_fraction'] * 100:.1f}%</td></tr>"
+                )
+            contact_note += "</table><p>Active means normal force above 0.1 N. Normal force is not vertical load share.</p>"
+        if result.get("closure_target_geometry"):
+            error = max(
+                result["closure_target_geometry"]["closed_command_target_error_m"]
+            )
+            contact_note += (
+                f"<p>Largest unconstrained closed-command fingertip error: {error * 1000:.1f} mm. "
+                "This kinematic command audit is separate from actual loaded contacts above.</p>"
+            )
         if "coordination" in result:
             diag = result["coordination"]
             motion_note += (
@@ -347,6 +364,7 @@ def review_trials(
             f"hold drift {result['hold_slip_m'] * 1000:.1f} mm ({html.escape(result.get('hold_slip_frame', 'world-vector legacy metric'))} frame).</p>"
             + support_note
             + motion_note
+            + contact_note
             + player(
                 video["path"],
                 stem + ".playback/video.webm",

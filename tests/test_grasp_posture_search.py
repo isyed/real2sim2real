@@ -125,6 +125,8 @@ def test_comparison_refuses_changed_baseline_feedback_or_geometric_gates(
     source(config)
     for key, value in (
         ("contact_feedback", {"gain": 2}),
+        ("finger_closure", {"offsets_rad": {"finger_PIP": 0.1}}),
+        ("finger_surface_feedback", {"gain_s_inv": 4}),
         ("planning", {"contact_error_m": 0.02}),
     ):
         changed = deepcopy(config)

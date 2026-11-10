@@ -95,6 +95,8 @@ def compare(config):
             "contact_feedback",
             "orientation_feedback",
             "object_frame_coordination",
+            "finger_closure",
+            "finger_surface_feedback",
         }:
             raise ValueError(
                 "Only declared contact/orientation/coordination corrections may vary"
@@ -110,6 +112,8 @@ def compare(config):
             "contact_feedback",
             "orientation_feedback",
             "object_frame_coordination",
+            "finger_closure",
+            "finger_surface_feedback",
         ):
             current[name] = controller.get(name)
         group = []
@@ -162,6 +166,8 @@ def compare(config):
             "contact_feedback",
             "orientation_feedback",
             "object_frame_coordination",
+            "finger_closure",
+            "finger_surface_feedback",
         ):
             current[name] = controller.get(name)
         for case in validation_cases:
@@ -241,6 +247,8 @@ def validate_fixed(config):
         "contact_feedback",
         "orientation_feedback",
         "object_frame_coordination",
+        "finger_closure",
+        "finger_surface_feedback",
     ):
         current[key] = controllers[0].get(key)
     cases = validation["cases"]

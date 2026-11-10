@@ -169,3 +169,10 @@ contact retention; compare actual force-limited trials against the pinned baseli
 changes to physical joint ranges, explicit invalid-bound rejection, signed
 sampled wrist margins and all-case candidate admission. Run its optional MuJoCo
 checks in the grasp runtime; geometric feasibility does not certify loaded contact.
+
+`test_finger_closure.py` verifies named closing-offset ownership and bounds,
+frozen settings, scratch command kinematics without physical state writes,
+bounded independent finger tracking/force offsets, and rejection of solver clock
+resets or warnings. Run it with the grasp/support tests in the optional MuJoCo
+runtime. Model contact evidence and unchanged baseline state archives remain
+separate experiment checks.

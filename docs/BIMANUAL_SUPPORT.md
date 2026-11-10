@@ -62,9 +62,10 @@ and `seat_s` extend the trial; they do not shorten the scored hold.
 A single measured object translation aligns the insertion to its planned lifted
 state, limited by `max_alignment_m` (at most 0.05 m). That alignment is then
 frozen. Both wrists share subsequent changes in the primary vertical command.
-The support hand does not follow a falling object's position downward. Rotational
-and horizontal coordination are limited; there is no general bimanual planner
-or arm collision solver in this adapter.
+The support hand does not follow a falling object's position downward. Optional
+[object-frame wrist coordination](WRIST_COORDINATION.md) adds a bounded common
+horizontal/rotational correction during hold. There is no general bimanual
+planner or arm collision solver in this adapter.
 
 Optional `actuator_bias_compensation` offsets the support position commands by
 robot gravity/Coriolis bias divided by actuator stiffness. It acts through the

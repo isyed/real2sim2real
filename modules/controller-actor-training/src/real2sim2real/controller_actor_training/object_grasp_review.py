@@ -318,12 +318,35 @@ def review_trials(
                 f"Support enabled: {result['support_controller'].get('enabled', True)}. "
                 "Both wrists are force limited; no arms are modelled.</p>"
             )
+        from .wrist_coordination import hold_world_motion
+
+        world_drift = hold_world_motion(result["records"])[
+            "hold_world_horizontal_drift_m"
+        ]
+        hold = [r for r in result["records"] if r["phase"] == "hold"]
+        rotation = max((r["rotation_change_deg"] for r in hold), default=None)
+        motion_note = (
+            "<p>Independent world-frame horizontal drift: "
+            + ("unavailable" if world_drift is None else f"{world_drift * 1000:.2f} mm")
+            + "; maximum object rotation: "
+            + ("unavailable" if rotation is None else f"{rotation:.2f} degrees")
+            + f"; opposing-finger contact in {result['hold_opposed_contact_fraction'] * 100:.1f}% of hold samples.</p>"
+        )
+        if "coordination" in result:
+            diag = result["coordination"]
+            motion_note += (
+                "<p>Common wrist correction active; joint-limit projection used in "
+                f"{diag.get('coordination_projected_steps', 'unrecorded')} of {diag.get('coordination_update_steps', 'unrecorded')} updates. "
+                "Exact simulated object pose is a privileged feedback input. "
+                "Reduced drift alone does not establish stable contact.</p>"
+            )
         sections.append(
             f"<h2>{html.escape(stem)}</h2><p>{html.escape(verdict)}. "
             f"Mass {config['physics']['mass_kg'] * result['mass_scale']:.2f} kg; friction {result['friction']:.2f}. "
             f"Minimum hold clearance {result['hold_minimum_clearance_m'] * 1000:.1f} mm; "
             f"hold drift {result['hold_slip_m'] * 1000:.1f} mm ({html.escape(result.get('hold_slip_frame', 'world-vector legacy metric'))} frame).</p>"
             + support_note
+            + motion_note
             + player(
                 video["path"],
                 stem + ".playback/video.webm",

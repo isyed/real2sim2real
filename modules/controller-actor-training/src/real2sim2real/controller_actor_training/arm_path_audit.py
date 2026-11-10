@@ -150,6 +150,33 @@ def fit_pose(model, data, body, joints, target, initial, max_nfev):
     )
 
 
+def place_bases(model, config, placement):
+    """Apply one shared base or explicitly named independent bases."""
+    bases = placement.get("bases", {config.get("base_body", ""): placement})
+    for name, pose in bases.items():
+        ident = model.body(name).id
+        if model.body_parentid[ident] != 0 or model.body_jntnum[ident]:
+            raise ValueError("Only fixed top-level bases can be placed")
+        model.body_pos[ident] = pose["position_m"]
+        model.body_quat[ident] = Rotation.from_euler("z", pose["yaw_rad"]).as_quat()[
+            [3, 0, 1, 2]
+        ]
+
+
+def hand_name(arm, name):
+    return arm.get("target_prefix", "") + name.removeprefix(arm["source_prefix"])
+
+
+def copy_fixture_frame(source, target, root):
+    """Preserve root placement and world slide directions of a retained fixture."""
+    src, dst = source.body(root).id, target.body(root).id
+    target.body_pos[dst] = source.body_pos[src]
+    target.body_quat[dst] = source.body_quat[src]
+    for j in range(source.njnt):
+        if source.jnt_bodyid[j] == src:
+            target.jnt_axis[target.joint(source.joint(j).name).id] = source.jnt_axis[j]
+
+
 def run(config):
     import mujoco
     from .object_grasp_pilot import load_scene, set_wrist_frame, set_root_frame
@@ -163,7 +190,7 @@ def run(config):
         raise ValueError("Saved states changed")
     if (
         not 1 <= len(config["placements"]) <= 8
-        or not 2 <= config["maximum_samples"] <= 200
+        or not 2 <= config["maximum_samples"] <= 1000
         or not 1 <= config["max_nfev"] <= 200
     ):
         raise ValueError("Bounded placement/sample/IK budget required")
@@ -195,22 +222,47 @@ def run(config):
             dtype=int,
         )
     )
-    model, hashes = build_model(
-        config["urdf"], Path(base["output"]) / "scene/scene.xml", out
-    )
+    if "assembly" in config:
+        from .arm_hand_assembly import build_assembly
+
+        model, hashes = build_assembly(
+            Path(base["output"]) / "scene/scene.xml", config["assembly"], out
+        )
+        limits = config["velocity_limits_rad_s"]
+        # Retained fixture hands are an explicit partial-integration diagnostic.
+        mounted = {a["source_root"] for a in config["arms"]}
+        for root in (
+            base["robot"]["root_body"]
+            if "robot" in base
+            else candidate.get("root_body", ""),
+            s["root_body"],
+        ):
+            if root and root not in mounted:
+                copy_fixture_frame(old, model, root)
+        if config.get("retained_fixture_hands"):
+            path = out / "audit-scene.xml"
+            mujoco.mj_saveLastXML(str(path), model)
+            receipt = json.loads((out / "assembly.json").read_text())
+            receipt["scene_sha256"] = digest(path)
+            receipt["retained_fixture_frames_copied_from_trial"] = True
+            write_json(out / "assembly.json", receipt)
+    else:
+        model, hashes = build_model(
+            config["urdf"], Path(base["output"]) / "scene/scene.xml", out
+        )
+        limits = {
+            j.get("name"): float(j.find("limit").get("velocity"))
+            for j in ET.parse(config["urdf"]).getroot().findall("joint")
+            if j.find("limit") is not None
+            and j.find("limit").get("velocity") is not None
+        }
     data = mujoco.MjData(model)
-    robot_base = model.body(config["base_body"]).id
     arms = config["arms"]
     if any(
         not 1 <= len(a.get("initial_seeds_rad", [a["seed_rad"]])) <= 4 for a in arms
     ):
         raise ValueError("At most four initial IK seeds per arm required")
     arm_bodies = {model.body(n).id for arm in arms for n in arm["collision_bodies"]}
-    limits = {
-        j.get("name"): float(j.find("limit").get("velocity"))
-        for j in ET.parse(config["urdf"]).getroot().findall("joint")
-        if j.find("limit") is not None and j.find("limit").get("velocity") is not None
-    }
     old_obj = old.joint("task_object_free").qposadr[0]
     new_obj = model.joint("task_object_free").qposadr[0]
     pairs = []
@@ -220,14 +272,22 @@ def run(config):
         ):
             if "fixture_" in name:
                 continue
-            target = name.removeprefix(arm["source_prefix"])
+            target = hand_name(arm, name)
             pairs.append((old.joint(name).qposadr[0], model.joint(target).qposadr[0]))
+    if "assembly" in config:
+        # Copy all remaining scalar source joints, including an explicitly
+        # retained support fixture. Mounted fixture joints no longer exist.
+        for j in range(old.njnt):
+            name = old.joint(j).name
+            target = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, name)
+            if target >= 0 and old.jnt_type[j] in (
+                mujoco.mjtJoint.mjJNT_HINGE,
+                mujoco.mjtJoint.mjJNT_SLIDE,
+            ):
+                pairs.append((old.jnt_qposadr[j], model.jnt_qposadr[target]))
     rows = []
     for placement in config["placements"]:
-        model.body_pos[robot_base] = placement["position_m"]
-        model.body_quat[robot_base] = Rotation.from_euler(
-            "z", placement["yaw_rad"]
-        ).as_quat()[[3, 0, 1, 2]]
+        place_bases(model, config, placement)
         data.qpos[:] = model.qpos0
         seeds = {a["name"]: np.array(a["seed_rad"]) for a in arms}
         samples = []
@@ -306,7 +366,7 @@ def run(config):
                         ancestor = int(old.body_parentid[ancestor])
                     if ancestor != src:
                         continue
-                    name = old.body(b).name.removeprefix(arm["source_prefix"])
+                    name = hand_name(arm, old.body(b).name)
                     ident = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, name)
                     if ident < 0:
                         raise ValueError("Missing hand body in arm model: " + name)
@@ -418,11 +478,13 @@ def run(config):
         placements=rows,
         sources={**config["sources"], **hashes, str(states_path): digest(states_path)},
         physics_run=False,
-        hand_mount_validation="URDF hand-root frames, named joints and relative hand-body FK compared; collision geometry and dynamics equivalence not established",
+        hand_mount_validation="Hand-root frames, named joints and relative hand-body FK compared; manufactured mounts and dynamics not validated",
         base_placement_measured=False,
         torque_validated=False,
         continuous_collision_certified=False,
         arm_integration_ready=False,
+        retained_fixture_hands=config.get("retained_fixture_hands", []),
+        velocity_limit_basis=config.get("velocity_limit_basis", "source URDF limits"),
         implementation_sha256=digest(Path(__file__)),
     )
     write_json(out / "audit.json", report)

@@ -599,23 +599,24 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
     closed = closing_target(config, candidate, closed)
     limits = model.jnt_range[idx["joints"]]
     closed = np.clip(closed, limits[:, 0], limits[:, 1])
-    from .finger_closure import closure_geometry
-
-    closure_audit = closure_geometry(
-        model,
-        data,
-        idx,
-        config["robot"]["sites"],
-        candidate["q_grasp"],
-        closed,
-        candidate["targets_m"]
-        if "targets_m" in candidate
-        else candidate["pair"]["targets_m"],
-    )
     if "pad_plan" in candidate:
         from .pad_grasp_planning import pad_closure_geometry
 
         closure_audit = pad_closure_geometry(model, data, idx, candidate, closed)
+    else:
+        from .finger_closure import closure_geometry
+
+        closure_audit = closure_geometry(
+            model,
+            data,
+            idx,
+            config["robot"]["sites"],
+            candidate["q_grasp"],
+            closed,
+            candidate["targets_m"]
+            if "targets_m" in candidate
+            else candidate["pair"]["targets_m"],
+        )
     data.qpos[idx["q"]] = pre
     if support:
         data.qpos[support.idx["q"]] = candidate["support"]["q_pregrasp"]

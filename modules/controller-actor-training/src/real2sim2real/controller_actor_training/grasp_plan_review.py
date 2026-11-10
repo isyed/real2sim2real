@@ -14,7 +14,12 @@ from real2sim2real.artifacts import digest, write_json
 
 def review(config):
     import mujoco
-    from .object_grasp_pilot import load_plan, load_scene, set_wrist_frame
+    from .object_grasp_pilot import (
+        load_plan,
+        load_scene,
+        set_wrist_frame,
+        set_root_frame,
+    )
     from .object_grasp_review import display_pieces, world_triangles, panel
     from real2sim2real.retargeting.grasp_kinematics import robot_indices
 
@@ -40,6 +45,18 @@ def review(config):
         if len(cards) >= 6:
             continue
         set_wrist_frame(model, data, config, c["base_position_m"], c["base_rotation"])
+        if "support" in c:
+            support = c["support"]
+            set_root_frame(
+                model,
+                data,
+                support["root_body"],
+                support["fixture_prefix"],
+                support["base_position_m"],
+                support["base_rotation"],
+            )
+            support_idx = robot_indices(model, support["root_body"])
+            data.qpos[support_idx["q"]] = support["q_pregrasp"]
         data.qpos[qid : qid + 7] = plan["settling"]["object_qpos"]
         panels = []
         for phase, key in [

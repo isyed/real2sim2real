@@ -136,3 +136,21 @@ def test_arrangement_excludes_failed_validation_and_deduplicates_sites(tmp_path)
     args["surveys"][0]["sha256"] = "changed"
     with pytest.raises(ValueError, match="changed"):
         combine(args)
+
+
+def test_inner_wall_sampling_excludes_outer_wall_and_top_and_is_world_consistent():
+    from real2sim2real.retargeting.contact_site_search import inner_wall_faces
+
+    ring = trimesh.creation.annulus(r_min=0.02, r_max=0.04, height=0.01, sections=24)
+    pose = np.eye(4)
+    selected = inner_wall_faces(ring, pose, [0, 0])
+    assert selected.any()
+    assert np.max(np.linalg.norm(ring.triangles_center[selected, :2], axis=1)) < 0.021
+    assert np.max(abs(ring.face_normals[selected, 2])) < 1e-6
+    pose[:3, 3] = [0.2, -0.1, 0.3]
+    np.testing.assert_array_equal(inner_wall_faces(ring, pose, [0.2, -0.1]), selected)
+    pose[0, 0] = 2
+    with pytest.raises(ValueError, match="Rigid"):
+        inner_wall_faces(ring, pose, [0.2, -0.1])
+    with pytest.raises(ValueError):
+        inner_wall_faces(ring, np.eye(4), [float("nan"), 0])

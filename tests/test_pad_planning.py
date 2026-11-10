@@ -212,3 +212,28 @@ def test_path_audit_detects_intermediate_collision_and_joint_limit_violation():
     assert report["samples"] >= 51
     assert not path_audit(model, data, idx, [[-0.2], [-0.1]])["within_joint_limits"]
     assert data.qpos[0] == 0
+
+
+def test_explicit_pad_patch_preserves_off_center_contact_instead_of_center_ray():
+    from real2sim2real.retargeting.pad_contacts import pad_frame, observe_frames
+    from real2sim2real.retargeting.grasp_kinematics import robot_indices
+
+    mj, model, data = fixture()
+    patch = pad_frame(
+        model, "hand", "pad", [0, 1, 0], point_body_m=[0.008, 0.0063, 0.01]
+    )
+    np.testing.assert_allclose(patch["point_body_m"], [0.008, 0.006, 0.01], atol=1e-8)
+    np.testing.assert_allclose(patch["normal_body"], [0, 1, 0], atol=1e-8)
+    assert "explicit surface patch" in patch["representation"]
+    data.qpos[1] = 0.4
+    mj.mj_fwdPosition(model, data)
+    points, _ = observe_frames(model, data, [patch], robot_indices(model, "hand"))
+    expected = (
+        data.xpos[model.body("finger").id]
+        + data.xmat[model.body("finger").id].reshape(3, 3) @ patch["point_body_m"]
+    )
+    np.testing.assert_allclose(points[0], expected)
+    with pytest.raises(ValueError, match="projection"):
+        pad_frame(model, "hand", "pad", [0, 1, 0], point_body_m=[0, 0.01, 0])
+    with pytest.raises(ValueError, match="wrong-facing"):
+        pad_frame(model, "hand", "pad", [0, -1, 0], point_body_m=[0, 0.006, 0])

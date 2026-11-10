@@ -66,3 +66,21 @@ downstream.
 Tests cover repeatable sampling, face eligibility, separation of discovery from
 validation, opposite sheet faces, empty shortlists, upward-force signs, provenance,
 deduplication and exclusion of held-out failures from force screening.
+
+## Opening-wall expansion alternatives
+
+`surface_support_search` also accepts `sampling_mode: inner_wall`. It requires a
+pinned `opening_region.report`/`sha256`, opening `index`, and `parameters`:
+`maximum_radius_m`, `maximum_abs_vertical_normal`, `minimum_inward_cosine`.
+The opening report must name the same plan hash, so the opening center and
+sampled faces share the same settled world. `contact_site_search.inner_wall_faces`
+selects reconstructed faces facing the opening center while excluding flat top
+surfaces and outward-facing walls.
+
+This proposes expansion-grasp contacts without assuming hidden underside bearing.
+It does not validate access or a force-bearing patch. Discovery and separate-frame
+validation retain the same visibility, stereo, depth and minimum-frame criteria.
+An empty validation-supported set must not fall back to discovery candidates or
+proceed to robot fitting. Sparse or inconsistent wall observations may still
+require additional calibrated views or metric measurements. Mink IK or MPC
+cannot supply missing scene evidence.

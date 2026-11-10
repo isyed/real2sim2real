@@ -209,3 +209,17 @@ opposition. Tiny fingertip errors or improved aggregate contact fractions can
 coexist with an effectively single-finger grasp. A fixed-wrist finger fit that
 hits its bounds with large normal errors calls for a different wrist/contact
 layout, not relaxed acceptance criteria.
+
+## Preserve the active pad patch and all bearing contacts
+
+A center ray through a curved pad may select a different patch from the one
+supporting a loaded object. Preserve an explicit, collision-hull-validated local
+point and normal when a simulated contact is used to initialize replanning.
+Label its provenance; it is not new camera evidence. Include any palm bearing
+needed for torque balance when jointly changing the wrist and fingers.
+
+Evaluate a loaded fit again from the original task start: rigid object-relative
+transfer, opening, approach, preload, force balance and finite patch support can
+all reject an otherwise convincing local fit. Small pose residuals do not imply
+that every intended pad actually touches the object. Planning failures do not
+replace an already passing physical baseline.

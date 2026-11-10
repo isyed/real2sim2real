@@ -18,7 +18,7 @@ def unit(value):
     return value / np.linalg.norm(value)
 
 
-def pad_frame(model, root_name, geom_name, outward_body):
+def pad_frame(model, root_name, geom_name, outward_body, *, point_body_m=None):
     """Intersect a declared body-frame ray with the actual compiled convex pad.
 
     Returns a body-local point and outward normal; no new collision geometry is
@@ -32,24 +32,39 @@ def pad_frame(model, root_name, geom_name, outward_body):
         raise ValueError("An owned collidable mesh pad is required")
     hull = collision_pad_hull(model, gid)
     direction = unit(outward_body)
-    center = hull.center_mass
-    distance = np.linalg.norm(hull.extents) + 0.01
-    points, _, faces = hull.ray.intersects_location(
-        [center + direction * distance], [-direction], multiple_hits=True
-    )
-    if not len(points):
-        raise ValueError("Declared pad ray misses collision surface")
-    selected = np.argmax((points - center) @ direction)
-    normal = hull.face_normals[faces[selected]]
+    if point_body_m is not None:
+        point = np.asarray(point_body_m, float)
+        if point.shape != (3,) or not np.isfinite(point).all():
+            raise ValueError("Finite body-local pad patch point required")
+        near, distance, faces = trimesh.proximity.closest_point(hull, [point])
+        if distance[0] > 0.001:
+            raise ValueError(
+                "Declared pad patch exceeds 1 mm collision-hull projection"
+            )
+        selected_point = near[0]
+        normal = hull.face_normals[faces[0]]
+        representation = "compiled convex collision pad; explicit surface patch"
+    else:
+        center = hull.center_mass
+        distance = np.linalg.norm(hull.extents) + 0.01
+        points, _, faces = hull.ray.intersects_location(
+            [center + direction * distance], [-direction], multiple_hits=True
+        )
+        if not len(points):
+            raise ValueError("Declared pad ray misses collision surface")
+        selected = np.argmax((points - center) @ direction)
+        selected_point = points[selected]
+        normal = hull.face_normals[faces[selected]]
+        representation = "compiled convex collision pad; ray-selected patch"
     if normal @ direction < 0.5:
-        raise ValueError("Pad ray has a grazing or wrong-facing intersection")
+        raise ValueError("Pad patch has a grazing or wrong-facing normal")
     return dict(
         geom=geom_name,
         body=model.body(model.geom_bodyid[gid]).name,
-        point_body_m=points[selected].tolist(),
+        point_body_m=selected_point.tolist(),
         normal_body=normal.tolist(),
         declared_outward_body=direction.tolist(),
-        representation="compiled convex collision pad; ray-selected patch",
+        representation=representation,
     )
 
 

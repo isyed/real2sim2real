@@ -273,3 +273,10 @@ changes, rotated compiled-mesh clearance, and loaded-wrist rebasing without
 moving the object or any world body. MuJoCo-dependent tests need the optional
 runtime. Downstream fixture/arm dynamics and matched material tests are required
 before promoting any planned contact change; see [contact replanning](CONTACT_REPLANNING.md).
+
+Coupled grasp tests additionally cover rigid loaded-to-initial wrist transfer,
+bounded wrist/finger search without changing native limits, explicit off-center
+collision-pad patches, and inward-facing opening-wall selection in a declared
+world. Optional MuJoCo tests validate pad ownership, local/world transforms and
+normal/position Jacobians. Downstream contact rejection and baseline state-hash
+regression remain separate evidence from these tests.

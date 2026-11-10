@@ -104,3 +104,49 @@ def shortlist_sites(sites, summaries, *, maximum=16, minimum_spacing_m=0.008):
         if len(selected) == maximum:
             break
     return selected
+
+
+def inner_wall_faces(
+    mesh,
+    world_from_object,
+    center_xy_m,
+    *,
+    maximum_radius_m=0.05,
+    maximum_abs_vertical_normal=0.6,
+    minimum_inward_cosine=0.7,
+):
+    """Select potential expansion contacts facing a declared opening center.
+
+    Geometry-only eligibility: it does not establish visibility, patch extent,
+    insertion access or lift forces. The center and transform must use one world.
+    """
+    pose, center = np.asarray(world_from_object, float), np.asarray(center_xy_m, float)
+    if (
+        pose.shape != (4, 4)
+        or center.shape != (2,)
+        or not np.isfinite(pose).all()
+        or not np.isfinite(center).all()
+        or not np.allclose(pose[3], [0, 0, 0, 1])
+        or not np.allclose(pose[:3, :3].T @ pose[:3, :3], np.eye(3), atol=1e-6)
+        or not np.isclose(np.linalg.det(pose[:3, :3]), 1)
+        or not 0 < maximum_radius_m <= 0.2
+        or not 0 <= maximum_abs_vertical_normal < 1
+        or not 0 < minimum_inward_cosine <= 1
+    ):
+        raise ValueError(
+            "Rigid metric world and bounded opening-wall parameters required"
+        )
+    points = mesh.triangles_center @ pose[:3, :3].T + pose[:3, 3]
+    normals = mesh.face_normals @ pose[:3, :3].T
+    radial = points[:, :2] - center
+    radius = np.linalg.norm(radial, axis=1)
+    horizontal = np.linalg.norm(normals[:, :2], axis=1)
+    cosine = -np.sum(radial * normals[:, :2], axis=1) / np.maximum(
+        radius * horizontal, 1e-12
+    )
+    return (
+        (radius > 1e-6)
+        & (radius <= maximum_radius_m)
+        & (abs(normals[:, 2]) <= maximum_abs_vertical_normal)
+        & (cosine >= minimum_inward_cosine)
+    )

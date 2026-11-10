@@ -52,3 +52,28 @@ def test_hold_maximum_and_load_engagement_are_preserved():
     assert summary["maximum_reference_position_error_m"] == 0.03
     assert summary["maximum_reference_rotation_error_deg"] == 5
     assert summary["maximum_support_load_offset_m"] == 0.0005
+
+
+def test_phase_deviation_reveals_insertion_error_and_never_time_aligns():
+    from real2sim2real.controller_actor_training.arm_replay_comparison import (
+        phase_object_deviation,
+    )
+    from copy import deepcopy
+
+    a = [
+        dict(phase=p, time_s=t, object_position_m=[0, 0, 0])
+        for t, p in enumerate(["lift", "support_approach", "hold"])
+    ]
+    b = deepcopy(a)
+    b[1]["object_position_m"] = [0.04, 0, 0]
+    b[2]["object_position_m"] = [0.04, 0, 0]
+    result = phase_object_deviation(a, b)
+    assert result["by_phase"]["lift"]["maximum_translation_difference_m"] == 0
+    assert (
+        result["by_phase"]["support_approach"]["maximum_translation_difference_m"]
+        == 0.04
+    )
+    assert not result["temporal_realignment"]
+    assert not phase_object_deviation(a, b[:-1])["available"]
+    b[1]["time_s"] += 0.01
+    assert not phase_object_deviation(a, b)["available"]

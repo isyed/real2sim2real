@@ -180,6 +180,7 @@ def copy_fixture_frame(source, target, root):
 def run(config):
     import mujoco
     from .object_grasp_pilot import load_scene, set_wrist_frame, set_root_frame
+    from .arm_path_planning import initial_starts, rank_paths
 
     for p, s in config["sources"].items():
         if digest(Path(p)) != s:
@@ -204,6 +205,13 @@ def run(config):
         or not 1 <= config["max_nfev"] <= 200
     ):
         raise ValueError("Bounded placement/sample/IK budget required")
+    for placement in config["placements"]:
+        if set(placement.get("ik_seed_indices", {})) - {
+            a["name"] for a in config["arms"]
+        }:
+            raise ValueError("IK seed choices must name configured arms")
+        for arm in config["arms"]:
+            initial_starts(arm, placement)
     out = Path(config["output"])
     out.mkdir(parents=True, exist_ok=False)
     write_json(out / "protocol.json", config)
@@ -333,7 +341,7 @@ def run(config):
                 if reference_changes is not None:
                     target = reference_changes[i] @ target
                 starts = (
-                    arm.get("initial_seeds_rad", [arm["seed_rad"]])
+                    initial_starts(arm, placement)
                     if not samples
                     else [seeds[arm["name"]]]
                 )
@@ -510,6 +518,10 @@ def run(config):
         retained_fixture_hands=config.get("retained_fixture_hands", []),
         velocity_limit_basis=config.get("velocity_limit_basis", "source URDF limits"),
         implementation_sha256=digest(Path(__file__)),
+        planning_implementation_sha256=digest(
+            Path(__file__).with_name("arm_path_planning.py")
+        ),
+        passing_path_shortlist=[r["placement"]["name"] for r in rank_paths(rows)],
     )
     write_json(out / "audit.json", report)
     table = "".join(

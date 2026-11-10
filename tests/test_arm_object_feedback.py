@@ -105,3 +105,52 @@ def test_nonrigid_and_unbounded_feedback_is_rejected():
     bad[0, 0] = 2
     with pytest.raises(ValueError):
         object_relative_error(bad, np.eye(4), np.eye(4))
+
+
+def test_precontact_support_alignment_uses_primary_retention_only_during_approach():
+    from real2sim2real.controller_actor_training.arm_object_feedback import (
+        support_contact_evidence,
+    )
+
+    assert support_contact_evidence("support_approach", 0, 2) == 0
+    assert (
+        support_contact_evidence("support_approach", 0, 2, allow_precontact=True) == 2
+    )
+    assert (
+        support_contact_evidence("support_approach", 0, 0, allow_precontact=True) == 0
+    )
+    assert support_contact_evidence("hold", 0, 2, allow_precontact=True) == 0
+    assert (
+        support_contact_evidence("support_seat", 0.5, 2, allow_precontact=True) == 0.5
+    )
+    with pytest.raises(ValueError):
+        support_contact_evidence(
+            "support_approach", 0, float("nan"), allow_precontact=True
+        )
+
+
+def test_height_alignment_latches_once_and_keeps_speed_travel_and_retention_gates():
+    from real2sim2real.controller_actor_training.arm_object_feedback import (
+        SupportHeightAlignment,
+    )
+
+    s = dict(
+        max_offset_m=0.01,
+        max_speed_m_s=0.01,
+        minimum_primary_contact_n=0.1,
+        maximum_initial_error_m=0.02,
+    )
+    c = SupportHeightAlignment(s)
+    assert c.update("lift", [0, 0, -0.007], 1, 0.01) == 0
+    assert c.update("support_approach", [0, 0, -0.007], 1, 0.01) == pytest.approx(
+        -0.0001
+    )
+    for _ in range(100):
+        c.update("hold", [0, 0, 0.015], 0, 0.01)
+    assert c.offset == pytest.approx(-0.007) and c.target_offset == pytest.approx(
+        -0.007
+    )
+    rejected = SupportHeightAlignment(s)
+    assert rejected.update("support_approach", [0, 0, -0.007], 0, 0.01) == 0
+    assert rejected.update("support_approach", [0, 0, -0.007], 1, 0.01) == 0
+    assert rejected.state == "rejected_observation"

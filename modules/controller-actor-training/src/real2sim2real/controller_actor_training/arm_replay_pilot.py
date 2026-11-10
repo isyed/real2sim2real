@@ -24,7 +24,12 @@ from .support_control import (
     support_hold_metrics,
     support_rejections,
 )
-from .arm_object_feedback import ArmObjectFeedback, joint_offset
+from .arm_object_feedback import (
+    ArmObjectFeedback,
+    joint_offset,
+    support_contact_evidence,
+    SupportHeightAlignment,
+)
 from .arm_replay_diagnostics import configure_contacts, wrist_errors, phase_maxima
 from .arm_tracking_control import ArmTrackingCompensator, InertialFeedforward
 from .arm_robustness import validate_case, apply_case
@@ -76,6 +81,10 @@ def run(config):
     import mujoco
 
     simulation_case = validate_case(config)
+    if config.get("precontact_support_alignment") and not config.get("object_feedback"):
+        raise ValueError(
+            "Precontact alignment requires explicit bounded object feedback"
+        )
     implementation_sources = {
         name: Path(__file__).with_name(name).read_bytes()
         for name in (
@@ -86,6 +95,7 @@ def run(config):
             "arm_robustness.py",
             "reference_extension.py",
             "simulation_health.py",
+            "finger_contact_trim.py",
         )
     }
     audit_path = Path(config["audit"])
@@ -215,6 +225,16 @@ def run(config):
     roots = {a["name"]: model.body(a["root"]).id for a in arms}
     hands = {name: subtree_geoms(model, body) for name, body in roots.items()}
     object_geoms = subtree_geoms(model, obj)
+    trim, trim_ids = None, None
+    if config.get("finger_contact_trim"):
+        from .finger_contact_trim import bind
+
+        trim, trim_ids = bind(
+            model,
+            config["finger_contact_trim"],
+            [dst for _, dst in finger_pairs],
+            roots["right"],
+        )
     arm_bodies = {model.body(n).id for a in arms for n in a["collision_bodies"]}
     arm_geoms = {
         g for g in range(model.ngeom) if int(model.geom_bodyid[g]) in arm_bodies
@@ -254,6 +274,13 @@ def run(config):
     )
     if feedback and condition != "loaded":
         raise ValueError("Object feedback requires real hand-object contacts")
+    height_alignment = (
+        SupportHeightAlignment(config["support_height_alignment"])
+        if config.get("support_height_alignment")
+        else None
+    )
+    if height_alignment and (feedback or condition != "loaded"):
+        raise ValueError("Choose isolated support-height alignment on a loaded task")
     previous_command = targets[0].copy()
     tracking = (
         ArmTrackingCompensator(config["tracking_compensation"], speed_limits)
@@ -288,7 +315,7 @@ def run(config):
         i = min(np.searchsorted(times, data.time, side="right") - 1, len(times) - 2)
         alpha = np.clip((data.time - times[i]) / (times[i + 1] - times[i]), 0, 1)
         target = targets[i] * (1 - alpha) + targets[i + 1] * alpha
-        if feedback:
+        if feedback or height_alignment:
             # Read the last solved contact forces before refreshing kinematics.
             normal = dict.fromkeys(roots, 0.0)
             opposed = {"thumb": 0.0, "fingers": 0.0}
@@ -342,26 +369,43 @@ def run(config):
                 pose = np.eye(4)
                 pose[:3, :3] = desired.xmat[body].reshape(3, 3)
                 pose[:3, 3] = desired.xpos[body]
-                correction = feedback.update(
-                    name,
-                    actual_object,
-                    reference_object,
-                    pose,
-                    model.opt.timestep,
-                    contact_n=min(opposed.values())
-                    if name == "right"
-                    else normal[name],
-                    active=phase
-                    in config.get("feedback_phases", {}).get(
+                if height_alignment:
+                    correction = np.zeros(6)
+                    if name == "left":
+                        correction[2] = height_alignment.update(
+                            phase,
+                            actual_object[:3, 3] - reference_object[:3, 3],
+                            min(opposed.values()),
+                            model.opt.timestep,
+                        )
+                else:
+                    correction = feedback.update(
                         name,
-                        ("lift", "support_approach", "support_seat", "hold")
+                        actual_object,
+                        reference_object,
+                        pose,
+                        model.opt.timestep,
+                        contact_n=min(opposed.values())
                         if name == "right"
-                        else ("support_seat", "hold"),
-                    ),
-                    support=name == "left",
-                    upward_force_n=upward,
-                    weight_n=float(model.body_mass[obj] * 9.81),
-                )
+                        else support_contact_evidence(
+                            phase,
+                            normal[name],
+                            min(opposed.values()),
+                            allow_precontact=config.get(
+                                "precontact_support_alignment", False
+                            ),
+                        ),
+                        active=phase
+                        in config.get("feedback_phases", {}).get(
+                            name,
+                            ("lift", "support_approach", "support_seat", "hold")
+                            if name == "right"
+                            else ("support_seat", "hold"),
+                        ),
+                        support=name == "left",
+                        upward_force_n=upward,
+                        weight_n=float(model.body_mass[obj] * 9.81),
+                    )
                 jp, jr = np.zeros((3, model.nv)), np.zeros((3, model.nv))
                 mujoco.mj_jacBody(model, desired, jp, jr, body)
                 target[indices] += joint_offset(
@@ -418,6 +462,37 @@ def run(config):
         for src, dst in finger_pairs:
             data.ctrl[dst] = (
                 saved["ctrl"][i, src] * (1 - alpha) + saved["ctrl"][i + 1, src] * alpha
+            )
+        if trim:
+            forces = {"thumb": 0.0, trim.settings["contact_group"]: 0.0}
+            for cid, contact in enumerate(data.contact):
+                pair = {int(contact.geom1), int(contact.geom2)}
+                if pair & object_geoms and pair & hands["right"]:
+                    geom_name = model.geom(next(iter(pair & hands["right"]))).name or ""
+                    force = np.zeros(6)
+                    mujoco.mj_contactForce(model, data, cid, force)
+                    for group in forces:
+                        if group in geom_name:
+                            forces[group] += max(0, float(force[0]))
+            source, following = parent["records"][i : i + 2]
+            active = (
+                source["phase"] == "hold"
+                and "reference_position_m" in source
+                and "reference_position_m" in following
+            )
+            error = 0.0
+            if active:
+                goal = (1 - alpha) * np.asarray(
+                    source["reference_position_m"]
+                ) + alpha * np.asarray(following["reference_position_m"])
+                error = float(np.linalg.norm(data.xpos[obj] - goal))
+            data.ctrl[trim_ids] = trim.target(
+                data.ctrl[trim_ids],
+                force_n=forces[trim.settings["contact_group"]],
+                anchor_force_n=forces["thumb"],
+                reference_error_m=error,
+                active=active,
+                dt=model.opt.timestep,
             )
         before_step_time = float(data.time)
         mujoco.mj_step(model, data)
@@ -539,6 +614,10 @@ def run(config):
             record["arm_torque_nm"] = data.actuator_force[aids].tolist()
             if tracking:
                 record["tracking_compensation"] = tracking.diagnostics()
+            if trim:
+                record["finger_contact_trim"] = trim.diagnostics()
+            if height_alignment:
+                record["support_height_alignment"] = height_alignment.diagnostics()
             if feedback:
                 record["object_feedback"] = feedback.diagnostics()
             if "reference_position_m" in source:
@@ -622,10 +701,17 @@ def run(config):
         ),
         torque_peak_nm=dict(zip(names, peaks.tolist())),
         saturation_fraction=dict(zip(names, (saturation / max(steps, 1)).tolist())),
-        control_mode="bounded joint PD plus bias compensation; archived finger commands; "
+        control_mode="bounded joint PD plus bias compensation; "
+        + (
+            "archived fingers with bounded contact trim; "
+            if trim
+            else "archived finger commands; "
+        )
         + (
             "bounded object-relative feedback"
             if feedback
+            else "latched precontact support-height alignment"
+            if height_alignment
             else "no online object feedback"
         ),
         object_feedback=None if feedback is None else feedback.diagnostics(),
@@ -635,7 +721,7 @@ def run(config):
         if inertia_control is None
         else inertia_control.peak.tolist(),
         feedback_observation_source="privileged simulator poses and solved contact forces"
-        if feedback
+        if feedback or height_alignment or trim
         else None,
         fixture_joints_removed=True,
         object_state_written_only_at_initialization=True,
@@ -650,6 +736,20 @@ def run(config):
         tracking_implementation_sha256=digest(snapshot / "arm_tracking_control.py"),
         robustness_implementation_sha256=digest(snapshot / "arm_robustness.py"),
         simulation_case=simulation_case,
+        finger_contact_trim=None if trim is None else trim.diagnostics(),
+        precontact_support_alignment=config.get("precontact_support_alignment", False),
+        support_height_alignment=None
+        if height_alignment is None
+        else height_alignment.diagnostics(),
+        support_height_alignment_observations="privileged simulator pose and primary contact at insertion start"
+        if height_alignment
+        else None,
+        finger_contact_trim_observations="privileged simulator normal forces and object pose"
+        if trim
+        else None,
+        finger_contact_trim_implementation_sha256=digest(
+            snapshot / "finger_contact_trim.py"
+        ),
         diagnostics_implementation_sha256=digest(
             snapshot / "arm_replay_diagnostics.py"
         ),

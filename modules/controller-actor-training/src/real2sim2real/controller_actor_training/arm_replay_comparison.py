@@ -3,11 +3,54 @@
 import argparse
 import html
 import json
+import math
 import os
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
 from real2sim2real.artifacts import digest, write_json
+
+
+def phase_object_deviation(baseline, candidate):
+    """Compare matched simulated poses before and during hold, without alignment."""
+    if not baseline or len(baseline) != len(candidate):
+        return dict(available=False, reason="incomplete_or_empty_timeline")
+    phases = {}
+    previous = [-math.inf, -math.inf]
+    for a, b in zip(baseline, candidate):
+        if not all(
+            k in r for r in (a, b) for k in ("phase", "time_s", "object_position_m")
+        ):
+            return dict(available=False, reason="missing_pose_or_clock")
+        times = [a["time_s"], b["time_s"]]
+        if (
+            not all(math.isfinite(t) and t > p for t, p in zip(times, previous))
+            or abs(times[0] - times[1]) > 0.003
+            or a["phase"] != b["phase"]
+        ):
+            return dict(available=False, reason="unmatched_clock_or_phase")
+        if any(
+            len(r["object_position_m"]) != 3
+            or not all(math.isfinite(v) for v in r["object_position_m"])
+            for r in (a, b)
+        ):
+            return dict(available=False, reason="invalid_object_pose")
+        delta = [y - x for x, y in zip(a["object_position_m"], b["object_position_m"])]
+        phases.setdefault(a["phase"], []).append(delta)
+        previous = times
+    return dict(
+        available=True,
+        temporal_realignment=False,
+        by_phase={
+            p: dict(
+                samples=len(rows),
+                first_delta_world_m=rows[0],
+                last_delta_world_m=rows[-1],
+                maximum_translation_difference_m=max(math.hypot(*r) for r in rows),
+            )
+            for p, rows in phases.items()
+        },
+    )
 
 
 def summarize(report):
@@ -62,8 +105,11 @@ def compare(paths, output):
     if len(paths) < 2 or len(paths) > 24 or len(set(paths)) != len(paths):
         raise ValueError("Compare 2–24 distinct saved results")
     rows = []
+    baseline_records = None
     for path in paths:
         report = json.loads(path.read_text())
+        if baseline_records is None:
+            baseline_records = report["records"]
         if report["schema"] != "real2sim2real.arm-replay-pilot/1":
             raise ValueError("Expected an arm-replay report")
         for file, key in (
@@ -84,6 +130,9 @@ def compare(paths, output):
                 config=report["config"],
                 integration_timestep_s=actual_step,
                 metrics=summarize(report),
+                object_deviation_from_first_run=phase_object_deviation(
+                    baseline_records, report["records"]
+                ),
             )
         )
     if len({r["config"]["audit_sha256"] for r in rows}) != 1:
@@ -101,6 +150,9 @@ def compare(paths, output):
         "tracking_compensation",
         "inertial_feedforward",
         "simulation_case",
+        "finger_contact_trim",
+        "precontact_support_alignment",
+        "support_height_alignment",
         "tracking_phases",
         *defaults,
     )

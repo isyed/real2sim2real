@@ -257,3 +257,12 @@ bounded independent finger tracking/force offsets, and rejection of solver clock
 resets or warnings. Run it with the grasp/support tests in the optional MuJoCo
 runtime. Model contact evidence and unchanged baseline state archives remain
 separate experiment checks.
+
+`test_arm_path_planning.py` checks declared seed selection, rejected-path exclusion
+and whole-path ranking. `test_finger_contact_trim.py` checks owned hand actuators,
+rate/travel bounds, force/reference freezes, physical joint stops and floating
+point interpolation at a stop. `test_arm_object_feedback.py` also checks the
+precontact force gate and single-observation support-height latch.
+`test_arm_clearance_audit.py` checks that saved geometric robot/table intersections
+exclude ordinary object/table support. These options require separate nominal
+and frozen-condition physics validation; unit tests do not promote them.

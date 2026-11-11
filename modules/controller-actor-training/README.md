@@ -419,3 +419,8 @@ wrists, then rechecks geometric admission before fresh physics. See
 between pinned admitted endpoints. The current adapter preserves wrist fixtures,
 object targets and native limits. See [posture transitions](../../docs/PAYLOAD_POSTURE.md)
 for configuration, observations and frozen-matrix admission.
+
+`acquisition_compare` compares pinned, byte-identical contact replays at native
+sample times. It separates acquisition/hold pressure, pad coverage, material
+sliding, other-link forces and actual wrist-relative object poses, with an
+interactive saved-data review. See [acquisition diagnostics](../../docs/ACQUISITION_DIAGNOSTICS.md).

@@ -178,3 +178,8 @@ owned fingers toward an admitted alternative while preserving wrists and object
 targets. The transition uses filtered load observations, explicit travel/speed
 bounds and intermediate collision checks. Freeze the entire rule before testing
 the full sensitivity matrix; separate fixed-posture successes cannot be pooled.
+
+Use [acquisition diagnostics](ACQUISITION_DIAGNOSTICS.md) to compare successful
+and rejected postures through closing, lift and hold entry. Pinned, identical-state
+contact replays expose delayed pad seating, loads on other links and pressure
+history without changing the source controller, drift anchors or verdicts.

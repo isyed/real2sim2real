@@ -217,3 +217,9 @@ moving-reference scores or stand in for a complete motion pass. See
 Residual RL is a distinct optional pipeline: it can improve an imperfect frozen
 controller, but learned error correction and held-out generalization require an
 explicit training/evaluation protocol. See [residual actor pilots](RESIDUAL_ACTOR_PILOTS.md#residual-reinforcement-learning-and-generalization).
+
+The [CPU arm residual environment](ARM_RESIDUAL_ADAPTER.md) supplies a concrete
+reset/step pressure-action boundary on the same replay loop. Pin the baseline and
+verify exact zero-action reproduction before collecting corrections or learning.
+A reproduced failed task remains failed; scalar adapter validation does not imply
+vectorized learner, domain-randomization or hardware readiness.

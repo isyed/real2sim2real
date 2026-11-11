@@ -146,6 +146,7 @@ def render(directory, *, follow_object=False):
         "physics_timestep_s",
         "finger_plan_admission",
         "stationary_admission",
+        "residual_adapter",
     ):
         if key in report:
             metrics[key] = report[key]

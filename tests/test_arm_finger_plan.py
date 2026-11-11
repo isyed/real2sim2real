@@ -86,6 +86,10 @@ def test_stationary_admission_pins_clock_posture_physics_and_complete_hold(tmp_p
         )
 
     assert validate_stationary(proposed())["sha256"] == digest(path)
+    report["residual_adapter"] = {"all_actions_zero": False}
+    with pytest.raises(ValueError, match="policy-aware"):
+        validate_stationary(proposed())
+    del report["residual_adapter"]
     changed = proposed()
     changed["control_period_s"] = 0.002
     with pytest.raises(ValueError, match="retune"):

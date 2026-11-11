@@ -344,3 +344,18 @@ Simulation controller rate is an experimental setting until matched to each
 embodiment's documented interfaces and measured latency/sensing. Separate the
 hand's command and tactile rates from the arm's update rate. Similar stationary
 results at two rates do not establish moving-contact rate robustness.
+
+### Pressure authority before residual learning
+
+Measure correction authority with small signed pressure changes and thumb/finger
+redistribution before training an actor. Higher force targets can change object
+rotation, rolling and the other hand's load; they do not guarantee less grasp
+drift. A pad's joint-offset bound or geometry freeze can prevent the requested
+target from producing the expected contact force. Preserve those guards and
+report requested targets separately from solved forces.
+
+Evaluate complete trials against the original task gates, not a learning reward
+or a shorter contact segment. A causal drift policy must use the original fixed
+grasp anchor; reanchoring after slip hides the error. Selecting directions and
+activation thresholds on the same replay is development. Confirming a nominal
+result with a deterministic repeat checks reproducibility, not generalization.

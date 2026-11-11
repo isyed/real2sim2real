@@ -109,6 +109,37 @@ state array with exact equality, and checks full diagnostic records, task verdic
 contact/arm metrics and physical scene. Any difference rejects reproduction.
 A reproduction pass does not make the underlying task successful.
 
+## Bounded pressure-authority trials
+
+`arm_residual_trial` runs a declared deterministic correction policy over the
+complete frozen horizon. It preserves the environment's original physical and
+acceptance configuration and writes a separate `trial.json` with metrics,
+protocol checks and policy provenance. A complete matched trial and the original
+task verdict are both required for `acceptance_passed`. No optimizer runs.
+
+```bash
+python -m real2sim2real.controller_actor_training.arm_residual_trial \
+  --config /data/pressure-trial.json
+```
+
+The trial configuration contains `environment` (the same environment settings
+above) and `policy`. A constant policy is, for example,
+`{"kind": "constant", "action": [0.5, 0.5, 0, 0]}`. With a 1 N environment
+cap this requests +0.5 N on the primary thumb and each primary finger pad. The
+environment still applies phase activation, slew bounds and native servo guards.
+
+A causal diagnostic policy can use
+`{"kind": "drift_ramp", "action": [0.5, 0.5, 0, 0],
+"start_m": 0.004, "full_m": 0.008}`. It scales the requested correction from
+zero to the declared action using the current primary wrist-frame drift norm.
+It returns zero before the original fixed grasp anchor exists. Thresholds and
+action directions must be declared before running the trial. Selecting them on
+the same replay is controller development, not held-out robustness evaluation.
+
+The trial snapshots its policy source before simulation, records action traces,
+and checks original configuration, physical scene, controller/physics clocks and
+the complete sampled timeline. Rejected or partial results remain visible.
+
 Arm reviews and comparisons expose residual metadata. Existing controller-only
 stationary promotion and robustness replay reject residual-policy artifacts,
 because those runners cannot reconstruct an actor from the baseline configuration.

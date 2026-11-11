@@ -7,6 +7,11 @@ without simultaneously changing its acceleration, orientation or moment arms.
 A rendered contact fit answers a different question: it only establishes a
 possible pose under the declared geometric assumptions.
 
+Keep stationary acquisition diagnostics and full motion/return/release results
+under distinct, pinned identities. Better mean object-pose tracking does not erase
+failed retention or clearance gates. See [continuous tracking proxies and the
+phase-aware residual-learning boundary](CONTINUOUS_TRACKING_PROXY.md).
+
 ## Two holds and two kinds of arm check
 
 Initial hand fitting positions the embodiment's real pads and joints at proposed

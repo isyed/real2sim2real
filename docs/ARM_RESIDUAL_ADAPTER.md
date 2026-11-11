@@ -155,3 +155,7 @@ environment or FlashSAC's vectorized JAX environment. Batched learner integratio
 supervised demonstration import, domain randomization and hardware observations
 remain separate work. G1/SONIC checkpoints are not compatible merely because
 this adapter exists.
+
+Continuous acquisition, demonstrated return and finger release require a separate
+phase-aware extension and full zero-action verification. See
+[continuous tracking and residual-learning boundaries](CONTINUOUS_TRACKING_PROXY.md).

@@ -1,5 +1,11 @@
 # Testing the reusable modules
 
+`tests/test_acquisition_compare.py` checks phase/gap-safe sliding integration,
+coherent-force versus preceding-servo observations, world-transform invariance,
+missing unloaded centroids, unchanged failed verdicts, explicit configuration
+changes, matched clocks/physics/wrists and immutable state-identical audit inputs.
+It also checks safe HTML data embedding. These diagnostics do not admit control.
+
 `tests/test_payload_posture.py` checks nominal/heavy deadband, continuous load
 interpolation, joint/fraction speed bounds, observation freezes, finger-only
 command ownership, return to the original pad point and rejection of failed,

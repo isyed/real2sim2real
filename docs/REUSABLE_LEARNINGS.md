@@ -269,3 +269,12 @@ Keep simulator force/acceleration observations explicit; neither case identity
 nor actual simulator mass should select the posture. Retain pressure limits,
 object targets, grasp anchors, reference timing and acceptance criteria. See
 [supported-load posture transitions](PAYLOAD_POSTURE.md).
+
+Matching a final finger posture and estimated payload does not reproduce the
+contact state reached by using that posture from acquisition. Compare pad seating
+times, other-link loads and object-local contact locations before attributing
+drift to force-budget exhaustion. Similar unsaturated pressure offsets can coexist
+with different bearing contacts. Integrate sliding only over loaded observations:
+less accumulated slip during missing contact is not better retention. Keep
+post-step contact forces separate from preceding-step servo observations. See
+[acquisition diagnostics](ACQUISITION_DIAGNOSTICS.md).

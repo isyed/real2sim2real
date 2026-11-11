@@ -20,7 +20,7 @@ where = ["src"]
 namespaces = true
 
 [tool.setuptools.package-data]
-"*" = ["*.json", "*.yaml", "*.yml", "*.txt", "*.cpp", "*.h", "*.hpp", "*.cmake", "*.cu", "*.cuh", "*.sh", "LICENSE", "NOTICE", "CMakeLists.txt"]
+"*" = ["*.json", "*.yaml", "*.yml", "*.txt", "*.html", "*.cpp", "*.h", "*.hpp", "*.cmake", "*.cu", "*.cuh", "*.sh", "LICENSE", "NOTICE", "CMakeLists.txt"]
 
 [tool.setuptools]
 license-files = ["LICENSE", "NOTICE", "licenses/*"]

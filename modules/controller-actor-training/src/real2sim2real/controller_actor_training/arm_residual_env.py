@@ -36,6 +36,7 @@ def frozen_source(config):
         result.get("schema") != "real2sim2real.arm-replay-pilot/1"
         or result.get("residual_adapter") is not None
         or result.get("bounded_grasp_correction") is not None
+        or result.get("closed_loop_grasp_feedback") is not None
         or result.get("finger_control_mode") != "live_contact_force"
         or result.get("physics_run") is not True
         or "incomplete_pilot" in result["rejected_for"]

@@ -105,6 +105,26 @@ def rollout(config, interaction=None):
     import mujoco
 
     finger_mode = config.get("finger_control_mode", "archived")
+    closed_spec = config.get("closed_loop_grasp_feedback")
+    if closed_spec is not None:
+        from .closed_loop_grasp import validate_source
+
+        validate_source(closed_spec, config)
+        if (
+            finger_mode != "live_contact_force"
+            or interaction is not None
+            or any(
+                config.get(k)
+                for k in (
+                    "object_feedback",
+                    "support_height_alignment",
+                    "bounded_grasp_correction",
+                )
+            )
+        ):
+            raise ValueError(
+                "Closed-loop grasp feedback requires exclusive live arm/finger ownership"
+            )
     correction_spec = config.get("bounded_grasp_correction")
     if correction_spec is not None:
         from .bounded_grasp_correction import validate
@@ -172,6 +192,8 @@ def rollout(config, interaction=None):
             "arm_finger_plan.py",
             "continuous_reference.py",
             "bounded_grasp_correction.py",
+            "closed_loop_grasp.py",
+            "slip_tilt_feedback.py",
             "finger_release.py",
             "finger_release_plan.py",
             "wrist_withdrawal.py",
@@ -564,6 +586,34 @@ def rollout(config, interaction=None):
     command_lead_s = float(np.max(np.diff(times)))
     control_start = float(data.time)
     control_updates = 0
+    closed = None
+    if closed_spec is not None:
+        from .closed_loop_grasp import ClosedLoopGrasp
+
+        closed = ClosedLoopGrasp(
+            model,
+            data,
+            roots,
+            arms,
+            qids,
+            vids,
+            ranges,
+            speed_limits,
+            parent,
+            closed_spec["controller"],
+            control_period,
+            robot_geoms,
+            arm_geoms,
+            object_geoms,
+            hands,
+            dict(
+                joint_margin_rad=audit["config"]["criteria"]["joint_margin_rad"],
+                arm_penetration_m=audit["config"]["criteria"]["arm_penetration_m"],
+                robot_penetration_m=parent["configuration"]["planning"][
+                    "max_penetration_m"
+                ],
+            ),
+        )
     if interaction is not None:
         if live_fingers is None or condition != "loaded":
             raise ValueError("Residual learning requires loaded live finger feedback")
@@ -716,6 +766,10 @@ def rollout(config, interaction=None):
                     not np.allclose(target, bounded, atol=1e-12, rtol=0)
                 )
                 target = bounded
+            if closed is not None:
+                target = closed.target(
+                    control_time, control_period, target, previous_command, i, alpha
+                )
             previous_command = target.copy()
             velocity = (
                 (targets[i + 1] - targets[i]) / (times[i + 1] - times[i])
@@ -736,6 +790,9 @@ def rollout(config, interaction=None):
                 margin = audit["config"]["criteria"]["joint_margin_rad"]
                 target = np.clip(target, ranges[:, 0] + margin, ranges[:, 1] - margin)
             inertial_torque = 0.0
+            if closed is not None and not closed.check_command(target):
+                aborted = "closed_loop_collision_guard"
+                break
             if inertia_control:
                 mujoco.mj_fullM(model, mass_matrix, data.qM)
                 acceleration = (1 - alpha) * accelerations[i] + alpha * accelerations[
@@ -1006,6 +1063,8 @@ def rollout(config, interaction=None):
             records.append(record)
             if interaction is not None:
                 interaction.record(record)
+            if closed is not None:
+                closed.record(record)
             qstates.append(data.qpos.copy())
             controls.append(data.ctrl.copy())
             timestamps.append(data.time)
@@ -1133,6 +1192,8 @@ def rollout(config, interaction=None):
             if feedback
             else "latched precontact support-height alignment"
             if height_alignment
+            else "bounded fixed-anchor slip and coordinated object-tilt feedback"
+            if closed is not None
             else "no online object feedback"
         ),
         object_feedback=None if feedback is None else feedback.diagnostics(),
@@ -1142,7 +1203,7 @@ def rollout(config, interaction=None):
         if inertia_control is None
         else inertia_control.peak.tolist(),
         feedback_observation_source="privileged simulator poses and solved contact forces"
-        if feedback or height_alignment or trim
+        if feedback or height_alignment or trim or closed is not None
         else None,
         fixture_joints_removed=True,
         object_state_written_only_at_initialization=True,
@@ -1178,6 +1239,12 @@ def rollout(config, interaction=None):
     )
     if interaction is not None:
         report["residual_adapter"] = interaction.finish(report, out)
+    if closed is not None:
+        report["closed_loop_grasp_feedback"] = closed.finish(out)
+        report["closed_loop_grasp_feedback"]["implementation_sha256"] = {
+            name: digest(snapshot / name)
+            for name in ("closed_loop_grasp.py", "slip_tilt_feedback.py")
+        }
     if correction_spec is not None:
         report["bounded_grasp_correction"] = dict(
             spec=correction_spec,

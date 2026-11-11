@@ -105,6 +105,15 @@ def rollout(config, interaction=None):
     import mujoco
 
     finger_mode = config.get("finger_control_mode", "archived")
+    correction_spec = config.get("bounded_grasp_correction")
+    if correction_spec is not None:
+        from .bounded_grasp_correction import validate
+
+        validate(correction_spec, config)
+        if finger_mode != "live_contact_force" or interaction is not None:
+            raise ValueError(
+                "Bounded grasp probes require the live finger owner without another residual"
+            )
     if finger_mode not in ("archived", "live_contact_force"):
         raise ValueError(
             "Explicit archived or live_contact_force finger control required"
@@ -162,6 +171,7 @@ def rollout(config, interaction=None):
             "arm_motion_condition.py",
             "arm_finger_plan.py",
             "continuous_reference.py",
+            "bounded_grasp_correction.py",
             "finger_release.py",
             "finger_release_plan.py",
             "wrist_withdrawal.py",
@@ -432,6 +442,36 @@ def rollout(config, interaction=None):
         from .acquisition_profile import bind_fingers
 
         bind_fingers(live_fingers, model, config["acquisition_profile"])
+    correction_path = None
+    if correction_spec is not None:
+        from .bounded_grasp_correction import bind_fingers, wrist_targets
+
+        bind_fingers(
+            live_fingers, model, correction_spec, parent["continuous_protocol"]
+        )
+        targets, correction_path = wrist_targets(
+            model,
+            data,
+            targets,
+            times,
+            qids,
+            vids,
+            arms,
+            roots,
+            parent,
+            correction_spec,
+            speed_limits,
+            audit["config"]["criteria"]["joint_margin_rad"],
+        )
+        write_json(out / "bounded-correction-path.json", correction_path)
+        if not correction_path["accepted"]:
+            raise ValueError(
+                "Bounded grasp correction fails wrist IK/speed/margin admission"
+            )
+        accelerations = np.gradient(np.gradient(targets, times, axis=0), times, axis=0)
+        np.savez_compressed(
+            out / "bounded-command-targets.npz", targets=targets, timestamps_s=times
+        )
     if finger_plan_admission or parent.get("continuous_protocol"):
         from .arm_finger_plan import path_screen
 
@@ -1138,6 +1178,17 @@ def rollout(config, interaction=None):
     )
     if interaction is not None:
         report["residual_adapter"] = interaction.finish(report, out)
+    if correction_spec is not None:
+        report["bounded_grasp_correction"] = dict(
+            spec=correction_spec,
+            path=correction_path,
+            promotion_eligible=False,
+            correction_is_learned=False,
+            finger_owner="existing live pressure servo nominal target",
+            release_owner="original table-supported release; command offsets recover to zero before release",
+            command_targets_sha256=digest(out / "bounded-command-targets.npz"),
+            implementation_sha256=digest(snapshot / "bounded_grasp_correction.py"),
+        )
     if parent.get("continuous_protocol"):
         report["continuous_protocol"] = parent["continuous_protocol"]
         report["continuous_metrics"] = continuous_metrics

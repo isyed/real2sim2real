@@ -195,6 +195,7 @@ def refresh_page(directory, *, follow_object=False):
         "finger_plan_admission",
         "stationary_admission",
         "residual_adapter",
+        "bounded_grasp_correction",
         "continuous_protocol",
         "continuous_metrics",
     ):

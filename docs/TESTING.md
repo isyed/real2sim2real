@@ -1,5 +1,12 @@
 # Testing the reusable modules
 
+`test_bounded_grasp_correction.py` checks pinned physical sources, frozen controller
+settings, owned finger commands, correction rate/travel limits and stationary
+retention of offsets. Its optional MuJoCo case checks object/world frame mapping,
+scratch IK state isolation and rejection of coarse waypoint interpolation into
+release. Full zero-probe state equality and actual loaded-motion/stationary
+acceptance remain separate downstream evidence.
+
 `test_continuous_residual.py` checks actual supported-release stage transitions,
 carry retention versus release unloading costs, the fixed acquisition anchor,
 complete native-clock admission and pressure decay after carrying. Finger-plan

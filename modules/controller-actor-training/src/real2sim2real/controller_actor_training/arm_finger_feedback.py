@@ -243,6 +243,10 @@ class ArmFingerFeedback:
                 schedule,
                 closing_windows=hand.get("closing_windows"),
             )
+        if hasattr(self, "correction_protocol"):
+            from .bounded_grasp_correction import finger_command
+
+            finger_command(self, time, nominal)
         activation = (
             self.rollout["approach_s"]
             + self.settings["close_activation_fraction"] * self.rollout["close_s"]

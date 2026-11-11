@@ -1,5 +1,9 @@
 # From a fitted grasp to moving control
 
+[Bounded wrist/posture authority probes](BOUNDED_GRASP_CORRECTIONS.md) retain the
+frozen continuous source and report loaded motion and paired stationary evidence
+without replacing an earlier baseline or issuing a promotion certificate.
+
 A stationary hold is a useful isolation test, not proof of moving manipulation.
 The object remains free under gravity. Holding robot targets fixed lets us ask
 whether contact geometry and the available finger control can retain the payload

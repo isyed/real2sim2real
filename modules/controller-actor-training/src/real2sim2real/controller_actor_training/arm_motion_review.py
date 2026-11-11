@@ -70,6 +70,7 @@ def build(config):
                 primary_drift_mm=result["hold_slip_m"] * 1000,
                 support_drift_mm=result["support_wrist_drift_m"] * 1000,
                 minimum_clearance_mm=result["hold_minimum_clearance_m"] * 1000,
+                bounded_grasp_correction=result.get("bounded_grasp_correction"),
             )
         )
     if clocks[0] != clocks[1]:
@@ -82,6 +83,8 @@ def build(config):
         rows=rows,
         matched_clock=True,
         audited_paths_equal=rows[0]["audit_sha256"] == rows[1]["audit_sha256"],
+        command_corrections_equal=rows[0]["bounded_grasp_correction"]
+        == rows[1]["bounded_grasp_correction"],
         controlled_single_variable_experiment=False,
         physics_rerun=False,
         implementation_sha256=digest(Path(__file__)),

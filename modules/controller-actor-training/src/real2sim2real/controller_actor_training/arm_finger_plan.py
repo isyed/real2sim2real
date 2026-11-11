@@ -255,6 +255,10 @@ def path_screen(
                 release_fast_mask=hand.get("release_fast_mask"),
                 closing_windows=hand.get("closing_windows"),
             )
+        if hasattr(live, "correction_protocol"):
+            from .bounded_grasp_correction import finger_command
+
+            finger_command(live, time, scratch.qpos)
         mujoco.mj_fwdPosition(model, scratch)
         if (
             live.rollout.get("finger_release")

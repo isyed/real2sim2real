@@ -179,6 +179,63 @@ that falls between integration-grid points. It still requires the complete sampl
 count, matching controller/configuration and a passing physical verdict; this
 rounding tolerance cannot admit a shortened hold.
 
+## Fitting release over a wrist-rotation path
+
+`wrist_withdrawal.rotation_vectors_world_rad` optionally supplies `right` and
+`left` axis-angle vectors of at most 0.2 rad each. Rotation acts about the wrist
+origin in world axes. It does not orbit the object. Optional `rotation_delay_s`
+(0.1–1) and `rotation_duration_s` (0.25–1.5) can schedule rotation before outward
+translation; both fields are required together and must fit inside release.
+Supported-opening admission is checked before the earliest nonzero wrist motion.
+The runtime checks one planning interval early (at most 25 ms), because joint
+interpolation can start motion on the segment preceding the analytic start time.
+
+`release_path_search` fits selected fingers along this motion. Required config:
+`source_result`, `source_sha256`, returned pre-release `time_s`, pinned
+`seed_posture`, owned `joints`, `wrist_withdrawal`, `rotation_seeds_world_rad`
+(1–9), `clearance_m` (1–5 mm), `fit_samples` (5–17), `verification_samples`
+(51–151), `maximum_evaluations` (<=100), new `output`, and `deadline_s` (<=900).
+Optional `role` selects `primary` or `secondary`; it defaults to `primary`.
+`optimize_rotation` jointly fits a rotation inside a strict 0.2 rad ball and the
+finger goal. `refinement_rounds` (0–3) adds up to three worst dense-query timestamps
+per round. Joint targets remain within native limits and <=0.5 rad from the original
+open posture. The current search requires a common finger-opening clock.
+Seeds apply to the selected hand; the other hand's finger goal and wrist rotation
+stay fixed while that path is fitted.
+
+The search extracts exact hand geometry onto scratch Cartesian fixtures, verifying
+world pose agreement against the saved arm state within 2 micrometres/2 microradians.
+Unnamed colliders are matched by body, collision mask and compiled local shape;
+ambiguous matches fail. The object stays fixed in these kinematic hypotheses.
+Position-only collision queries use a planning margin to detect near contact;
+no physics step runs, and forces do not enter the fitting objective. Query margins
+are never exported into the dynamics scene.
+
+Primary object clearance progresses from the existing 3 mm contact-penetration
+envelope to the requested final separation. `require_bilateral_clearance` additionally
+checks support-hand penetration through the path and its final separation, with
+the final clearance transition over the last 20% of opening. Full-hand self-collision
+and table clearance are checked at every sampled pose. Hand collision geometry
+must remain at least 5 mm above the table's conservative height envelope. Historical accepted
+postures may initialize a new search; their original wrist contract is retained
+as seed provenance and does not admit the new path.
+
+Each candidate exports a pinned `finger-release-posture/1` proposal containing
+its exact `wrist_withdrawal` and `release_settings`. Hand-fixture sampling is
+explicitly separate from full-arm admission and physical release. The preparation
+CLI accepts the same `finger_release_posture` spec as live replay, so archived
+finger goals, arm audits and the live owner agree. Planning and runtime reject
+mixed posture/wrist/clock contracts. Runtime also requires the exact posture
+pinned into the audited source plan.
+
+After fixture admission, run a fresh dense full-arm audit, assembled hand/arm path
+screen, and complete free-object dynamics. Preserve rejected candidates and the
+source verdict, including when a source has good geometry but fails retention.
+Release metrics now report peak/final forces for each hand while keeping the
+original combined <=1 N acceptance limit. A primary hand clearing can expose
+remaining support-hand contact; individual progress never becomes bilateral or
+whole-controller acceptance automatically.
+
 Reference scoring includes acquisition/return and separates `complete_protocol`
 from native-duration `moving_reference`; terminal settling cannot inflate the
 latter. These use reconstructed references, not official challenge ground truth.

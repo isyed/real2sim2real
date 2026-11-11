@@ -169,6 +169,31 @@ def evaluate_continuous(records, protocol, table_z, *, stationary=False):
             object_translation_drift_m=movement if after else None,
             observed_settle_s=coverage,
         )
+        hand_forces = {
+            role: [
+                sum(
+                    p["force_n"]
+                    for label, p in r["contact_patch_motion"]["pads"].items()
+                    if label.startswith(role + ":")
+                )
+                + sum(
+                    force
+                    for label, force in r["contact_patch_motion"][
+                        "other_object_contacts_n"
+                    ].items()
+                    if label.startswith(role + ":")
+                )
+                for r in after
+            ]
+            for role in ("primary", "secondary")
+        }
+        result["release"]["peak_hand_forces_n"] = {
+            role: max(values) if values else None
+            for role, values in hand_forces.items()
+        }
+        result["release"]["final_hand_forces_n"] = {
+            role: values[-1] if values else None for role, values in hand_forces.items()
+        }
         if not release_pass:
             failures.append("incomplete_finger_release")
     return result, failures
@@ -184,7 +209,11 @@ def run(config):
 
     implementation = Path(__file__).read_bytes()
 
-    if set(config) - {"finger_release", "wrist_withdrawal"} != {
+    if set(config) - {
+        "finger_release",
+        "wrist_withdrawal",
+        "finger_release_posture",
+    } != {
         "baseline_result",
         "baseline_sha256",
         "output",
@@ -279,6 +308,19 @@ def run(config):
         if release is None:
             raise ValueError("Wrist withdrawal requires supported finger release")
         validate_withdrawal(withdrawal, release)
+    opening_targets = {}
+    posture_spec = config.get("finger_release_posture")
+    if posture_spec:
+        if not release or set(posture_spec) != {"path", "sha256"}:
+            raise ValueError("Pinned opening posture requires planned finger release")
+        from .finger_release_plan import read_posture, planning_targets
+
+        posture_path, posture = read_posture(
+            posture_spec, withdrawal=withdrawal, release=release
+        )
+        targets = posture["joint_targets_rad"]
+        opening_targets = planning_targets(model, hands, targets)
+        sources[str(posture_path)] = digest(posture_path)
     times = np.r_[np.arange(0, duration, config["sample_period_s"]), duration]
     if len(times) > 1000:
         raise ValueError("Continuous plan exceeds the dense arm-audit budget")
@@ -339,6 +381,7 @@ def run(config):
                     hand["q_open"],
                     hand["q_closed"],
                     base["rollout"],
+                    release_open=opening_targets.get(hand["root_body"]),
                     release_fast_mask=np.array(
                         ["thumb" in n for n in hand["joint_names"]]
                     ),
@@ -357,9 +400,9 @@ def run(config):
             wrist[:3, 3], wrist[:3, :3] = data.xpos[root], data.xmat[root].reshape(3, 3)
             target = change @ wrist
             if withdrawal:
-                from .wrist_withdrawal import offset
+                from .wrist_withdrawal import transform
 
-                target[:3, 3] += offset(time, role, withdrawal, release)
+                target = transform(time, role, target, withdrawal, release)
             q = np.array(
                 [
                     model.joint(hand["fixture_prefix"] + s).qposadr[0]
@@ -432,6 +475,8 @@ def run(config):
         )
     if withdrawal:
         protocol["wrist_withdrawal"] = withdrawal
+    if posture_spec:
+        protocol["finger_release_posture"] = posture_spec
     source = out / "source-trial"
     source.mkdir()
     (source / "continuous_reference.py").write_bytes(implementation)

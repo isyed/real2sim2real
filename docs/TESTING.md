@@ -1,5 +1,13 @@
 # Testing the reusable modules
 
+`test_release_path_search.py` checks hand-role contact residuals, structural matching
+of unnamed colliders, bounded rotation parameters and position-only near-contact
+queries without physics advancement. Wrist withdrawal tests check world-axis
+rotation about the wrist origin, separate rotation/translation clocks and support
+admission before the earliest motion. Opening-posture tests reject mixed wrist/clock
+contracts and protect fixture/arm/object coordinates during planning. Continuous
+release tests retain the combined force limit despite per-hand diagnostics.
+
 `test_pad_seating_plan.py` checks bounded, pinned opposing-finger changes, contact
 frame validation, atomic rejection and preserved acquisition timing. Withdrawal
 tests check translation/duration bounds and supported-unhooking admission.

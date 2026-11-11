@@ -181,6 +181,13 @@ def rollout(config, interaction=None):
     if {a["name"] for a in arms} != {"left", "right"}:
         raise ValueError("Both hands must have arms")
     parent = json.loads(Path(audit["config"]["trial"]).read_text())
+    required_posture = parent.get("continuous_protocol", {}).get(
+        "finger_release_posture"
+    )
+    if required_posture and config.get("finger_release_posture") != required_posture:
+        raise ValueError(
+            "Live release must use the exact posture in the audited command plan"
+        )
     if config.get("finger_release_posture") and (
         finger_mode != "live_contact_force"
         or not parent.get("continuous_protocol", {}).get("release_planned")
@@ -358,7 +365,15 @@ def rollout(config, interaction=None):
         if config.get("finger_release_posture"):
             from .finger_release_plan import bind
 
-            bind(live_fingers, model, config["finger_release_posture"])
+            bind(
+                live_fingers,
+                model,
+                config["finger_release_posture"],
+                withdrawal=parent.get("continuous_protocol", {}).get(
+                    "wrist_withdrawal"
+                ),
+                release=parent.get("continuous_protocol", {}).get("finger_release"),
+            )
         if config.get("finger_seating_plan"):
             from .pad_seating_plan import bind
 
@@ -453,6 +468,7 @@ def rollout(config, interaction=None):
     control_period, control_stride = controller_clock(
         model.opt.timestep, config.get("control_period_s")
     )
+    command_lead_s = float(np.max(np.diff(times)))
     control_start = float(data.time)
     control_updates = 0
     if interaction is not None:
@@ -480,6 +496,7 @@ def rollout(config, interaction=None):
                     withdrawal,
                     parent["continuous_protocol"]["finger_release"],
                     live_fingers.release.started_s,
+                    command_lead_s=command_lead_s,
                 ):
                     aborted = "withdrawal_without_supported_unhooking"
                     break

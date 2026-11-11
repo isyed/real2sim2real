@@ -431,6 +431,20 @@ through another finger. Enforce the original self/environment limits in both
 configurations, then screen the entire arm/finger trajectory; reject before
 physics when that commanded path is unsafe.
 
+Use complete simulated acquisition/hold rollouts to compare contact sequencing;
+static pad fits cannot predict every loaded branch. A thumb-first schedule can
+reduce primary drift while leaving support drift and clearance outside limits.
+Retain all metrics, blocked paths and original verdicts. Evaluate sustained
+bilateral pad loading over the full reference-defined hold, never an
+outcome-selected stable segment. A better scalar search objective is not a pass.
+
+Transfer promising schedules to other admitted grasp seeds before attributing
+failure solely to initialization. Require an exact identity replay for each seed,
+preserve task/physics budgets, and repeat a selected candidate without retuning.
+If bounded acquisition searches still fail, replan support contact geometry and
+bearing/insertion clearance rather than indefinitely tuning timing or weakening
+acceptance. Reproducibility in one nominal scene does not establish robustness.
+
 Measure correction authority with small signed pressure changes and thumb/finger
 redistribution before training an actor. Higher force targets can change object
 rotation, rolling and the other hand's load; they do not guarantee less grasp

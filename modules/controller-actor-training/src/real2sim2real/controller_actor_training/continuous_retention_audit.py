@@ -27,6 +27,8 @@ def load_readiness(records, *, fraction=0.5, dwell_s=0.1, maximum_gap_s=0.03):
         raise ValueError("Finite positive load-readiness diagnostics required")
     started = dict(primary=None, secondary=None, bilateral=None)
     confirmed = dict(primary=None, secondary=None, bilateral=None)
+    qualified = dict(primary=0, secondary=0, bilateral=0)
+    count = 0
     previous = None
     for row in records:
         time = row["time_s"]
@@ -48,7 +50,9 @@ def load_readiness(records, *, fraction=0.5, dwell_s=0.1, maximum_gap_s=0.03):
                 enough.append(target > 0 and force >= fraction * target)
             ready[role] = enough[0] and sum(enough[1:]) >= 2
         ready["bilateral"] = all(ready.values())
+        count += 1
         for role, value in ready.items():
+            qualified[role] += int(value)
             if value:
                 if started[role] is None:
                     started[role] = time
@@ -63,6 +67,9 @@ def load_readiness(records, *, fraction=0.5, dwell_s=0.1, maximum_gap_s=0.03):
         maximum_sample_gap_s=maximum_gap_s,
         opposing_pads_required=2,
         first_confirmed_s=confirmed,
+        sampled_load_fraction={
+            role: total / count if count else 0.0 for role, total in qualified.items()
+        },
         diagnostic_only=True,
         acceptance_changed=False,
     )

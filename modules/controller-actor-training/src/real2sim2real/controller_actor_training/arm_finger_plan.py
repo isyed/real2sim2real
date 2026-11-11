@@ -225,6 +225,7 @@ def path_screen(
                 live.rollout,
                 release_open=hand.get("release_open"),
                 release_fast_mask=hand.get("release_fast_mask"),
+                closing_windows=hand.get("closing_windows"),
             )
         mujoco.mj_fwdPosition(model, scratch)
         if (

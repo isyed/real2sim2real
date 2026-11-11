@@ -228,6 +228,11 @@ rounding tolerance cannot admit a shortened hold.
 
 ## Joint closure wrists and loaded finger posture
 
+For optimization against actual acquisition and the complete stationary hold,
+see [acquisition rollout search](ACQUISITION_ROLLOUT_SEARCH.md). It coordinates
+robot wrist/finger closure within the existing interval and preserves the raw
+object clock and original acceptance gates.
+
 `closing_grasp_plan --config ...` jointly fits both wrist displacements and all
 ten finger chains from a pinned, table-supported acquisition-completion state.
 Required settings are `source_result`, `source_sha256`, `time_s`,

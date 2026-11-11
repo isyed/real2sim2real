@@ -10,6 +10,11 @@ retention, demonstrated motion and bilateral release have separate admission ste
 `closing_grasp_plan` adds joint closing-wrist and ten-finger proposals with optional
 calibration from an actual loaded hold. Proposals remain coupled to bounded
 object-frame wrist preload through arm-path admission and live finger ownership.
+The [acquisition rollout search](../../docs/ACQUISITION_ROLLOUT_SEARCH.md) evaluates
+bounded wrist/thumb/finger schedules in complete stationary physics, with identity
+regression, full-hold contact scoring and unchanged task acceptance. Rejected
+scores and path failures remain explicit; a new stationary pass still requires
+moving/return/release validation.
 
 The [CPU arm residual environment](../../docs/ARM_RESIDUAL_ADAPTER.md) adds a
 reset/step interface for bounded bilateral pressure corrections on frozen arm

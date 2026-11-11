@@ -34,7 +34,15 @@ def feedback_settings(original, overrides=None):
 
 
 def finger_waypoint(
-    time, pre, opened, closed, rollout, *, release_open=None, release_fast_mask=None
+    time,
+    pre,
+    opened,
+    closed,
+    rollout,
+    *,
+    release_open=None,
+    release_fast_mask=None,
+    closing_windows=None,
 ):
     from .object_grasp_pilot import smoothstep
 
@@ -46,6 +54,14 @@ def finger_waypoint(
             "Finger closure may use 50–100% of the acquisition close window"
         )
     close *= fraction
+    if closing_windows is not None:
+        from .acquisition_profile import window
+
+        windows = np.asarray(closing_windows, float)
+        if values[0].ndim != 1 or windows.shape != (len(values[0]), 2) or fraction != 1:
+            raise ValueError("Exclusive matching per-joint closing windows required")
+        for value in windows:
+            window(value)
     if (
         not np.isfinite([time, approach, close]).all()
         or time < 0
@@ -60,7 +76,12 @@ def finger_waypoint(
         a = smoothstep(time / approach)
         return (1 - a) * values[0] + a * values[1]
     if time < approach + close:
-        a = smoothstep((time - approach) / close)
+        f = (time - approach) / close
+        a = smoothstep(
+            f
+            if closing_windows is None
+            else (f - windows[:, 0]) / (windows[:, 1] - windows[:, 0])
+        )
         return (1 - a) * values[1] + a * values[2]
     if rollout.get("finger_release"):
         from .finger_release import release_fraction
@@ -216,7 +237,12 @@ class ArmFingerFeedback:
         nominal = data.qpos.copy()
         schedule = {k: v for k, v in self.rollout.items() if k != "finger_release"}
         for hand in self.hands:
-            nominal[hand["qids"]] = finger_waypoint(time, *hand["waypoints"], schedule)
+            nominal[hand["qids"]] = finger_waypoint(
+                time,
+                *hand["waypoints"],
+                schedule,
+                closing_windows=hand.get("closing_windows"),
+            )
         activation = (
             self.rollout["approach_s"]
             + self.settings["close_activation_fraction"] * self.rollout["close_s"]

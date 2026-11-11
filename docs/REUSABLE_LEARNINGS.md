@@ -367,6 +367,17 @@ clearance can retain thumb contact in dynamics. Verify the opening path, actual
 joint response and residual contact through the full settling window. Longer
 opening does not substitute for a table-clear unhooking/withdrawal path.
 
+Thumb-first opening can collide with a finger that remains closed. Screen the
+complete articulated-hand trajectory on the same finger clocks used by live
+control, and retain the pair/time witness when it fails. A wrist translation that
+frees one hand can leave the other hooked to the object. Check both hands' residual
+contact forces, object pose, and tabletop support through the full release window.
+
+Geometrically seated pads can remain unloaded in dynamics because the robot has
+not reached those poses. Inspect actual closure response and early load transfer;
+a static fit cannot substitute for stationary admission. An earlier finger closing
+command must retain the independently declared object clock and drift anchor.
+
 Inspect seating before increasing pressure: unloaded pads at closure, millimetre
 normal gaps before lift, or wrist tracking active only after lift can explain later
 drift. Compare coherent contact force with requested pressure and preserve existing

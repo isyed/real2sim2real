@@ -184,7 +184,7 @@ def run(config):
 
     implementation = Path(__file__).read_bytes()
 
-    if set(config) - {"finger_release"} != {
+    if set(config) - {"finger_release", "wrist_withdrawal"} != {
         "baseline_result",
         "baseline_sha256",
         "output",
@@ -272,6 +272,13 @@ def run(config):
         validate_release(release)
         base["rollout"]["finger_release"] = release
         duration += release["duration_s"] + release["settle_s"]
+    withdrawal = config.get("wrist_withdrawal")
+    if withdrawal:
+        from .wrist_withdrawal import validate_withdrawal
+
+        if release is None:
+            raise ValueError("Wrist withdrawal requires supported finger release")
+        validate_withdrawal(withdrawal, release)
     times = np.r_[np.arange(0, duration, config["sample_period_s"]), duration]
     if len(times) > 1000:
         raise ValueError("Continuous plan exceeds the dense arm-audit budget")
@@ -317,7 +324,7 @@ def run(config):
         ).as_quat()[[3, 0, 1, 2]]
         change = command @ np.linalg.inv(anchor)
         wrists = []
-        for hand, idx in zip(hands, indices):
+        for role, hand, idx in zip(("right", "left"), hands, indices):
             waypoint = finger_waypoint(
                 time,
                 hand["q_pregrasp"],
@@ -332,6 +339,9 @@ def run(config):
                     hand["q_open"],
                     hand["q_closed"],
                     base["rollout"],
+                    release_fast_mask=np.array(
+                        ["thumb" in n for n in hand["joint_names"]]
+                    ),
                 )
                 fingers = np.array(
                     [
@@ -346,6 +356,10 @@ def run(config):
             wrist = np.eye(4)
             wrist[:3, 3], wrist[:3, :3] = data.xpos[root], data.xmat[root].reshape(3, 3)
             target = change @ wrist
+            if withdrawal:
+                from .wrist_withdrawal import offset
+
+                target[:3, 3] += offset(time, role, withdrawal, release)
             q = np.array(
                 [
                     model.joint(hand["fixture_prefix"] + s).qposadr[0]
@@ -416,6 +430,8 @@ def run(config):
             minimum_table_contact_fraction=0.8,
             maximum_sample_tolerance_s=0.05,
         )
+    if withdrawal:
+        protocol["wrist_withdrawal"] = withdrawal
     source = out / "source-trial"
     source.mkdir()
     (source / "continuous_reference.py").write_bytes(implementation)

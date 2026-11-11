@@ -1,5 +1,12 @@
 # Testing the reusable modules
 
+`test_pad_seating_plan.py` checks bounded, pinned opposing-finger changes, contact
+frame validation, atomic rejection and preserved acquisition timing. Withdrawal
+tests check translation/duration bounds and supported-unhooking admission.
+Mounted-hand and finger-path tests verify independent thumb clocks and conservative
+table clearance without writes to the physical state. Stationary promotion tests
+accept integration-grid endpoint rounding and reject a genuinely shortened trial.
+
 `test_finger_release.py` checks table-load gating, smooth opening without a command
 jump, blocked release and no automatic re-close. `test_finger_release_plan.py`
 checks pinned, bounded finger-only posture binding without changing acquisition.

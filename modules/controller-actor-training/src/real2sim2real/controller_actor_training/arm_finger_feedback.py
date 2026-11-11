@@ -32,11 +32,19 @@ def feedback_settings(original, overrides=None):
     return result
 
 
-def finger_waypoint(time, pre, opened, closed, rollout, *, release_open=None):
+def finger_waypoint(
+    time, pre, opened, closed, rollout, *, release_open=None, release_fast_mask=None
+):
     from .object_grasp_pilot import smoothstep
 
     values = [np.asarray(v, float) for v in (pre, opened, closed)]
     approach, close = rollout["approach_s"], rollout["close_s"]
+    fraction = rollout.get("finger_close_fraction", 1.0)
+    if not np.isfinite(fraction) or not 0.5 <= fraction <= 1:
+        raise ValueError(
+            "Finger closure may use 50–100% of the acquisition close window"
+        )
+    close *= fraction
     if (
         not np.isfinite([time, approach, close]).all()
         or time < 0
@@ -62,7 +70,23 @@ def finger_waypoint(time, pre, opened, closed, rollout, *, release_open=None):
         )
         if released.shape != values[1].shape or not np.isfinite(released).all():
             raise ValueError("Finite matching release posture required")
-        return (1 - a) * values[2] + a * released
+        result = (1 - a) * values[2] + a * released
+        if (
+            release_fast_mask is not None
+            and "thumb_duration_s" in rollout["finger_release"]
+        ):
+            mask = np.asarray(release_fast_mask, bool)
+            if mask.shape != result.shape:
+                raise ValueError("Thumb mask must match the planned hand coordinates")
+            fast = release_fraction(
+                time,
+                dict(
+                    rollout["finger_release"],
+                    duration_s=rollout["finger_release"]["thumb_duration_s"],
+                ),
+            )
+            result[mask] = (1 - fast) * values[2][mask] + fast * released[mask]
+        return result
     return values[2].copy()
 
 
@@ -152,6 +176,18 @@ class ArmFingerFeedback:
         )
         if set(self.qids) != owned or len(self.qids) != len(owned):
             raise ValueError("Live feedback may own existing finger actuators only")
+        if self.release is not None:
+            thumbs = {
+                int(q)
+                for p in self.servo.pads
+                if p["group"] == "thumb"
+                for q in p["qids"]
+            }
+            self.release.unhook_mask = np.array([int(q) in thumbs for q in self.qids])
+            for hand in self.hands:
+                hand["release_fast_mask"] = np.array(
+                    [int(q) in thumbs for q in hand["qids"]]
+                )
         self.support_bias = config["support_controller"].get(
             "actuator_bias_compensation", False
         )

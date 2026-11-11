@@ -61,7 +61,7 @@ def contact_witness(data, geom, objects, cutoff):
     return min(choices, key=lambda v: v[0]) if choices else (cutoff, np.zeros(6))
 
 
-def bind(live, model, spec):
+def bind(live, model, spec, *, closing_wrist_offsets=None):
     if set(spec) - {"close_fraction"} != {"path", "sha256"}:
         raise ValueError("Pinned seating proposal required")
     fraction = spec.get("close_fraction", 1.0)
@@ -71,25 +71,56 @@ def bind(live, model, spec):
     if digest(path) != spec["sha256"]:
         raise ValueError("Seating proposal changed")
     report = json.loads(path.read_text())
+    joint_plan = report.get("schema") == "real2sim2real.closing-grasp-plan/1"
+    from .closing_wrist_offsets import nonzero
+
+    if nonzero(closing_wrist_offsets) and not joint_plan:
+        raise ValueError(
+            "Nonzero wrist preload requires its jointly fitted finger proposal"
+        )
+    if joint_plan:
+        from .closing_wrist_offsets import validate
+
+        validate(report["closing_wrist_offsets"])
+        if report["closing_wrist_offsets"] != closing_wrist_offsets:
+            raise ValueError(
+                "Joint finger proposal requires its exact audited closing wrist offsets"
+            )
     if (
-        report.get("schema") != "real2sim2real.pad-seating-plan/1"
+        report.get("schema")
+        not in (
+            "real2sim2real.pad-seating-plan/1",
+            "real2sim2real.closing-grasp-plan/1",
+        )
         or report.get("geometry_accepted") is not True
     ):
         raise ValueError("Geometrically accepted seating proposal required")
     pads = {p["role"] + ":" + p["group"]: p for p in live.servo.pads}
+    if joint_plan and {p["label"] for p in report["pads"]} != set(pads):
+        raise ValueError("Joint closure must cover both complete five-pad hands")
     changes, points = {}, []
     for item in report["pads"]:
         pad = pads.get(item["label"])
         if pad is None or model.geom(pad["gid"]).name != item["geom"]:
             raise ValueError("Seating pad identity changed")
         names = [model.joint(int(model.dof_jntid[d])).name for d in pad["dofs"]]
-        if names != item["joint_names"] or item["label"].endswith(":thumb"):
+        if names != item["joint_names"] or (
+            item["label"].endswith(":thumb") and not joint_plan
+        ):
             raise ValueError("Only the declared opposing finger chains may change")
         proposed = np.asarray(item["closed_rad"], float)
         hand = next(h for h in live.hands if h["role"] == pad["role"])
         old = np.array(
             [hand["waypoints"][2][list(hand["qids"]).index(q)] for q in pad["qids"]]
         )
+        if joint_plan:
+            anchor = np.asarray(item["nominal_closed_rad"], float)
+            if anchor.shape != old.shape or not np.allclose(
+                anchor, old, atol=1e-8, rtol=0
+            ):
+                raise ValueError(
+                    "Joint closure must retain its original nominal finger anchor"
+                )
         if (
             proposed.shape != old.shape
             or not np.isfinite(proposed).all()

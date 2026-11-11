@@ -12,6 +12,62 @@ from .acquisition_compare import relative_object, pose_difference
 from .contact_patch_motion import summarize
 
 
+def load_readiness(records, *, fraction=0.5, dwell_s=0.1, maximum_gap_s=0.03):
+    """Sampled thumb + two opposing pads at a fraction of requested pressure.
+
+    Read-only diagnostic, not a new contact/force-closure acceptance gate.
+    Requires continuous observations for a simultaneous bilateral dwell.
+    """
+    if (
+        not np.isfinite([fraction, dwell_s, maximum_gap_s]).all()
+        or not 0 < fraction <= 1
+        or dwell_s <= 0
+        or maximum_gap_s <= 0
+    ):
+        raise ValueError("Finite positive load-readiness diagnostics required")
+    started = dict(primary=None, secondary=None, bilateral=None)
+    confirmed = dict(primary=None, secondary=None, bilateral=None)
+    previous = None
+    for row in records:
+        time = row["time_s"]
+        if not np.isfinite(time) or (previous is not None and time <= previous):
+            raise ValueError("Strict finite observation clock required")
+        if previous is not None and time - previous > maximum_gap_s:
+            started = dict.fromkeys(started)
+        ready = {}
+        for role in ("primary", "secondary"):
+            enough = []
+            for group in ("thumb", "index", "middle", "ring", "pinky"):
+                label = role + ":" + group
+                force = row["contact_patch_motion"]["pads"][label]["force_n"]
+                target = row["contact_force_feedback"][label]["target_n"]
+                if not np.isfinite([force, target]).all() or min(force, target) < 0:
+                    raise ValueError(
+                        "Finite nonnegative measured/requested pressures required"
+                    )
+                enough.append(target > 0 and force >= fraction * target)
+            ready[role] = enough[0] and sum(enough[1:]) >= 2
+        ready["bilateral"] = all(ready.values())
+        for role, value in ready.items():
+            if value:
+                if started[role] is None:
+                    started[role] = time
+                if time - started[role] >= dwell_s - 1e-9 and confirmed[role] is None:
+                    confirmed[role] = time
+            else:
+                started[role] = None
+        previous = time
+    return dict(
+        requested_force_fraction=fraction,
+        continuous_dwell_s=dwell_s,
+        maximum_sample_gap_s=maximum_gap_s,
+        opposing_pads_required=2,
+        first_confirmed_s=confirmed,
+        diagnostic_only=True,
+        acceptance_changed=False,
+    )
+
+
 def describe(source):
     rows = source["records"]
     protocol = source["continuous_protocol"]
@@ -79,6 +135,9 @@ def describe(source):
         source_rejected_for=source["rejected_for"],
         diagnostic_only=True,
         acceptance_changed=False,
+        load_readiness=load_readiness(
+            [r for r in rows if r["phase"] in ("close", "lift", "hold")]
+        ),
     )
 
 
@@ -103,6 +162,12 @@ def run(paths, output):
             + "</h2><p>Original verdict: "
             + html.escape(str(source["rejected_for"]))
             + "</p>"
+        )
+        cards.append(
+            "<p>Sampled sustained load (thumb + two opposing pads per hand at half "
+            "requested force for 0.1 s): "
+            + html.escape(json.dumps(report["load_readiness"]["first_confirmed_s"]))
+            + ". Diagnostic only; this does not change acceptance.</p>"
         )
         for name, window in report["windows"].items():
             cards.append(

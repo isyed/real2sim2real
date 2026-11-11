@@ -7,6 +7,9 @@ and evaluates complete free-object motion with acquisition-anchored retention.
 The same route includes bounded unloaded-pad acquisition, optional non-pad finger
 clearance fitting, and a saved-state position-motor audit. Geometry, stationary
 retention, demonstrated motion and bilateral release have separate admission steps.
+`closing_grasp_plan` adds joint closing-wrist and ten-finger proposals with optional
+calibration from an actual loaded hold. Proposals remain coupled to bounded
+object-frame wrist preload through arm-path admission and live finger ownership.
 
 The [CPU arm residual environment](../../docs/ARM_RESIDUAL_ADAPTER.md) adds a
 reset/step interface for bounded bilateral pressure corrections on frozen arm

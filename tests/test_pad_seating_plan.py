@@ -84,6 +84,38 @@ def test_seating_changes_closed_fingers_and_frames_without_retiming_acquisition_
     np.testing.assert_array_equal(live.servo.pads[0]["point_body"], [0.001, 0, 0])
 
 
+def test_joint_closure_is_bound_to_exact_wrist_path_before_any_mutation(tmp_path):
+    live, model, proposal = fixture()
+    from test_closing_wrist_offsets import settings
+
+    with pytest.raises(ValueError, match="jointly fitted"):
+        bind(live, model, write(tmp_path, proposal), closing_wrist_offsets=settings())
+    proposal["schema"] = "real2sim2real.closing-grasp-plan/1"
+    proposal["closing_wrist_offsets"] = settings()
+    proposal["pads"][0]["nominal_closed_rad"] = [0.1]
+    spec = write(tmp_path, proposal)
+    with pytest.raises(ValueError, match="exact audited"):
+        bind(live, model, spec)
+    np.testing.assert_array_equal(live.hands[0]["waypoints"][2], [0.1])
+    # The small ownership fixture has one pad. Real planner emits all ten;
+    # the binder requires complete coverage of whichever live hands it owns.
+    bind(live, model, spec, closing_wrist_offsets=settings())
+    np.testing.assert_array_equal(live.hands[0]["waypoints"][2], [0.2])
+
+
+def test_joint_closure_rejects_mismatched_nominal_anchor_atomically(tmp_path):
+    from test_closing_wrist_offsets import settings
+
+    live, model, proposal = fixture()
+    proposal.update(
+        schema="real2sim2real.closing-grasp-plan/1", closing_wrist_offsets=settings()
+    )
+    proposal["pads"][0]["nominal_closed_rad"] = [0.11]
+    with pytest.raises(ValueError, match="nominal finger anchor"):
+        bind(live, model, write(tmp_path, proposal), closing_wrist_offsets=settings())
+    np.testing.assert_array_equal(live.hands[0]["waypoints"][2], [0.1])
+
+
 @pytest.mark.parametrize(
     "case",
     [

@@ -359,6 +359,20 @@ def gravity_wrench_screen(
         required_normal_forces_n=(groups @ result.x).tolist()
         if result.success
         else None,
+        # Sum each point's friction-pyramid forces, rather than confusing
+        # normal pressure budgets with upward payload support.
+        contact_forces_world_n=(
+            np.einsum(
+                "ijk,ij->ik",
+                np.asarray(columns)[:, :3].reshape(len(p), 8, 3),
+                result.x.reshape(len(p), 8),
+            ).tolist()
+            if result.success
+            else None
+        ),
+        equilibrium_residual=(matrix @ result.x - target).tolist()
+        if result.success
+        else None,
         actuator_feasibility_validated=False,
         dynamic_success_validated=False,
     )

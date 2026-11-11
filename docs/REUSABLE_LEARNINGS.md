@@ -457,3 +457,26 @@ or a shorter contact segment. A causal drift policy must use the original fixed
 grasp anchor; reanchoring after slip hides the error. Selecting directions and
 activation thresholds on the same replay is development. Confirming a nominal
 result with a deterministic repeat checks reproducibility, not generalization.
+
+When replacing frictional wall support with a bearing grasp, first check the
+**exterior** underside, finite pad coverage and insertion gap at the initial rest
+pose. A cavity floor or a surface reachable only after lifting cannot establish
+from-table acquisition. A coarse grid that finds no broad body patch is a
+sampling result, not proof that every possible contact is absent.
+
+Match target order to the real hand's finger order before interpreting fit
+failures. Submillimetre pad position errors can coexist with a misaligned thumb
+or deep proximal-link penetration. Record collision witnesses along insertion
+and closure, rather than increasing pressure on an inadmissible posture.
+
+Use complete contact forces to inspect a proposed load path: normal pressure and
+net upward support are different quantities. An underside contact can still
+require friction and substantial opposing clamp forces to balance torque about
+the centre of mass. Keep static feasibility separate from finite pad coverage,
+actuator feasibility, observation evidence and actual loaded retention. See
+[bearing support planning](BEARING_SUPPORT_PLANNING.md).
+
+Label stationary review videos with the intentional command-freeze time and
+full simulated endpoint. Motion stopping in a diagnostic is not a truncated
+capture or a faithful replay of a continuously moving demonstration. Reuse
+immutable media for text-only corrections; do not change archived physics.

@@ -230,3 +230,9 @@ reset/step pressure-action boundary on the same replay loop. Pin the baseline an
 verify exact zero-action reproduction before collecting corrections or learning.
 A reproduced failed task remains failed; scalar adapter validation does not imply
 vectorized learner, domain-randomization or hardware readiness.
+
+A contact-strategy branch can use [bearing support planning](BEARING_SUPPORT_PLANNING.md)
+to screen exterior lower surfaces, insertion and static load paths before new
+arm/control trials. It preserves the source controller and never promotes a
+geometric fit directly to control. Stationary report banners distinguish the
+intentional command freeze from a complete demonstrated-motion replay.

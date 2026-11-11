@@ -6,6 +6,9 @@ bounded actuator-driven physics, and only then policy training. Keep hand joint
 commands, source timestamps, task geometry and physical acceptance criteria
 explicit so a change of embodiment remains reviewable.
 
+See [control readiness](CONTROL_READINESS.md) for the distinction between a fixture
+hold, endpoint reachability, complete arm fitting and an arm-mounted hold.
+
 ## Reusable components
 
 * `arm_hand_assembly.build_assembly` attaches existing hand subtrees to independently

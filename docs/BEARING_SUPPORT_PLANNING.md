@@ -70,3 +70,34 @@ first hold time and saved final time prominently: commanded motion deliberately
 stops while the free object's physics continues. A moving replay is labeled
 separately and does not imply task success. This prevents stationary retention
 videos from being confused with truncated demonstrated-motion replay.
+
+## Side-thumb contact and a separate insertion posture
+
+A proposal may supply `thumb_side_contact: {anchor_m, outward_world}`. The anchor
+selects a ray through the unchanged reconstructed mesh; the unit outward direction
+must be approximately horizontal. `directional_exterior_target` rigidly expresses
+the source in a ray-aligned frame and reuses the same exterior five-ray stencil.
+The four finger targets retain their declared anatomical order and underside
+checks. A surface centre hit never substitutes for a missing finite side patch.
+
+Optional `seed_joint_positions_rad` names only owned support finger joints within
+native limits. It cannot set fixture coordinates or other-hand/object joints.
+`opening_gap_m` ranges from 4 to 20 mm; `preload_m` ranges from 0 to 0.5 mm.
+These change geometric targets, not force ceilings or acceptance thresholds.
+A preload at the same depth as the 0.5 mm surface-distance criterion can place
+nearby pad samples just outside that criterion; reducing commanded preload tests
+seating without relaxing the gap or normal requirements.
+
+Side proposals also record nominal primary finite-pad coverage and a grouped
+finite-patch wrench check. Do not assume an old source hand's commanded closed
+pose proves new paired coverage or loaded equilibrium. A clear insertion can
+coexist with missing primary samples or failed static balance. Refit the paired
+load path before fixture/arm dynamics. See [control readiness](CONTROL_READINESS.md)
+for how these geometry checks differ from the two kinds of stationary hold.
+
+The planner's root-frame changes preserve the initialized object and retained
+primary joints explicitly. This matters because simulator constant rebuilding
+can reset state. Geometry artifacts from the older non-preserving setup cannot
+establish paired clearance or rejection for the intended retained grasp; repeat
+with the invariant checked. Original controllers retain the legacy initialization
+default, and physical rollout results are not changed by this diagnostic fix.

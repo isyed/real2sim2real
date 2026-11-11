@@ -55,7 +55,12 @@ def render(path):
     if digest(source_path) != source["sha256"]:
         raise ValueError("Source grasp changed")
     parent = json.loads(source_path.read_text())
-    survey = json.loads((path.parent / "surface-survey.json").read_text())
+    survey_path = path.parent / "surface-survey.json"
+    survey = (
+        json.loads(survey_path.read_text())
+        if survey_path.exists()
+        else {"sites": [], "sampled_positions": 0}
+    )
     sites = [s["targets_m"][0] for s in survey["sites"]]
     hand = parent["candidate"]
     rows = []
@@ -69,12 +74,21 @@ def render(path):
                     c["index"],
                     c["proposal"].get("name", ""),
                     metric(c.get("site_errors_m"), 1000),
-                    metric(c.get("normal_errors_deg")),
+                    f"{c['maximum_all_pose_normal_error_deg']:.3f}"
+                    if "maximum_all_pose_normal_error_deg" in c
+                    else metric(c.get("normal_errors_deg")),
                     f"{c['path']['max_penetration_m'] * 1000:.3f}"
                     if "path" in c
                     else "—",
                     c.get("patches", {}).get("samples_per_pad", "—"),
-                    ", ".join(c["rejected_for"]),
+                    c.get("gravity_screens", {})
+                    .get(str(parent["configuration"]["physics"]["friction"]), {})
+                    .get("feasible", "unavailable"),
+                    c.get("paired_finite_gravity_wrench", {}).get(
+                        "feasible", "unavailable"
+                    ),
+                    ", ".join(c["rejected_for"])
+                    or "Geometry pass; control not admitted",
                 )
             )
             + "</tr>"
@@ -90,18 +104,27 @@ def render(path):
 <style>body{font:17px system-ui;max-width:1200px;margin:30px auto}td,th{border:1px solid #ddd;padding:8px}table{border-collapse:collapse;font-size:14px}svg{width:100%}pre{white-space:pre-wrap}</style>
 <h1>Support bearing geometry and load-path audit</h1>
 <p><strong>No new control or dynamics validation.</strong> Targets and static equilibrium are hypotheses. Source-mesh geometry does not independently verify visible contact patches.</p>
-<p>Green: table-clear underside stencil sites. Blue: retained primary targets. Red: best position-fit support proposal. Black: source mesh centre of mass. These are point schematics, not collision renderings.</p>"""
+<p>Green: table-clear underside survey sites, when supplied. Blue: retained primary targets. Red: best position-fit support proposal. Black: source mesh centre of mass. These are point schematics, not collision renderings.</p>"""
         + drawing
-        + f"<p>Survey: {survey['sampled_positions']} positions; {len(sites)} exterior five-ray stencils pass the geometric gap screen. Geometry candidates: {plan['geometry_candidates']}.</p>"
-        + "<table><tr><th>ID</th><th>Proposal</th><th>Max seating error mm</th><th>Max normal error deg</th><th>Path penetration mm</th><th>Finite samples per pad</th><th>Rejections</th></tr>"
+        + f"<p>Optional survey: {survey['sampled_positions']} positions; {len(sites)} exterior five-ray stencils pass the geometric gap screen. Geometry candidates: {plan['geometry_candidates']}.</p>"
+        + "<table><tr><th>ID</th><th>Proposal</th><th>Max seating error mm</th><th>Max normal error deg</th><th>Path penetration mm</th><th>Finite samples per pad</th><th>Point balance</th><th>Finite paired balance</th><th>Rejections</th></tr>"
         + "".join(rows)
-        + '</table><p>Admission uses the pinned source position/penetration limits, ≤25° normal error, native joint limits and finite contacts on all five pads. Static force feasibility does not establish actuator feasibility or grasp retention. The primary hand is held at its source closed pose for this preflight; simultaneous acquisition and arm reachability remain untested.</p><p><a href="plan.json">Full plan and provenance</a> · <a href="surface-survey.json">Surface survey</a></p>'
+        + '</table><p>Admission uses the pinned source position/penetration limits, ≤25° normal error, native joint limits and finite contacts on all five pads. Static force feasibility does not establish actuator feasibility or grasp retention. The primary hand is held at its source closed pose for this preflight; simultaneous acquisition and arm reachability remain untested.</p><p><a href="plan.json">Full plan and provenance</a> · {SURVEY_LINK}</p>'
+    )
+    review_path = path.parent / "review.html"
+    review_path.write_text(
+        review_path.read_text().replace(
+            "{SURVEY_LINK}",
+            '<a href="surface-survey.json">Surface survey</a>'
+            if survey_path.exists()
+            else "No separate survey supplied",
+        )
     )
     write_json(
         path.parent / "review-receipt.json",
         dict(
             plan_sha256=digest(path),
-            survey_sha256=digest(path.parent / "surface-survey.json"),
+            survey_sha256=digest(survey_path) if survey_path.exists() else None,
             review_sha256=digest(path.parent / "review.html"),
             implementation_sha256=digest(Path(__file__)),
             physics_rerun=False,

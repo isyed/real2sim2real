@@ -1,4 +1,4 @@
-"""Bounded, geometry-only planning of an opposing top/underside support grasp.
+"""Bounded, geometry-only planning of top/side-thumb and underside support grasps.
 
 First exterior ray hits exclude cavity floors. Source surface geometry is a
 hypothesis: this stage neither verifies observation support nor admits control.
@@ -85,6 +85,72 @@ def exterior_targets(
     )
 
 
+def directional_exterior_target(mesh, anchor_m, outward_world):
+    """First exterior five-ray patch along an arbitrary declared world direction.
+
+    Rigidly express the same source mesh in a ray-aligned frame, reusing the
+    vertical exterior screen. This neither repairs nor replaces source geometry.
+    """
+    anchor, direction = np.asarray(anchor_m, float), np.asarray(outward_world, float)
+    if (
+        anchor.shape != (3,)
+        or direction.shape != (3,)
+        or not np.isfinite(np.r_[anchor, direction]).all()
+        or not np.isclose(np.linalg.norm(direction), 1)
+    ):
+        raise ValueError("Finite metric anchor and unit outward direction required")
+    direction = direction / np.linalg.norm(direction)
+    tangent = np.cross(direction, np.eye(3)[np.argmin(abs(direction))])
+    tangent /= np.linalg.norm(tangent)
+    rotation = np.stack([tangent, np.cross(direction, tangent), direction], axis=1)
+    transform = np.eye(4)
+    transform[:3, :3] = rotation.T
+    transform[:3, 3] = -rotation.T @ anchor
+    local = mesh.copy()
+    local.apply_transform(transform)
+    result = exterior_targets(local, [[0, 0]], [1])
+    if result["accepted"]:
+        for key in ("targets_m", "patch_points_m"):
+            result[key] = (np.asarray(result[key]) @ rotation.T + anchor).tolist()
+        result["outward_normals"] = (
+            np.asarray(result["outward_normals"]) @ rotation.T
+        ).tolist()
+    result["ray_anchor_m"] = anchor.tolist()
+    result["declared_outward_world"] = direction.tolist()
+    return result
+
+
+def support_surface(mesh, proposal):
+    """Opposing top/bottom legacy grasp or side-thumb with four underside pads."""
+    side = proposal.get("thumb_side_contact")
+    if side is None:
+        return exterior_targets(mesh, proposal["xy_m"], [1, -1, -1, -1, -1])
+    thumb = directional_exterior_target(mesh, side["anchor_m"], side["outward_world"])
+    fingers = exterior_targets(mesh, proposal["xy_m"][1:], [-1] * 4)
+    if not thumb["accepted"] or not fingers["accepted"]:
+        return dict(
+            accepted=False,
+            rejected_for=list(
+                dict.fromkeys(
+                    ["thumb:" + r for r in thumb["rejected_for"]]
+                    + ["fingers:" + r for r in fingers["rejected_for"]]
+                )
+            ),
+            thumb=thumb,
+            fingers=fingers,
+        )
+    result = dict(
+        accepted=True,
+        rejected_for=[],
+        patch_radius_m=0.004,
+        independent_observation_validated=False,
+        thumb=thumb,
+    )
+    for key in ("targets_m", "outward_normals", "patch_points_m", "face_indices"):
+        result[key] = thumb[key] + fingers[key]
+    return result
+
+
 def survey_underside(mesh, xy_m, *, table_top_z_m, minimum_gap_m=0.015):
     """Screen at most 4096 declared grid positions; do not infer observation support."""
     xy = np.asarray(xy_m, float)
@@ -137,6 +203,32 @@ def validate(config):
         ):
             raise ValueError("Five metric contact positions and finite yaw required")
 
+        if "thumb_side_contact" in p:
+            side = p["thumb_side_contact"]
+            anchor, direction = (
+                np.asarray(side["anchor_m"], float),
+                np.asarray(side["outward_world"], float),
+            )
+            if (
+                anchor.shape != (3,)
+                or direction.shape != (3,)
+                or not np.isfinite(np.r_[anchor, direction]).all()
+                or not np.isclose(np.linalg.norm(direction), 1)
+                or abs(direction[2]) > 0.25
+            ):
+                raise ValueError(
+                    "Bounded side-thumb anchor and horizontal outward direction required"
+                )
+        gap = p.get("opening_gap_m", 0.004)
+        if not np.isfinite(gap) or not 0.004 <= gap <= 0.02:
+            raise ValueError("Opening gap must remain within 4–20 mm")
+        preload = p.get("preload_m", 0.0005)
+        if not np.isfinite(preload) or not 0 <= preload <= 0.0005:
+            raise ValueError("Seating preload must remain within 0–0.5 mm")
+        for name, value in p.get("seed_joint_positions_rad", {}).items():
+            if not isinstance(name, str) or not np.isfinite(value):
+                raise ValueError("Explicit finite owned joint seed required")
+
 
 def run(config):
     import mujoco
@@ -149,6 +241,8 @@ def run(config):
         contact_patch_samples,
         gravity_wrench_screen,
     )
+
+    from real2sim2real.retargeting.paired_contacts import paired_wrench_screen
 
     validate(config)
     source_path = Path(config["source_trial"]["path"])
@@ -184,6 +278,7 @@ def run(config):
         Path(inspect.getfile(path_audit)),
         Path(inspect.getfile(robot_indices)),
         Path(inspect.getfile(fit_pad_contacts)),
+        Path(inspect.getfile(paired_wrench_screen)),
     ]
     implementations = {str(path): digest(path) for path in helper_paths}
     snapshot = output / "implementation"
@@ -205,7 +300,7 @@ def run(config):
             independent_observation_validated=False,
             geometry_candidate=False,
         )
-        surface = exterior_targets(mesh, proposal["xy_m"], [1, -1, -1, -1, -1])
+        surface = support_surface(mesh, proposal)
         row["surface"] = surface
         if not surface["accepted"]:
             row["rejected_for"] = surface["rejected_for"]
@@ -232,6 +327,7 @@ def run(config):
             "fixture_",
             primary["base_position_m"],
             primary["base_rotation"],
+            preserve_state=True,
         )
         data.qpos[primary_idx["q"]] = primary["q_closed"]
         set_root_frame(
@@ -241,6 +337,7 @@ def run(config):
             robot["fixture_prefix"],
             [0, 0, 0],
             np.eye(3),
+            preserve_state=True,
         )
         seed = np.zeros(len(names))
         for k, name in enumerate(names):
@@ -258,6 +355,20 @@ def run(config):
             for k, name in enumerate(names):
                 if name.startswith(robot["fixture_prefix"]):
                     seed[k] = 0
+        for name, value in proposal.get("seed_joint_positions_rad", {}).items():
+            if name not in names:
+                raise ValueError("Seed must name an owned support joint")
+            k = names.index(name)
+            if (
+                name.startswith(robot["fixture_prefix"])
+                or not model.jnt_range[idx["joints"][k], 0]
+                <= value
+                <= model.jnt_range[idx["joints"][k], 1]
+            ):
+                raise ValueError(
+                    "Seed must preserve native finger limits and fixture ownership"
+                )
+            seed[k] = value
         data.qpos[idx["q"]] = seed
         mujoco.mj_fwdPosition(model, data)
         local, _ = observe_frames(model, data, frames, idx)
@@ -269,8 +380,20 @@ def run(config):
             rotation = np.stack([forward, np.cross(-up, forward), -up], axis=1)
         position = targets.mean(0) - rotation @ local.mean(0)
         set_root_frame(
-            model, data, robot["root_body"], robot["fixture_prefix"], position, rotation
+            model,
+            data,
+            robot["root_body"],
+            robot["fixture_prefix"],
+            position,
+            rotation,
+            preserve_state=True,
         )
+        if not np.array_equal(
+            data.qpos[primary_idx["q"]], primary["q_closed"]
+        ) or not np.array_equal(data.qpos[j : j + 7], source_state):
+            raise ValueError(
+                "Support-root placement changed retained primary/object state"
+            )
         kwargs = dict(
             max_nfev=config["maximum_evaluations"],
             fixture_prefix=robot["fixture_prefix"],
@@ -284,7 +407,7 @@ def run(config):
             data,
             robot["root_body"],
             frames,
-            targets + 0.004 * outward,
+            targets + proposal.get("opening_gap_m", 0.004) * outward,
             -outward,
             fitted["q"],
             **kwargs,
@@ -294,7 +417,7 @@ def run(config):
             data,
             robot["root_body"],
             frames,
-            targets - 0.0005 * outward,
+            targets - proposal.get("preload_m", 0.0005) * outward,
             -outward,
             fitted["q"],
             **kwargs,
@@ -306,6 +429,17 @@ def run(config):
         data.qpos[idx["q"]] = closed["q"]
         mujoco.mj_fwdPosition(model, data)
         patches = contact_patch_samples(model, data, frames, mesh)
+        primary_patches = contact_patch_samples(
+            model, data, primary["pad_plan"]["frames"], mesh
+        )
+        finite_wrench = paired_wrench_screen(
+            primary_patches,
+            patches,
+            mesh.center_mass,
+            base["physics"]["mass_kg"],
+            base["physics"]["friction"],
+            config["maximum_normal_force_n"],
+        )
         primary_targets = np.asarray(primary["targets_m"])
         import trimesh
 
@@ -337,6 +471,8 @@ def run(config):
             reasons.append("native_joint_limits")
         if not patches["all_pads_observed"]:
             reasons.append("missing_finite_pad_contact")
+        if proposal.get("thumb_side_contact") and not finite_wrench["feasible"]:
+            reasons.append("paired_finite_gravity_balance_unverified")
         if not force[str(base["physics"]["friction"])]["feasible"]:
             reasons.append("static_gravity_wrench")
         row.update(
@@ -356,8 +492,13 @@ def run(config):
             pad_plan=dict(frames=frames),
             path=path,
             patches=patches,
+            primary_patches=primary_patches,
+            paired_finite_gravity_wrench=finite_wrench,
             site_errors_m=fitted["site_errors_m"].tolist(),
             normal_errors_deg=fitted["normal_errors_deg"].tolist(),
+            maximum_all_pose_normal_error_deg=max(
+                float(f["normal_errors_deg"].max()) for f in errors
+            ),
             maximum_all_pose_error_m=max(
                 float(f["site_errors_m"].max()) for f in errors
             ),
@@ -378,6 +519,7 @@ def run(config):
         candidates=rows,
         geometry_candidates=sum(r["geometry_candidate"] for r in rows),
         control_admitted=False,
+        retained_primary_and_object_state_verified=True,
         arm_reachability_validated=False,
         acquisition_timing_validated=False,
         dynamic_success_validated=False,

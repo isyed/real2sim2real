@@ -1,5 +1,9 @@
 # From a fitted grasp to moving control
 
+[Measured slip/tilt feedback](CLOSED_LOOP_GRASP_FEEDBACK.md) uses acquisition-time
+anchors, coordinated object-pivot wrist corrections and bounded recovery before
+release. Its zero-gain replay and complete loaded acceptance are separate checks.
+
 [Bounded wrist/posture authority probes](BOUNDED_GRASP_CORRECTIONS.md) retain the
 frozen continuous source and report loaded motion and paired stationary evidence
 without replacing an earlier baseline or issuing a promotion certificate.

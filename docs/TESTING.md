@@ -1,5 +1,12 @@
 # Testing the reusable modules
 
+`test_slip_tilt_feedback.py` checks fixed anchors, correction sign/rate/travel,
+coordinated object-pivot tilt, contact/reference freezes, blocked downward slip,
+supported-release recovery and stationary offset retention. Its optional runtime
+case rejects a collision at a command midpoint even when both endpoints are
+clear, while preserving live simulation state. Exact observed zero-gain replay
+and complete downstream physics remain required separately.
+
 `test_bounded_grasp_correction.py` checks pinned physical sources, frozen controller
 settings, owned finger commands, correction rate/travel limits and stationary
 retention of offsets. Its optional MuJoCo case checks object/world frame mapping,

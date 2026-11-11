@@ -196,6 +196,7 @@ def refresh_page(directory, *, follow_object=False):
         "stationary_admission",
         "residual_adapter",
         "bounded_grasp_correction",
+        "closed_loop_grasp_feedback",
         "continuous_protocol",
         "continuous_metrics",
     ):

@@ -347,6 +347,14 @@ results at two rates do not establish moving-contact rate robustness.
 
 ### Pressure authority before residual learning
 
+A separate robot lift followed by restarting reference frame zero creates a pause
+and an elevated replay anchor that are absent from a continuous demonstration.
+The continuous protocol uses the pre-lift capture interval for robot acquisition.
+Reference-defined suspension, acquisition-anchored drift and table-return checks
+must be explicit; post-lift drift and continuous drift are different cohorts.
+Bounded table-aware command projection must leave the raw scored reference intact.
+See [continuous object-reference control](CONTINUOUS_OBJECT_REFERENCE.md).
+
 Measure correction authority with small signed pressure changes and thumb/finger
 redistribution before training an actor. Higher force targets can change object
 rotation, rolling and the other hand's load; they do not guarantee less grasp

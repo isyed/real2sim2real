@@ -147,6 +147,8 @@ def render(directory, *, follow_object=False):
         "finger_plan_admission",
         "stationary_admission",
         "residual_adapter",
+        "continuous_protocol",
+        "continuous_metrics",
     ):
         if key in report:
             metrics[key] = report[key]

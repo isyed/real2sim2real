@@ -1,5 +1,10 @@
 # Controller and actor training
 
+The [continuous object-reference route](../../docs/CONTINUOUS_OBJECT_REFERENCE.md)
+places robot acquisition on the capture clock, followed by the demonstrated lift
+and table return. It emits a planning-only artifact for fresh arm/finger admission
+and evaluates complete free-object motion with acquisition-anchored retention.
+
 The [CPU arm residual environment](../../docs/ARM_RESIDUAL_ADAPTER.md) adds a
 reset/step interface for bounded bilateral pressure corrections on frozen arm
 control. Its zero-policy validator compares full saved physics and unchanged

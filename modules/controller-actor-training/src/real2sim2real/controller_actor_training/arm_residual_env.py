@@ -34,6 +34,7 @@ def frozen_source(config):
     result = json.loads(path.read_text())
     if (
         result.get("schema") != "real2sim2real.arm-replay-pilot/1"
+        or result.get("continuous_protocol") is not None
         or result.get("residual_adapter") is not None
         or result.get("finger_control_mode") != "live_contact_force"
         or result.get("physics_run") is not True
@@ -41,7 +42,7 @@ def frozen_source(config):
         or not result.get("fixed_controller_clock")
     ):
         raise ValueError(
-            "Complete fixed-clock live-finger frozen replay required; no residual stacking"
+            "Complete staged fixed-clock live-finger frozen replay required; continuous phase rewards and residual stacking are not supported"
         )
     for filename, field in (
         ("scene.xml", "scene_sha256"),

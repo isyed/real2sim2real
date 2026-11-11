@@ -76,6 +76,13 @@ Original inputs and rejected outputs remain intact.
 
 ## Extend motion without redefining success
 
+For acquisition followed directly by demonstrated lift and table return, use the
+separate [continuous object-reference preparation](CONTINUOUS_OBJECT_REFERENCE.md).
+It removes the independent lift and reference restart, emits a planning-only
+artifact, and requires fresh arm/finger screening and free-object dynamics.
+Acquisition-anchored drift and table-return gates define a new task protocol;
+preserve the original staged experiment for comparison.
+
 `guided_motion.select_interval` requires every requested inclusive frame ID;
 requesting a longer interval from a truncated export fails. Capture timestamps
 and metric poses are preserved. No temporal realignment, motion rescaling or

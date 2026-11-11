@@ -39,6 +39,13 @@ def score_poses(actual, reference, vertices):
     )
 
 
+def row_scope(row, duration, continuous):
+    """A continuous reference includes acquisition/return, excluding final padding."""
+    included = continuous or row["phase"] == "hold"
+    elapsed = row["time_s"] if continuous else row.get("reference_elapsed_s", -1)
+    return included, included and 0 <= elapsed <= duration
+
+
 def evaluate(directory):
     from .object_grasp_pilot import load_scene
 
@@ -80,13 +87,15 @@ def evaluate(directory):
     )
     vertices = np.asarray(mesh.vertices)[indices]
     achieved, references, moving = [], [], []
+    continuous = bool(parent.get("continuous_protocol"))
     for actual, reference in zip(report["records"], parent["records"]):
         if (
             abs(actual["time_s"] - reference["time_s"]) > 0.003
             or actual["phase"] != reference["phase"]
         ):
             raise ValueError("Saved record clock or phase mismatch")
-        if reference["phase"] != "hold":
+        included, native = row_scope(reference, duration, continuous)
+        if not included:
             continue
         achieved.append(
             np.r_[
@@ -100,7 +109,7 @@ def evaluate(directory):
                 Rotation.from_matrix(reference["reference_rotation"]).as_quat(),
             ]
         )
-        moving.append(0 <= reference["reference_elapsed_s"] <= duration)
+        moving.append(native)
     achieved, references, moving = (
         np.asarray(achieved),
         np.asarray(references),
@@ -109,7 +118,11 @@ def evaluate(directory):
     result = dict(
         schema="real2sim2real.arm-reference-evaluation/1",
         official_challenge_score=False,
-        reference="reconstructed object motion, aligned to achieved source grasp",
+        reference=(
+            "reconstructed object motion on capture clock, aligned to declared resting pose"
+            if continuous
+            else "reconstructed object motion, aligned to achieved source grasp"
+        ),
         clock="source record pairing; maximum allowed clock difference 3 ms; no temporal realignment",
         reference_frame_ids=frame_ids,
         reference_duration_s=duration,
@@ -124,6 +137,9 @@ def evaluate(directory):
         metric_implementation_sha256=digest(Path(metrics.__file__)),
         implementation_sha256=digest(Path(__file__)),
     )
+    if continuous:
+        result["complete_protocol"] = result.pop("complete_hold")
+        result["continuous_protocol"] = parent["continuous_protocol"]
     output = directory / "reference-metrics.json"
     if output.exists():
         raise ValueError("Reference evaluation already exists")

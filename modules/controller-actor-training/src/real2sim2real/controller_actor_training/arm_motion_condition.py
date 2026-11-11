@@ -12,6 +12,10 @@ def apply_condition(parent, targets, condition):
     values = np.asarray(targets, float)
     records = parent["records"]
     indices = [i for i, r in enumerate(records) if r["phase"] == "hold"]
+    if parent.get("continuous_protocol") and indices:
+        # Explicit stationary diagnostic: freeze at the first suspended sample,
+        # including the period otherwise assigned to return/settle.
+        indices = list(range(indices[0], len(records)))
     if (
         values.ndim != 2
         or len(values) != len(records)
@@ -31,6 +35,8 @@ def apply_condition(parent, targets, condition):
     held = values.copy()
     held[first:] = values[first]
     for i in indices:
+        if parent.get("continuous_protocol"):
+            result["records"][i]["phase"] = "hold"
         for key in (
             "reference_position_m",
             "reference_rotation",

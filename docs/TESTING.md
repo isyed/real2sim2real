@@ -1,5 +1,12 @@
 # Testing the reusable modules
 
+`test_continuous_reference.py` checks capture-clock motion without an independent
+lift, raw-reference preservation under bounded table command projection, nonfinite
+input rejection, reference-defined phases, acquisition-anchored drift and table
+return. Reference-scoring tests ensure acquisition/return are included and terminal
+settling is excluded from the native-duration cohort. Downstream dense IK, complete
+free-object physics and exact staged zero-action regression remain separate evidence.
+
 `tests/test_pressure_policy.py` checks copied bounded requests, causal drift
 activation with a fixed-anchor flag, saturation, invalid settings and rejection
 of changed gates, clocks or incomplete timelines in pressure-authority trials.

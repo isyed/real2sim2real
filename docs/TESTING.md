@@ -366,3 +366,17 @@ and freeze counters without changing source records or acceptance anchors.
 After shared-runner changes, run an exact saved-state regression downstream:
 adding qvel/telemetry changes archive contents but must preserve qpos, ctrl and
 native timestamps. Controller changes still require fresh full-length physics.
+
+
+`test_arm_motion_condition.py` checks that a stationary diagnostic preserves the
+source, complete command clock and acquisition prefix while freezing only hold
+commands and references. Demonstrated motion is the unchanged default.
+`test_arm_finger_plan.py` checks hand identity, original acquisition, bounded
+finger changes, FK wrist preservation, immutable stationary physics evidence and
+rejection of clock retuning or incomplete holds. Its MuJoCo path-screen test
+preserves physical state/native limits and rejects a new environment collision.
+Patch-replan tests require thin-wall projection to preserve the intended wall
+side and seed offsets to respect frozen joints and search bounds. Reference-score
+tests reject stationary runs as demonstrated-motion evidence. Actual candidate
+admission, complete stationary holds and matched motion retries remain downstream
+physics evidence.

@@ -65,3 +65,26 @@ successes from different source plans into a complete matrix pass. The sensitivi
 stage freezes one admitted candidate/controller for every case. A policy that
 selects or transitions between postures from supported-load observations needs
 its own pinned rule and fresh full-matrix validation, including the transition.
+
+
+## Bounded contact placement as well as patch-ray changes
+
+Optional `surface_shifts_m` maps each hand role and anatomical pad group to a
+world-frame contact proposal within 6 mm. The stage projects onto the unchanged
+source mesh within 3 mm and preserves the intended wall side by requiring a
+nearby surface normal within 35 degrees of the original. A global nearest point
+can jump across a thin vessel wall; a wrong-side projection must not silently
+replace an intended opposing contact. Proposed surfaces still need every original
+normal, finite-patch, shared-force and paired-path admission check.
+
+`seed_offsets_rad` gives named finger-only optimization seed changes of at most
+0.2 rad inside the existing 0.35 rad search radius and native limits. It does not
+expand physical limits or move frozen wrists. Replanned grasp/closed errors and
+finite patches are refreshed in the resulting hand metadata. Original pregrasp
+and opening waypoints stay fixed. All proposals, including rejected wrong-side
+or incomplete patches, remain explicit downstream evidence.
+
+For fresh arm-mounted stationary and demonstrated evaluation, use the admitted
+`arm_replay_pilot.finger_plan` binding described in
+[arm integration](ARM_HAND_INTEGRATION.md#stationary-acquisition-diagnostics-and-admitted-finger-replanning).
+A complete stationary hold pins one controller/clock before a motion retry.

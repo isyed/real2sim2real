@@ -144,6 +144,7 @@ def compare(paths, output):
         exclude_adjacent_arm_collisions=False,
         control_period_s=None,
         finger_control_mode="archived",
+        motion_condition="demonstrated",
     )
     keys = (
         "placement",
@@ -160,6 +161,7 @@ def compare(paths, output):
         "object_feedback",
         "feedback_phases",
         "finger_feedback_override",
+        "finger_plan",
         *defaults,
     )
     differing = [

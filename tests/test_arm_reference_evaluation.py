@@ -21,3 +21,16 @@ def test_object_metrics_include_rotation_and_are_not_finger_metrics():
 def test_empty_cohort_cannot_look_perfect():
     with pytest.raises(ValueError):
         score_poses(np.empty((0, 7)), np.empty((0, 7)), np.eye(3))
+
+
+def test_stationary_diagnostic_cannot_receive_demonstrated_motion_scores(tmp_path):
+    import json
+    from real2sim2real.controller_actor_training.arm_reference_evaluation import (
+        evaluate,
+    )
+
+    (tmp_path / "result.json").write_text(
+        json.dumps(dict(motion_condition="stationary_hold"))
+    )
+    with pytest.raises(ValueError, match="Stationary"):
+        evaluate(tmp_path)

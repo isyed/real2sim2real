@@ -1,5 +1,11 @@
 # Testing the reusable modules
 
+`test_continuous_tracking_proxy.py` checks known translation/rotation metric values,
+surface-ADD invariance under body-origin changes, input immutability, timestamp
+interpolation and rejection of missing coverage. Downstream equality against the
+official registered-pose formulas on the same reconstructed inputs validates the
+math only; it does not provide independent ground truth or benchmark scores.
+
 `test_release_path_search.py` checks hand-role contact residuals, structural matching
 of unnamed colliders, bounded rotation parameters and position-only near-contact
 queries without physics advancement. Wrist withdrawal tests check world-axis

@@ -1,5 +1,10 @@
 # CPU residual environment for arm-mounted articulated hands
 
+This adapter currently accepts staged replay results. The separately supported
+[continuous reference protocol](CONTINUOUS_OBJECT_REFERENCE.md) has acquisition
+anchors and table-return phases; its results are rejected here until the learning
+observations and rewards are adapted to that task.
+
 `ArmResidualEnv` supplies scalar NumPy `reset`, `step` and `close` methods around
 the audited two-arm replay. It provides observations, bounded pressure actions,
 provisional rewards and episode outcomes. The local UR/Sharpa embodiment comes

@@ -132,6 +132,7 @@ def test_pinned_failed_baseline_allowed_but_mutations_and_stacking_reject(tmp_pa
         dict(residual_adapter={"enabled": True}),
         dict(rejected_for=["incomplete_pilot"]),
         dict(fixed_controller_clock=False),
+        dict(continuous_protocol={"schema": "new_phase_semantics"}),
     ]:
         path = tmp_path / "baseline/result.json"
         path.write_text(json.dumps(dict(source, **change)))

@@ -55,7 +55,11 @@ def phase_object_deviation(baseline, candidate):
 
 def summarize(report):
     hold = [r for r in report["records"] if r["phase"] == "hold"]
-    reference = [r for r in hold if "reference_position_error_m" in r]
+    reference = [
+        r
+        for r in (report["records"] if report.get("continuous_protocol") else hold)
+        if "reference_position_error_m" in r
+    ]
     result = {
         k: report[k]
         for k in (

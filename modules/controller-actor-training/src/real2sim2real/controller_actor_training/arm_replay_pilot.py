@@ -148,6 +148,7 @@ def rollout(config, interaction=None):
             "contact_anchor.py",
             "arm_motion_condition.py",
             "arm_finger_plan.py",
+            "continuous_reference.py",
         )
     }
     audit_path = Path(config["audit"])
@@ -341,7 +342,7 @@ def rollout(config, interaction=None):
             overrides=config.get("finger_feedback_override"),
         )
     finger_path = None
-    if finger_plan_admission:
+    if finger_plan_admission or parent.get("continuous_protocol"):
         from .arm_finger_plan import path_screen
 
         finger_path = path_screen(
@@ -434,7 +435,9 @@ def rollout(config, interaction=None):
     if interaction is not None:
         if live_fingers is None or condition != "loaded":
             raise ValueError("Residual learning requires loaded live finger feedback")
-        interaction.bind(model, data, live_fingers, roots, parent, times, control_period)
+        interaction.bind(
+            model, data, live_fingers, roots, parent, times, control_period
+        )
     while data.time < times[-1] - model.opt.timestep / 2:
         if steps % control_stride == 0:
             control_time = (
@@ -610,7 +613,10 @@ def rollout(config, interaction=None):
                     live_fingers.command(model, data, control_time, control_period)
                 else:
                     live_fingers.command(
-                        model, data, control_time, control_period,
+                        model,
+                        data,
+                        control_time,
+                        control_period,
                         pressure_offsets=pressure_offsets,
                     )
             else:
@@ -815,6 +821,19 @@ def rollout(config, interaction=None):
     task = json.loads(Path(parent["configuration"]["task"]).read_text())
     metrics = measure_hold(records, table_top_m=task["table"]["top_z_m"])
     metrics.update(support_hold_metrics(records, float(model.body_mass[obj] * 9.81)))
+    continuous_metrics, continuous_failures = None, []
+    if parent.get("continuous_protocol"):
+        from .continuous_reference import evaluate_continuous
+
+        continuous_metrics, continuous_failures = evaluate_continuous(
+            records,
+            parent["continuous_protocol"],
+            task["table"]["top_z_m"],
+            stationary=motion_condition == "stationary_hold",
+        )
+        for key in ("hold_slip_m", "support_wrist_drift_m"):
+            if key in continuous_metrics:
+                metrics[key] = continuous_metrics[key]
     failures = hold_rejections(
         metrics,
         minimum_clearance_m=task["goal"]["minimum_clearance_m"],
@@ -825,10 +844,14 @@ def rollout(config, interaction=None):
         aborted=aborted,
     )
     failures.extend(support_rejections(metrics))
+    failures.extend(continuous_failures)
     if condition != "loaded":
         failures.append("diagnostic_contact_condition")
     reference = [
-        r for r in records if r["phase"] == "hold" and "reference_position_error_m" in r
+        r
+        for r in records
+        if (r["phase"] == "hold" or parent.get("continuous_protocol"))
+        and "reference_position_error_m" in r
     ]
     if (
         not reference
@@ -958,6 +981,9 @@ def rollout(config, interaction=None):
     )
     if interaction is not None:
         report["residual_adapter"] = interaction.finish(report, out)
+    if parent.get("continuous_protocol"):
+        report["continuous_protocol"] = parent["continuous_protocol"]
+        report["continuous_metrics"] = continuous_metrics
     write_json(out / "result.json", report)
     print(
         json.dumps(

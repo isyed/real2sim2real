@@ -16,10 +16,15 @@ from .object_grasp_review import display_pieces, world_triangles, panel
 
 
 def render(directory, *, follow_object=False):
+    directory = Path(directory)
+    stem = "rollout-follow" if follow_object else "rollout"
+    if (directory / (stem + ".mp4")).exists():
+        raise FileExistsError(
+            "Saved review video exists; use --refresh-page to preserve immutable media"
+        )
     import mujoco
     import imageio_ffmpeg
 
-    directory = Path(directory)
     report = json.loads((directory / "result.json").read_text())
     for filename, key in [
         ("states.npz", "states_sha256"),
@@ -50,7 +55,6 @@ def render(directory, *, follow_object=False):
     step = max(1, round(len(times) / 160))
     fps = 1 / (float(np.median(np.diff(times))) * step)
     stem = "rollout-follow" if follow_object else "rollout"
-    playback_name = "playback-follow" if follow_object else "playback"
     video = directory / (stem + ".mp4")
     writer = imageio_ffmpeg.write_frames(
         str(video),
@@ -113,6 +117,50 @@ def render(directory, *, follow_object=False):
             writer.send(np.asarray(frame))
     finally:
         writer.close()
+    refresh_page(directory, follow_object=follow_object)
+
+
+def motion_explanation(report):
+    """Distinguish deliberately frozen robot goals from truncated playback."""
+    records = report.get("records", [])
+    if report.get("motion_condition") != "stationary_hold":
+        return "<p>This replay uses the demonstrated-motion condition. Check the result for task acceptance.</p>"
+    hold = next((r for r in records if r.get("phase") == "hold"), None)
+    # Saved record timestamps are seconds in the simulation clock.
+    start = hold.get("time_s") if hold else None
+    end = records[-1].get("time_s") if records else None
+    timing = (
+        f" at {start:.2f} s; physics and playback continue through {end:.2f} s"
+        if start is not None and end is not None
+        else "; physics continues throughout the saved stationary test"
+    )
+    return (
+        '<p role="note"><strong>Stationary diagnostic: the commanded lift deliberately stops'
+        + timing
+        + ".</strong> The object remains free to move or slip. This tests grasp retention; "
+        + "it is not the full demonstrated trajectory. Return and finger release are disabled. "
+        + "A stationary result does not establish demonstrated-motion success.</p>"
+    )
+
+
+def refresh_page(directory, *, follow_object=False):
+    """Refresh report text using immutable saved video; do not rerender or simulate."""
+    directory = Path(directory)
+    report = json.loads((directory / "result.json").read_text())
+    stem = "rollout-follow" if follow_object else "rollout"
+    playback_name = "playback-follow" if follow_object else "playback"
+    video = directory / (stem + ".mp4")
+    receipt_path = directory / (
+        "review-receipt-follow.json" if follow_object else "review-receipt.json"
+    )
+    if receipt_path.exists():
+        previous = json.loads(receipt_path.read_text())
+        if previous["result_sha256"] != digest(directory / "result.json") or previous[
+            "video_sha256"
+        ] != digest(video):
+            raise ValueError(
+                "Saved video/result identity differs from the previous review"
+            )
     playback = prepare_playback(video, directory / playback_name)
     media = video_html(
         stem + ".mp4",
@@ -173,7 +221,8 @@ def render(directory, *, follow_object=False):
         + " act on a free object. The straight mounts are hypotheses; hardware assembly and policy readiness are not established.</p>"
         + "<p>Motion condition: "
         + html.escape(report.get("motion_condition", "demonstrated"))
-        + ". A stationary hold does not establish demonstrated-motion success.</p>"
+        + ".</p>"
+        + motion_explanation(report)
         + phase_summary
         + media
         + '<p><a href="result.json">Full result and provenance</a></p><pre>'
@@ -199,6 +248,11 @@ def main():
     parser.add_argument("--directory", type=Path, required=True)
     parser.add_argument("--worker", action="store_true")
     parser.add_argument("--follow-object", action="store_true")
+    parser.add_argument(
+        "--refresh-page",
+        action="store_true",
+        help="Reuse saved video; update report text only",
+    )
     args = parser.parse_args()
     if not args.worker:
         from real2sim2real.bounded_process import run
@@ -212,6 +266,7 @@ def main():
                 str(args.directory.resolve()),
                 "--worker",
                 *(["--follow-object"] if args.follow_object else []),
+                *(["--refresh-page"] if args.refresh_page else []),
             ],
             timeout=600,
             env={
@@ -221,7 +276,8 @@ def main():
                 "OMP_NUM_THREADS": "1",
             },
         )
-    render(args.directory, follow_object=args.follow_object)
+    action = refresh_page if args.refresh_page else render
+    action(args.directory, follow_object=args.follow_object)
 
 
 if __name__ == "__main__":

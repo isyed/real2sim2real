@@ -468,3 +468,11 @@ not automatically promoted controllers. See [arm integration](../../docs/ARM_HAN
 Use `stereo_patch_audit` to distinguish isolated supported surface points from
 observed finite patch geometry before fitting hands. See
 [contact-site search](../../docs/CONTACT_SITE_SEARCH.md).
+
+`bearing_support_plan` provides bounded exterior top/underside support proposals,
+real-pad fitting, insertion/seating collision witnesses and static load-path
+screens. `bearing_support_review` produces a saved-data contact schematic and
+rejection table. These stages never admit control or inherit a release pass;
+see [bearing support planning](../../docs/BEARING_SUPPORT_PLANNING.md).
+`arm_replay_review --refresh-page` updates protocol explanations using immutable
+saved video, with prominent stationary hold/start/end labeling.

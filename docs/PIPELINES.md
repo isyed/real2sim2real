@@ -206,3 +206,14 @@ finite plane coverage remains distinct from material thickness, bearing area and
 insertion clearance. Sparse or noisy patches leave admission rejected; retain the
 source mesh and force-balance assumptions while seeking the specific missing
 views/measurements. See [finite contact patches](CONTACT_SITE_SEARCH.md#a-supported-point-is-not-a-finite-contact-patch).
+
+
+The arm route supports `motion_condition: stationary_hold` before an unchanged
+`demonstrated` retry. A new admitted `finger_plan` preserves wrist FK/acquisition
+and gets a full assembled nominal-finger path check; fresh stationary artifacts
+pin its controller/clock before motion. Stationary evidence cannot receive
+moving-reference scores or stand in for a complete motion pass. See
+[stationary-to-motion admission](ARM_HAND_INTEGRATION.md#stationary-acquisition-diagnostics-and-admitted-finger-replanning).
+Residual RL is a distinct optional pipeline: it can improve an imperfect frozen
+controller, but learned error correction and held-out generalization require an
+explicit training/evaluation protocol. See [residual actor pilots](RESIDUAL_ACTOR_PILOTS.md#residual-reinforcement-learning-and-generalization).

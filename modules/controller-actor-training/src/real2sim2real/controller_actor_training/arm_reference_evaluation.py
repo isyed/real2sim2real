@@ -45,6 +45,10 @@ def evaluate(directory):
     directory = Path(directory)
     path = directory / "result.json"
     report = json.loads(path.read_text())
+    if report.get("motion_condition", "demonstrated") != "demonstrated":
+        raise ValueError(
+            "Stationary diagnostics cannot be scored as demonstrated motion"
+        )
     for source, sha in report["sources"].items():
         if digest(Path(source)) != sha:
             raise ValueError("Replay source changed")

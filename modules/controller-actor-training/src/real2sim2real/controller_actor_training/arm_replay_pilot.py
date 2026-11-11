@@ -35,6 +35,7 @@ from .arm_tracking_control import ArmTrackingCompensator, InertialFeedforward
 from .arm_robustness import validate_case, apply_case
 from .reference_extension import effective_parent
 from .simulation_health import step_rejection
+from .arm_motion_condition import apply_condition
 
 
 def controller_clock(physics_step_s, requested_period_s=None):
@@ -110,6 +111,16 @@ def run(config):
     if config.get("finger_feedback_override") and finger_mode != "live_contact_force":
         raise ValueError("Finger feedback overrides require the live owner")
     simulation_case = validate_case(config)
+    stationary_admission = None
+    if config.get("finger_plan"):
+        if finger_mode != "live_contact_force":
+            raise ValueError("Replanned finger ownership requires live feedback")
+    if config.get("motion_condition", "demonstrated") == "demonstrated" and (
+        config.get("finger_plan") or config.get("validated_stationary")
+    ):
+        from .arm_finger_plan import validate_stationary
+
+        stationary_admission = validate_stationary(config)
     if config.get("precontact_support_alignment") and not config.get("object_feedback"):
         raise ValueError(
             "Precontact alignment requires explicit bounded object feedback"
@@ -130,6 +141,8 @@ def run(config):
             "payload_pressure.py",
             "contact_patch_motion.py",
             "contact_anchor.py",
+            "arm_motion_condition.py",
+            "arm_finger_plan.py",
         )
     }
     audit_path = Path(config["audit"])
@@ -231,6 +244,8 @@ def run(config):
     targets = np.array(
         [np.concatenate([s["arms"][a["name"]]["q"] for a in arms]) for s in samples]
     )
+    motion_condition = config.get("motion_condition", "demonstrated")
+    parent, targets = apply_condition(parent, targets, motion_condition)
     accelerations = np.gradient(np.gradient(targets, times, axis=0), times, axis=0)
     inertia_control = (
         InertialFeedforward(config["inertial_feedforward"], limits)
@@ -301,11 +316,16 @@ def run(config):
         apply_case(model, data, simulation_case)
         mujoco.mj_saveLastXML(str(scene), model)
     live_fingers = None
+    finger_plan_admission = None
     if finger_mode == "live_contact_force":
         from .arm_finger_feedback import ArmFingerFeedback
 
         if condition != "loaded":
             raise ValueError("Live contact feedback requires loaded contacts")
+        if config.get("finger_plan"):
+            from .arm_finger_plan import bind
+
+            parent, finger_plan_admission = bind(parent, config["finger_plan"], out)
         live_fingers = ArmFingerFeedback(
             model,
             data,
@@ -315,6 +335,32 @@ def run(config):
             [dst for _, dst in finger_pairs],
             overrides=config.get("finger_feedback_override"),
         )
+    finger_path = None
+    if finger_plan_admission:
+        from .arm_finger_plan import path_screen
+
+        finger_path = path_screen(
+            model,
+            data,
+            targets,
+            times,
+            qids,
+            live_fingers,
+            arm_geoms,
+            robot_geoms,
+            object_geoms,
+            dict(
+                arm_penetration_m=audit["config"]["criteria"]["arm_penetration_m"],
+                robot_penetration_m=parent["configuration"]["planning"][
+                    "max_penetration_m"
+                ],
+            ),
+        )
+        write_json(out / "finger-path.json", finger_path)
+        if not finger_path["accepted"]:
+            raise ValueError(
+                "New finger commands fail assembled arm/environment path admission"
+            )
     contact_motion = diagnostic_data = None
     if config.get("contact_patch_motion"):
         from .contact_patch_motion import ContactPatchMotion
@@ -783,6 +829,11 @@ def run(config):
         motion_summary = summarize(records, config["contact_patch_motion"])
     report = dict(
         schema="real2sim2real.arm-replay-pilot/1",
+        motion_condition=motion_condition,
+        demonstrated_motion_executed=motion_condition == "demonstrated",
+        finger_plan_admission=finger_plan_admission,
+        finger_path_screen=finger_path,
+        stationary_admission=stationary_admission,
         finger_control_mode=finger_mode,
         controller_period_s=control_period,
         controller_updates=control_updates,

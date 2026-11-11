@@ -101,6 +101,8 @@ def render(directory, *, follow_object=False):
                 (12, 25),
                 "Finger control: "
                 + report.get("finger_control_mode", "archived")
+                + " | "
+                + report.get("motion_condition", "demonstrated")
                 + (
                     " | right camera follows object; left overview fixed"
                     if follow_object
@@ -139,6 +141,11 @@ def render(directory, *, follow_object=False):
         "feedback_observation_source",
         "contact_exclusions",
         "finger_control_mode",
+        "motion_condition",
+        "controller_period_s",
+        "physics_timestep_s",
+        "finger_plan_admission",
+        "stationary_admission",
     ):
         if key in report:
             metrics[key] = report[key]
@@ -151,6 +158,9 @@ def render(directory, *, follow_object=False):
         '<!doctype html><meta charset="utf-8"><style>body{font:17px system-ui;max-width:1100px;margin:30px auto}video{width:100%}pre{white-space:pre-wrap}</style><h1>Two-arm control transfer</h1><p>Saved simulated dynamics, not hardware execution. Both Cartesian wrist fixtures are removed. Torque-limited arm actuators and '
         + finger_description
         + " act on a free object. The straight mounts are hypotheses; hardware assembly and policy readiness are not established.</p>"
+        + "<p>Motion condition: "
+        + html.escape(report.get("motion_condition", "demonstrated"))
+        + ". A stationary hold does not establish demonstrated-motion success.</p>"
         + media
         + '<p><a href="result.json">Full result and provenance</a></p><pre>'
         + html.escape(json.dumps(metrics, indent=2))

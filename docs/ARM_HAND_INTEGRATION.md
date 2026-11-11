@@ -363,3 +363,54 @@ Keep a failed correction in the record. Neither contact existence, reduced wrist
 tracking error nor a smaller numerical timestep by itself admits a grasp. A
 candidate must complete the intended reference and terminal hold at a declared
 outer update period before a frozen payload/friction matrix or actor training.
+
+
+## Stationary acquisition diagnostics and admitted finger replanning
+
+`motion_condition: stationary_hold` retains the audited acquisition, lift, sample
+clock and complete declared duration. At first hold it fixes arm joint commands
+and the independently specified object reference at their first hold values.
+`demonstrated` is the unchanged default. Results label the condition and whether
+demonstrated motion was actually executed. A stationary pass is not a trajectory
+pass; do not pool the two tasks. Both use the same physical retention gates.
+
+An optional `finger_plan` supplies `plan`, `sha256` and `candidate_id` from an
+admitted fixed-wrist `bilateral_patch_replan`. `arm_finger_plan` requires matching
+source-plan ancestry, original task initialization, both finite pad patches and
+shared-budget gravity balance. FK checks all four wrist waypoints; original
+finger pregrasp/open commands and hand identity remain fixed. Grasp/closed finger
+changes stay within the planner's 0.35 rad radius and native limits. Bindings,
+new targets and source hashes are saved separately from the original arm audit.
+
+The assembled-arm runner checks the new nominal finger commands against every
+audited arm sample in scratch simulator data, including robot/environment
+collisions. It excludes object contacts from this check because the source
+object trajectory is not a physical prediction for the new grasp. Static contact
+admission and fresh unassisted physics remain separate gates. Feedback offsets
+are also not predicted by this kinematic screen and remain subject to actual
+rollout collision, retention, torque and speed checks.
+
+A new finger plan can enter demonstrated motion only with `validated_stationary`
+(`result`, `sha256`) pointing to a complete passing stationary arm run. Promotion
+pins physical artifacts and preserves finger plan, arm audit, controller clock,
+gains, force settings, geometry and native limits. Only the named motion condition,
+output/prose and bounded stage deadline may differ. Reference timing and final
+hold duration are retained. The existing archived/default route remains available
+with its original behavior.
+
+## Choosing update rates for an embodiment
+
+A 1 kHz outer controller is a declared simulation diagnostic, not a universal
+hardware requirement. The [UR7e manufacturer specification](https://www.universal-robots.com/manuals/EN/HTML/SW5_22/Content/prod-usr-man/complianceUR7e/H_g5_sections/appendix_g5/tech_spec_data_7e.htm)
+lists a 500 Hz system update frequency; the
+[official UR communication guide](https://www.universal-robots.com/developer/communication-protocol/)
+lists ROS/ROS2 and real-time interfaces at 500 Hz. Communication frequency does
+not certify end-to-end tracking, and the hand's command/tactile rates must be
+verified separately. A common 500 Hz simulator check is a sensitivity experiment,
+not a verified model of all vendor inner loops or tactile sensing.
+
+Use independent fixed physics and feedback clocks. Preserve the earlier rate as
+a matched diagnostic cohort, explicitly declare new rates, and validate moving
+contacts as well as stationary holds. Similar stationary performance does not
+establish moving-task rate robustness. Never choose a timestep or feedback rate
+only because it crosses a narrow success gate.

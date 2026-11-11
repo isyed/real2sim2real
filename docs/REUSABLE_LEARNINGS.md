@@ -322,3 +322,23 @@ consistency. Reject noisy/partial patches without replacing the input geometry.
 Original reconstructed point height, a settled model height and verified insertion
 clearance are different quantities. Additional views or measurements are justified
 when the existing calibrated streams cannot resolve thickness or a bearing patch.
+
+
+### Posture admission and stationary-to-motion transfer
+
+Preserve the intended surface side when projecting contact proposals on thin
+walls. Nearest Euclidean distance alone can swap an inner grasp surface for an
+outer one. Keep a bounded original-normal neighborhood, disclose every rejected
+projection, and recheck both finite pad patches and force balance.
+
+A new finger posture can retain audited wrist poses, but it still needs a fresh
+assembled-arm/finger/environment path check and actual dynamics. Preserve the
+original acquisition waypoints and native limits. A complete stationary pass can
+coexist with moving-reference failure at exactly the same controller rate. Pin
+the stationary candidate, clock and physical artifacts before motion; do not
+retune between the two and then describe them as one controller pass.
+
+Simulation controller rate is an experimental setting until matched to each
+embodiment's documented interfaces and measured latency/sensing. Separate the
+hand's command and tactile rates from the arm's update rate. Similar stationary
+results at two rates do not establish moving-contact rate robustness.

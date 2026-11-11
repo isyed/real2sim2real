@@ -15,6 +15,56 @@ import numpy as np
 from real2sim2real.artifacts import digest, write_json
 
 
+def shifted_contacts(mesh, targets, normals, frames, shifts):
+    """Project bounded named contact proposals onto the unchanged source mesh."""
+    import trimesh
+
+    points, outward = (
+        np.array(targets, float, copy=True),
+        np.array(normals, float, copy=True),
+    )
+    for group, delta in shifts.items():
+        if group not in ("thumb", "index", "middle", "ring", "pinky"):
+            raise ValueError("Explicit anatomical contact group required")
+        indices = [i for i, f in enumerate(frames) if group in f["geom"]]
+        delta = np.asarray(delta, float)
+        if (
+            len(indices) != 1
+            or delta.shape != (3,)
+            or not np.isfinite(delta).all()
+            or np.linalg.norm(delta) > 0.006
+        ):
+            raise ValueError("One owned contact and a shift within 6 mm required")
+        i = indices[0]
+        # Thin walls can put the opposite surface closer than the intended one.
+        # Preserve the proposed side rather than silently flipping its normal.
+        target = points[i] + delta
+        eligible = np.linalg.norm(mesh.triangles_center - target, axis=1) <= 0.02
+        eligible &= mesh.face_normals @ outward[i] >= np.cos(np.deg2rad(35))
+        if not eligible.any():
+            raise ValueError("No same-side source surface near shifted contact")
+        local = mesh.submesh([np.flatnonzero(eligible)], append=True, repair=False)
+        near, gap, face = trimesh.proximity.closest_point(local, [target])
+        if gap[0] > 0.003 or np.linalg.norm(near[0] - points[i]) > 0.006:
+            raise ValueError(
+                "Shifted contact exceeds source-surface projection/travel bounds"
+            )
+        points[i], outward[i] = near[0], local.face_normals[face[0]]
+    return points, outward
+
+
+def posture_seed(names, original, offsets, bounds):
+    seed = np.asarray(original, float).copy()
+    for name, delta in offsets.items():
+        if name not in names or not np.isfinite(delta) or abs(delta) > 0.2:
+            raise ValueError("Owned joint seed changes within 0.2 rad required")
+        i = names.index(name)
+        if bounds[name][1] - bounds[name][0] < 1e-6:
+            raise ValueError("Cannot seed a frozen joint")
+        seed[i] = np.clip(seed[i] + delta, *bounds[name])
+    return seed
+
+
 def finger_bounds(model, indices, names, seed, active, radius, prefix):
     seed = np.asarray(seed, float)
     if (
@@ -83,6 +133,9 @@ def run(config):
     ):
         raise ValueError("Source task/robot parent changed")
     base = json.loads(parent_path.read_text())["configuration"]
+    for path, sha in config.get("diagnostic_inputs", {}).items():
+        if digest(Path(path)) != sha:
+            raise ValueError("Pinned posture diagnostic changed")
     out = Path(config["output"])
     out.mkdir(parents=True, exist_ok=False)
     write_json(out / "protocol.json", config)
@@ -133,6 +186,15 @@ def run(config):
                 h["pad_plan"]["frames"][index] = pad_frame(
                     model, h["root_body"], old["geom"], direction
                 )
+            h["targets_m"], h["outward_normals"] = shifted_contacts(
+                mesh,
+                h["targets_m"],
+                h["outward_normals"],
+                h["pad_plan"]["frames"],
+                proposal.get("surface_shifts_m", {}).get(role, {}),
+            )
+            h["targets_m"] = h["targets_m"].tolist()
+            h["outward_normals"] = h["outward_normals"].tolist()
         frames = [f for h in hands for f in h["pad_plan"]["frames"]]
         targets = np.concatenate([h["targets_m"] for h in hands])
         outward = np.concatenate([h["outward_normals"] for h in hands])
@@ -145,13 +207,20 @@ def run(config):
             data.qpos[qids] = seed
             bounds = {}
             for role, h, i in zip(("primary", "secondary"), hands, ids):
-                groups = set(proposal.get(role, {}))
+                groups = set(proposal.get(role, {})) | set(
+                    proposal.get("surface_shifts_m", {}).get(role, {})
+                )
                 active = [
                     n
                     for n in h["joint_names"]
                     if any(g in n for g in groups)
                     and not n.startswith(h["fixture_prefix"])
                 ]
+                active.extend(
+                    n
+                    for n in proposal.get("seed_offsets_rad", {}).get(role, {})
+                    if n not in active
+                )
                 if active:
                     bounds.update(
                         finger_bounds(
@@ -168,6 +237,13 @@ def run(config):
                     for j, n, v in zip(i["joints"], h["joint_names"], h[key]):
                         lo, hi = model.jnt_range[j]
                         bounds[n] = [max(lo, v - 1e-7), min(hi, v + 1e-7)]
+            names = [n for h in hands for n in h["joint_names"]]
+            offsets = {
+                n: v
+                for role in ("primary", "secondary")
+                for n, v in proposal.get("seed_offsets_rad", {}).get(role, {}).items()
+            }
+            fit_seed = posture_seed(names, seed, offsets, bounds)
             fits[key] = fit_pad_contacts(
                 model,
                 data,
@@ -175,7 +251,7 @@ def run(config):
                 frames,
                 targets - inset * outward,
                 -outward,
-                seed,
+                fit_seed,
                 joint_bounds=bounds,
                 fixture_prefix=[h["fixture_prefix"] for h in hands],
                 max_nfev=200,
@@ -211,17 +287,31 @@ def run(config):
                 ),
             )
         cursor = 0
+        pad_cursor = 0
         for h, i in zip(hands, ids):
             n = len(i["q"])
             for key in fits:
                 h[key] = fits[key]["q"][cursor : cursor + n].tolist()
+            count = len(h["pad_plan"]["frames"])
+            h["site_errors_m"] = fits["q_grasp"]["site_errors_m"][
+                pad_cursor : pad_cursor + count
+            ].tolist()
+            h["normal_errors_deg"] = fits["q_grasp"]["normal_errors_deg"][
+                pad_cursor : pad_cursor + count
+            ].tolist()
+            h["closed_target_errors_m"] = fits["q_closed"]["site_errors_m"][
+                pad_cursor : pad_cursor + count
+            ].tolist()
             cursor += n
+            pad_cursor += count
         data.qpos[qids] = fits["q_closed"]["q"]
         mujoco.mj_fwdPosition(model, data)
         patches = [
             contact_patch_samples(model, data, h["pad_plan"]["frames"], mesh)
             for h in hands
         ]
+        for h, patch in zip(hands, patches):
+            h["patches"] = patch
         combined = {
             k: np.concatenate([i[k] for i in ids])
             for k in ("joints", "q", "dofs", "geoms")

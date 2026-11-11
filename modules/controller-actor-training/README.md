@@ -474,5 +474,13 @@ real-pad fitting, insertion/seating collision witnesses and static load-path
 screens. `bearing_support_review` produces a saved-data contact schematic and
 rejection table. These stages never admit control or inherit a release pass;
 see [bearing support planning](../../docs/BEARING_SUPPORT_PLANNING.md).
+`paired_acquisition_audit --config <config.json>` checks a pinned retained primary
+and replacement support moving together through pregrasp/open/closed states;
+it preserves setup state and rechecks paired collisions and finite-patch balance.
+`paired_contact_review --config <config.json>` projects those contact centres into
+the matching saved calibrated RGB/depth and masks, retaining occlusion and missing
+evidence explicitly. Both run under finite CPU deadlines and leave old results
+unchanged. Neither claims loaded success or independently verified contact
+patches. See [control readiness and preservation of earlier evidence](../../docs/CONTROL_READINESS.md).
 `arm_replay_review --refresh-page` updates protocol explanations using immutable
 saved video, with prominent stationary hold/start/end labeling.

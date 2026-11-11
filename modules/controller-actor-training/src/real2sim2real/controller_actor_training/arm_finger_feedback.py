@@ -150,7 +150,7 @@ class ArmFingerFeedback:
             ),
         }
 
-    def command(self, model, data, time, dt):
+    def command(self, model, data, time, dt, *, pressure_offsets=None):
         from .support_control import bias_compensated_target
 
         nominal = data.qpos.copy()
@@ -163,6 +163,8 @@ class ArmFingerFeedback:
             + self.settings["close_activation_fraction"] * self.rollout["close_s"]
         )
         extra = {}
+        if pressure_offsets is not None:
+            extra["pressure_offsets"] = pressure_offsets
         if self.settings.get("contact_anchor"):
             extra["retention_active"] = bool(
                 time

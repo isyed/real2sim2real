@@ -431,8 +431,14 @@ class BilateralContactForce:
                 allowed_penetration_m=allowed_penetration_m,
             )
 
-    def target(self, model, data, nominal, *, active, dt, retention_active=False):
+    def target(self, model, data, nominal, *, active, dt, retention_active=False,
+               pressure_offsets=None):
         import mujoco
+
+        if pressure_offsets is not None:
+            from .residual_pressure import validate_offsets
+
+            validate_offsets(pressure_offsets)
 
         output = np.asarray(nominal, float).copy()
         if (
@@ -514,6 +520,13 @@ class BilateralContactForce:
             goal_n = self.settings["target_force_n"][pad["group"]]
             if self.payload:
                 goal_n = self.payload.target(pad["role"], goal_n, group=pad["group"])
+            if pressure_offsets is not None:
+                from .residual_pressure import pressure_goal
+
+                channel = pad["role"] + ":" + (
+                    "thumb" if pad["group"] == "thumb" else "fingers"
+                )
+                goal_n = pressure_goal(goal_n, pressure_offsets[channel])
             pad["target_n"] = goal_n
             observed = (
                 self.settings.get("normal_observation", "planned") == "solved_contact"

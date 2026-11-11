@@ -96,7 +96,12 @@ def subtree_geoms(model, root):
     return result
 
 
-def run(config):
+def rollout(config, interaction=None):
+    """Shared simulation coroutine; an optional adapter pauses at policy ticks.
+
+    The adapter can request pressure offsets only. Default execution never yields
+    and retains the original controller operations and physical clock.
+    """
     import mujoco
 
     finger_mode = config.get("finger_control_mode", "archived")
@@ -426,6 +431,10 @@ def run(config):
     )
     control_start = float(data.time)
     control_updates = 0
+    if interaction is not None:
+        if live_fingers is None or condition != "loaded":
+            raise ValueError("Residual learning requires loaded live finger feedback")
+        interaction.bind(model, data, live_fingers, roots, parent, times, control_period)
     while data.time < times[-1] - model.opt.timestep / 2:
         if steps % control_stride == 0:
             control_time = (
@@ -438,6 +447,15 @@ def run(config):
                 np.searchsorted(times, control_time, side="right") - 1, len(times) - 2
             )
             alpha = np.clip((control_time - times[i]) / (times[i + 1] - times[i]), 0, 1)
+            pressure_offsets = None
+            if interaction is not None:
+                interaction.check_deadline()
+                if (control_updates - 1) % interaction.policy_stride == 0:
+                    action = yield interaction.observe(control_time, i, alpha)
+                    interaction.accept(action)
+                pressure_offsets = interaction.advance(
+                    control_period, parent["records"][i]["phase"]
+                )
             target = targets[i] * (1 - alpha) + targets[i + 1] * alpha
             if feedback or height_alignment:
                 # Read the last solved contact forces before refreshing kinematics.
@@ -588,7 +606,13 @@ def run(config):
                 kd=config["kd_nm_s_per_rad"],
             )
             if live_fingers:
-                live_fingers.command(model, data, control_time, control_period)
+                if pressure_offsets is None:
+                    live_fingers.command(model, data, control_time, control_period)
+                else:
+                    live_fingers.command(
+                        model, data, control_time, control_period,
+                        pressure_offsets=pressure_offsets,
+                    )
             else:
                 for src, dst in finger_pairs:
                     data.ctrl[dst] = (
@@ -779,6 +803,8 @@ def run(config):
                     )
                 )
             records.append(record)
+            if interaction is not None:
+                interaction.record(record)
             qstates.append(data.qpos.copy())
             controls.append(data.ctrl.copy())
             timestamps.append(data.time)
@@ -930,6 +956,8 @@ def run(config):
         ),
         feedback_implementation_sha256=digest(snapshot / "arm_object_feedback.py"),
     )
+    if interaction is not None:
+        report["residual_adapter"] = interaction.finish(report, out)
     write_json(out / "result.json", report)
     print(
         json.dumps(
@@ -949,6 +977,18 @@ def run(config):
         flush=True,
     )
     return report
+
+
+def run(config):
+    """Run the unchanged noninteractive controller to completion."""
+    worker = rollout(config)
+    try:
+        next(worker)
+    except StopIteration as done:
+        return done.value
+    finally:
+        worker.close()
+    raise RuntimeError("A frozen replay cannot request a policy action")
 
 
 def main():

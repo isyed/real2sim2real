@@ -28,6 +28,17 @@ def test_frozen_controller_and_bounds(tmp_path):
         frozen_controller=dict(result=str(result), sha256=digest(result)),
     )
     assert validate_case(probe) == case
+    content = json.loads(result.read_text())
+    result.write_text(
+        json.dumps(dict(content, residual_adapter={"all_actions_zero": False}))
+    )
+    with pytest.raises(ValueError, match="policy-aware"):
+        validate_case(
+            dict(
+                probe, frozen_controller=dict(result=str(result), sha256=digest(result))
+            )
+        )
+    result.write_text(json.dumps(content))
     with pytest.raises(ValueError, match="may not change"):
         validate_case(dict(probe, gains=[1500, 24]))
     with pytest.raises(ValueError, match="bounds"):

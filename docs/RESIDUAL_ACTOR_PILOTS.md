@@ -61,6 +61,11 @@ delay/noise tests. Existing FlashSAC infrastructure does not by itself supply a
 UR/Sharpa training environment or a compatible action/observation interface;
 those adapters need implementation and validation before checkpoint reuse.
 
+The [CPU arm residual adapter](ARM_RESIDUAL_ADAPTER.md) now supplies a bounded
+pressure-action reset/step environment on the shared arm-replay loop, with explicit
+privileged observations and exact zero-policy comparison. It does not connect the
+scalar CPU environment to the vectorized G1/FlashSAC learner or start training.
+
 For a proposed supervised warm start followed by residual RL, see
 [demonstration and reward design](DEMONSTRATION_RESIDUAL_CONTROL.md). That protocol
 defines correction labels, data splits, observable inputs and phase-aware rewards;

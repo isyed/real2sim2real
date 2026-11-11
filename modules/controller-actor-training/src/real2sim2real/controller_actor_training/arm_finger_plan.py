@@ -144,6 +144,8 @@ def validate_stationary(config):
     if digest(path) != spec["sha256"]:
         raise ValueError("Pinned stationary arm hold changed")
     report = json.loads(path.read_text())
+    if report.get("residual_adapter") is not None:
+        raise ValueError("Residual stationary holds require policy-aware promotion; do not silently omit the actor")
     if (
         report.get("schema") != "real2sim2real.arm-replay-pilot/1"
         or report["success"] is not True

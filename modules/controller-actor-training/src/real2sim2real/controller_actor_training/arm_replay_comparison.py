@@ -128,6 +128,7 @@ def compare(paths, output):
                 result=str(path),
                 result_sha256=digest(path),
                 config=report["config"],
+                residual_adapter=report.get("residual_adapter"),
                 integration_timestep_s=actual_step,
                 controller_period_s=report.get("controller_period_s", actual_step),
                 metrics=summarize(report),
@@ -162,6 +163,7 @@ def compare(paths, output):
         "feedback_phases",
         "finger_feedback_override",
         "finger_plan",
+        "residual_adapter",
         *defaults,
     )
     differing = [
@@ -174,6 +176,8 @@ def compare(paths, output):
                     if k == "timestep_s"
                     else r["controller_period_s"]
                     if k == "control_period_s"
+                    else r["residual_adapter"]
+                    if k == "residual_adapter"
                     else r["config"].get(k, defaults.get(k)),
                     sort_keys=True,
                 )

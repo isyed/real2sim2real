@@ -89,7 +89,7 @@ def test_mounted_arm_binding_preserves_arm_object_and_native_limits(
         validate_settings,
     )
 
-    xml = ['<mujoco><compiler autolimits="true"/><worldbody>']
+    xml = ['<mujoco><compiler autolimits="true" angle="radian"/><worldbody>']
     act = []
     hands = []
     groups = ["thumb", "index", "middle", "ring", "pinky"]
@@ -196,3 +196,61 @@ def test_mounted_arm_binding_preserves_arm_object_and_native_limits(
         (data.qpos, data.qvel, model.jnt_range, model.actuator_forcerange), before
     ):
         np.testing.assert_array_equal(got, want)
+
+    # Real mounted-hand pressure injection retains sole finger ownership.
+    from real2sim2real.controller_actor_training.residual_pressure import CHANNELS
+
+    c.command(model, data, 2.0, 0.001, pressure_offsets=dict.fromkeys(CHANNELS, -0.5))
+    assert all(data.ctrl[a] == 0.123 for a in range(model.nu) if a not in fingers)
+    for pad in c.servo.pads:
+        assert pad["target_n"] == control["target_force_n"][pad["group"]] - 0.5
+    for got, want in zip(
+        (data.qpos, data.qvel, model.jnt_range, model.actuator_forcerange), before
+    ):
+        np.testing.assert_array_equal(got, want)
+
+    # Reading policy observations must not perturb live solver state or commands.
+    from real2sim2real.controller_actor_training.arm_residual_observation import (
+        ArmResidualObservation,
+    )
+    from real2sim2real.controller_actor_training.residual_pressure import (
+        PressureResidual,
+    )
+
+    parent["records"] = [
+        dict(
+            phase="hold",
+            reference_position_m=[0, 0, 0],
+            reference_rotation=np.eye(3).tolist(),
+        )
+    ] * 2
+    observer = ArmResidualObservation(
+        model,
+        data,
+        c,
+        dict(right=model.body("right_hand").id, left=model.body("left_hand").id),
+        parent,
+        np.array([0, 0.02]),
+    )
+    controller = PressureResidual(
+        dict(
+            policy_period_s=0.02,
+            max_offset_n=1.0,
+            max_rate_n_s=5.0,
+            active_phases=["hold"],
+        )
+    )
+    fields = (
+        "qpos",
+        "qvel",
+        "ctrl",
+        "qacc",
+        "qacc_warmstart",
+        "qfrc_bias",
+        "actuator_force",
+    )
+    original = {name: getattr(data, name).copy() for name in fields}
+    packet = observer.capture(0.0, 0, 0.0, controller)
+    assert np.isfinite(packet["observation"]).all()
+    for name in fields:
+        np.testing.assert_array_equal(getattr(data, name), original[name])

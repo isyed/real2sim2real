@@ -1,5 +1,12 @@
 # Testing the reusable modules
 
+`tests/test_arm_residual_env.py` covers bounded pressure actions, policy clocks,
+immutable source binding, reset/terminal semantics, time-normalized rewards,
+fixed grasp anchors and deadline truncation. The extended mounted-hand MuJoCo
+fixture in `test_arm_finger_feedback.py` checks pressure-target injection without
+arm/state/limit writes and verifies that observation capture preserves the live
+solver state. Complete zero-action physical replay is separate downstream evidence.
+
 `tests/test_arm_finger_feedback.py` checks native finger waypoint timing,
 reconstruction before feedback, and exclusive actuator ownership. Its optional
 MuJoCo test binds hands under actuated arms while preserving physical arm/object

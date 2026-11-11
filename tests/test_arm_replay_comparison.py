@@ -1,4 +1,5 @@
 from real2sim2real.controller_actor_training.arm_replay_comparison import summarize
+import pytest
 
 
 def report():
@@ -79,7 +80,10 @@ def test_phase_deviation_reveals_insertion_error_and_never_time_aligns():
     assert not phase_object_deviation(a, b)["available"]
 
 
-def test_comparison_exposes_feedback_rate_and_contact_rule_changes(tmp_path):
+@pytest.mark.parametrize("with_residual", [False, True])
+def test_comparison_exposes_feedback_rate_and_contact_rule_changes(
+    tmp_path, with_residual
+):
     import json
     from real2sim2real.artifacts import digest
     from real2sim2real.controller_actor_training.arm_replay_comparison import compare
@@ -104,6 +108,10 @@ def test_comparison_exposes_feedback_rate_and_contact_rule_changes(tmp_path):
             r["config"]["control_period_s"] = period
             r["config"]["object_feedback"] = {"gain_s_inv": 1}
             r["config"]["finger_feedback_override"] = {"loaded_tangent_gap_m": 0.025}
+            if with_residual:
+                r["residual_adapter"] = dict(
+                    all_actions_zero=True, settings={"policy_period_s": 0.02}
+                )
         path = folder / "result.json"
         path.write_text(json.dumps(r))
         paths.append(path)
@@ -112,6 +120,7 @@ def test_comparison_exposes_feedback_rate_and_contact_rule_changes(tmp_path):
     assert r["differing_base_control_settings"] == [
         "object_feedback",
         "finger_feedback_override",
+        *(["residual_adapter"] if with_residual else []),
         "control_period_s",
     ]
     assert [row["controller_period_s"] for row in r["rows"]] == [0.00025, 0.001]

@@ -1,5 +1,10 @@
 # Controller and actor training
 
+The [CPU arm residual environment](../../docs/ARM_RESIDUAL_ADAPTER.md) adds a
+reset/step interface for bounded bilateral pressure corrections on frozen arm
+control. Its zero-policy validator compares full saved physics and unchanged
+task outcomes. Observations are privileged; learner integration is separate.
+
 The [pipeline guide](../../docs/PIPELINES.md) separates human-reference training
 from object-reference control. `object_control_stage` exposes arm-path screening
 and actuator-driven evaluation through the common artifact/deadline protocol.

@@ -1,5 +1,16 @@
 # Controller and actor training
 
+The [pipeline guide](../../docs/PIPELINES.md) separates human-reference training
+from object-reference control. `object_control_stage` exposes arm-path screening
+and actuator-driven evaluation through the common artifact/deadline protocol.
+Reference extension preserves the admitted prefix; frozen-controller robustness
+is evaluated separately from nominal success.
+
+Optional [pad contact planning](../../docs/PAD_CONTACT_PLANNING.md) adds actual
+collision-pad frames, normal fitting, closing-path checks and static wrench
+diagnostics. Rejected hypotheses have their own static review; they are not
+shown as successful physics rollouts.
+
 For a CPU grasp/lift pilot driven by object geometry rather than a human motion
 reference, see [object-centric grasp planning](../../docs/OBJECT_CENTRIC_GRASPS.md).
 It provides a force-limited wrist/hand fixture, collision/approach checks, an
@@ -347,3 +358,92 @@ matching checkpoint recipe, learner state and replay; changed buffer or optimize
 settings cannot silently reuse an old learner. `diagnostic_review` stops invalid
 execution or severe combined score/balance regression. It does not launch work,
 extend a run, certify task success or select a submission.
+
+Contact-region audits and paired contact-arrangement diagnostics are documented
+in [CONTACT_REGION_AUDIT.md](../../docs/CONTACT_REGION_AUDIT.md). These preserve
+rejected plans and distinguish force balance from observed contact support and
+validated two-hand robot execution.
+
+Before fitting a handle hook or underbody support grasp, use
+`handle_access_audit` to check opening geometry and swept tool clearance against
+the source mesh, convex proxy and finite table. See
+[HANDLE_INSERTION.md](../../docs/HANDLE_INSERTION.md) for the bounded probe
+templates, browser review, uncertainty limits and integration with contact IK.
+
+`guided_motion_pilot` compares a retained grasp against an opt-in reconstructed
+object-motion transfer after support establishment. It preserves physical gates
+and scores motion fidelity separately; it does not validate human finger motion.
+See [GUIDED_MOTION.md](../../docs/GUIDED_MOTION.md) for initialization, observation
+and Cartesian-fixture limits.
+
+`grasp_retention` provides an opt-in, bounded primary-wrist correction for an
+established loaded grasp. `retention_experiment` freezes the source trajectory
+and physical criteria, then compares matched nominal and validation cases.
+`retention_review` renders saved states with separate physical/fidelity outcomes.
+See [GRASP_RETENTION.md](../../docs/GRASP_RETENTION.md) for privileged observations,
+contact freezes, saturation and the distinction between retention and pad slip.
+
+`retained_pad_search` reuses pad position/normal fits and closing-path checks
+around a successful grasp before matched dynamics. `arm_path_audit` and
+`arm_path_review` check an explicit local URDF against saved wrist paths,
+including hand-frame compatibility, joint/speed limits and nonadjacent arm
+collisions. See [ARM_PATH_AUDIT.md](../../docs/ARM_PATH_AUDIT.md). These are
+kinematic integration diagnostics, not arm torque or physical execution claims.
+
+For bounded support insertion and opposing-pad proposals against a retained
+physical baseline, see [contact replanning](../../docs/CONTACT_REPLANNING.md).
+
+[Contact-force feedback](../../docs/CONTACT_FORCE_FEEDBACK.md) adds bounded
+finger-only pressure regulation, stationary-to-motion admission and saved-state
+video comparison to the simultaneous bilateral fixture pipeline.
+It also supports opt-in common object-pose corrections and planned-surface tangent
+feedback. These are separately evaluated hypotheses; accurate object motion alone
+does not establish retained contact or arm feasibility.
+
+`grasp_sensitivity` performs frozen payload/friction tests from a pinned complete
+passing fixture trial. It requires identical nominal replay, preserves reference
+and physical criteria, and records each failed case before subsequent arm audits.
+
+`payload_pressure` adds optional supported-load estimation and bounded pressure
+allocation between hands. The core consumes force/acceleration observations;
+the current fixture adapter changes only finger targets, records its privileged
+inputs, and retains the original wrist path, actuator limits and acceptance gates.
+
+`contact_patch_audit` adds read-only solved-contact material velocities and patch
+centroids, preserving replay state archives. `bilateral_patch_replan` uses pinned
+diagnostics to propose bounded pad-surface/finger-posture changes with fixed
+wrists, then rechecks geometric admission before fresh physics. See
+[loaded contact motion](../../docs/CONTACT_PATCH_MOTION.md).
+
+`payload_posture` adds bounded supported-load-driven finger-posture transitions
+between pinned admitted endpoints. The current adapter preserves wrist fixtures,
+object targets and native limits. See [posture transitions](../../docs/PAYLOAD_POSTURE.md)
+for configuration, observations and frozen-matrix admission.
+
+`acquisition_compare` compares pinned, byte-identical contact replays at native
+sample times. It separates acquisition/hold pressure, pad coverage, material
+sliding, other-link forces and actual wrist-relative object poses, with an
+interactive saved-data review. See [acquisition diagnostics](../../docs/ACQUISITION_DIAGNOSTICS.md).
+
+`arm_finger_feedback` optionally binds the source bilateral pressure/load rule
+to assembled arms. It reconstructs nominal finger waypoints before feedback,
+preserves actuator ownership/native limits and labels live control separately
+from archived command transfer. See [arm integration](../../docs/ARM_HAND_INTEGRATION.md).
+
+`reference_extension` accepts an explicit longer `hold_s` to cover native-time
+motion plus at least one second. It preserves the admitted reference prefix;
+longer horizons are new evaluation cohorts, with unchanged physical gates.
+An explicit `allow_prepend` can include earlier capture frames while verifying
+that admitted capture poses/timestamps remain intact. It records a changed
+reference origin and cannot claim the old control prefix or original capture-start
+pose was reproduced. Robot acquisition remains an explicit stage.
+
+
+Arm-mounted retention experiments can record read-only coherent pad motion with
+`arm_replay_pilot.contact_patch_motion` and inspect acquisition/hold drift through
+`arm_retention_audit`. Optional normal, contact-anchor and loaded-continuation
+ablations retain force/joint limits and require fresh physical admission; they are
+not automatically promoted controllers. See [arm integration](../../docs/ARM_HAND_INTEGRATION.md).
+Use `stereo_patch_audit` to distinguish isolated supported surface points from
+observed finite patch geometry before fitting hands. See
+[contact-site search](../../docs/CONTACT_SITE_SEARCH.md).

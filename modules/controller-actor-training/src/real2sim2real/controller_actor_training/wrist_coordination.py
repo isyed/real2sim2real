@@ -53,6 +53,10 @@ class ObjectFrameCoordinator:
     original settled orientation. Vertical clearance and support load control
     remain separate. Only world-aligned slide plus intrinsic XYZ wrist fixtures
     are supported; this is not an arm inverse-kinematics solver.
+
+    With an explicit desired_pose, its position becomes the moving pivot and all
+    three translation axes are corrected. The caller must freeze the stationary
+    goal or supply an independent reference, and disable competing hold servos.
     """
 
     def __init__(self, model, hands, settings, target_rotation):
@@ -140,7 +144,7 @@ class ObjectFrameCoordinator:
         self.projected_steps = 0
         self.update_steps = 0
 
-    def update(self, object_pose, dt):
+    def update(self, object_pose, dt, desired_pose=None):
         object_pose = np.asarray(object_pose, float)
         if (
             object_pose.shape != (4, 4)
@@ -151,8 +155,25 @@ class ObjectFrameCoordinator:
             raise ValueError("Finite metric object pose and positive step required")
         if self.pivot is None:
             self.pivot = object_pose[:3, 3].copy()
+        if desired_pose is not None:
+            desired_pose = np.asarray(desired_pose, float)
+            if (
+                desired_pose.shape != (4, 4)
+                or not np.isfinite(desired_pose).all()
+                or not np.allclose(desired_pose[3], [0, 0, 0, 1])
+                or not np.allclose(
+                    desired_pose[:3, :3].T @ desired_pose[:3, :3], np.eye(3), atol=1e-7
+                )
+                or not np.isclose(np.linalg.det(desired_pose[:3, :3]), 1)
+            ):
+                raise ValueError(
+                    "Proper independently supplied desired object pose required"
+                )
+            self.pivot = desired_pose[:3, 3].copy()
+            self.target_rotation = desired_pose[:3, :3].copy()
         error = self.pivot - object_pose[:3, 3]
-        error[2] = 0.0
+        if desired_pose is None:
+            error[2] = 0.0
         s = self.settings
         velocity = bounded_vector(
             error * s["translation_gain_s_inv"], s["max_translation_speed_m_s"]
@@ -173,14 +194,14 @@ class ObjectFrameCoordinator:
             )
         ).as_matrix()
 
-    def target(self, model, target, object_pose, dt):
+    def target(self, model, target, object_pose, dt, *, desired_pose=None):
         import mujoco
 
         previous_rotation, previous_translation = (
             self.rotation.copy(),
             self.translation.copy(),
         )
-        self.update(object_pose, dt)
+        self.update(object_pose, dt, desired_pose)
         result = np.asarray(target, float).copy()
         self.scratch.qpos[:] = result
         mujoco.mj_kinematics(model, self.scratch)

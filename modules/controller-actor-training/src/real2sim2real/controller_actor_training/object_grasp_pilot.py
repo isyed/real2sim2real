@@ -15,9 +15,8 @@ from real2sim2real.artifacts import digest, write_json
 from .object_grasp_scene import quaternion
 
 
-def load_scene(config):
-    import mujoco
-
+def verify_scene_assets(config):
+    """Verify a prepared scene without importing or initializing a simulator."""
     root = Path(config["output"]) / "scene"
     receipt = json.loads((root / "receipt.json").read_text())
     task_source = receipt["config"]["task"]
@@ -47,6 +46,13 @@ def load_scene(config):
         for name, sha in records.items():
             if digest(folder / name) != sha:
                 raise ValueError("Scene assets changed")
+    return root, receipt
+
+
+def load_scene(config):
+    import mujoco
+
+    root, _ = verify_scene_assets(config)
     model = mujoco.MjModel.from_xml_path(str(root / "scene.xml"))
     verify_unassisted_model(model)
     return (
@@ -293,6 +299,14 @@ def plan(config):
             opened = np.clip(opened, limits[:, 0], limits[:, 1])
             pre = opened.copy()
             pre[z_index] += config["rollout"]["approach_offset_m"]
+            pad_extra = {}
+            if config.get("pad_planning") is not None:
+                from .pad_grasp_planning import fit_candidate
+
+                fit, opened, pre, pad_extra, targets = fit_candidate(
+                    model, data, config, world, targets, seed, idx, z_index
+                )
+                q = fit["q"]
             approach_penetration = 0.0
             for fraction in np.linspace(0, 1, 15):
                 data.qpos[idx["q"]] = (1 - fraction) * pre + fraction * opened
@@ -302,6 +316,8 @@ def plan(config):
                     float(contact_penetrations(model, data, idx).max(initial=0)),
                 )
             reasons = []
+            if pad_extra:
+                reasons.extend(pad_extra["pad_plan"]["rejected_for"])
             if fit["site_errors_m"].max() > settings["contact_error_m"]:
                 reasons.append("contact_target_error")
             if fit["penetration_m"].max(initial=0) > settings["max_penetration_m"]:
@@ -310,6 +326,7 @@ def plan(config):
                 reasons.append("approach_penetration")
             row = dict(
                 candidate_id=number,
+                **pad_extra,
                 thumb_side_direction=direction,
                 pair=pair,
                 targets_m=targets.tolist(),
@@ -546,6 +563,13 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
     if candidate not in planning["candidates"] or not candidate["accepted"]:
         raise ValueError("Trial requires an unchanged accepted grasp plan")
     model, data, mesh = load_scene(config)
+    if config.get("physics_step_s") is not None:
+        step_s = config["physics_step_s"]
+        if not np.isfinite(step_s) or not 0.00025 <= step_s <= model.opt.timestep:
+            raise ValueError(
+                "Explicit timestep may refine the prepared scene down to 0.25 ms"
+            )
+        model.opt.timestep = step_s
     set_wrist_frame(
         model, data, config, candidate["base_position_m"], candidate["base_rotation"]
     )
@@ -577,21 +601,29 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
         config["rollout"]["close_offset_rad"],
         config.get("finger_closure"),
     )
+    from .pad_grasp_planning import closing_target
+
+    closed = closing_target(config, candidate, closed)
     limits = model.jnt_range[idx["joints"]]
     closed = np.clip(closed, limits[:, 0], limits[:, 1])
-    from .finger_closure import closure_geometry
+    if "pad_plan" in candidate:
+        from .pad_grasp_planning import pad_closure_geometry
 
-    closure_audit = closure_geometry(
-        model,
-        data,
-        idx,
-        config["robot"]["sites"],
-        candidate["q_grasp"],
-        closed,
-        candidate["targets_m"]
-        if "targets_m" in candidate
-        else candidate["pair"]["targets_m"],
-    )
+        closure_audit = pad_closure_geometry(model, data, idx, candidate, closed)
+    else:
+        from .finger_closure import closure_geometry
+
+        closure_audit = closure_geometry(
+            model,
+            data,
+            idx,
+            config["robot"]["sites"],
+            candidate["q_grasp"],
+            closed,
+            candidate["targets_m"]
+            if "targets_m" in candidate
+            else candidate["pair"]["targets_m"],
+        )
     data.qpos[idx["q"]] = pre
     if support:
         data.qpos[support.idx["q"]] = candidate["support"]["q_pregrasp"]
@@ -603,6 +635,9 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
     if settings["hold_s"] < goal["hold_s"]:
         raise ValueError("Trial hold cannot be shorter than the task requirement")
     feedback = config.get("clearance_feedback")
+    freeze_lift_at_hold = config.get("freeze_lift_at_hold", False)
+    if type(freeze_lift_at_hold) is not bool:
+        raise ValueError("Explicit Boolean lift-offset ownership required")
     contact_feedback = config.get("contact_feedback")
     rotation_feedback = config.get("orientation_feedback")
     surface = None
@@ -656,10 +691,111 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
             initial_rotation,
         )
     object_geoms = set(np.flatnonzero(model.geom_bodyid == obj))
+    guidance = None
+    if config.get("reference_guidance") is not None:
+        if not support or not support.enabled or coordination:
+            raise ValueError(
+                "Reference guidance requires two hands and exclusive wrist-command ownership"
+            )
+        from .guided_motion import GuidedMotion
+
+        guidance = GuidedMotion(
+            model,
+            [
+                (config["robot"]["root_body"], "fixture_"),
+                (
+                    config["support_robot"]["root_body"],
+                    config["support_robot"]["fixture_prefix"],
+                ),
+            ],
+            config["reference_guidance"],
+        )
+        if settings["hold_s"] < guidance.reference.elapsed[-1] + task["goal"]["hold_s"]:
+            raise ValueError(
+                "Reference transfer must leave the required final hold duration"
+            )
     hand_geoms = set(idx["geoms"])
+    retention = None
+    if config.get("grasp_retention") is not None:
+        if not guidance:
+            raise ValueError("Retention requires an independently fixed motion target")
+        from .grasp_retention import GraspRetention
+
+        retention = GraspRetention(config["grasp_retention"])
+    force_servo = None
+    if config.get("contact_force_feedback") is not None:
+        if (
+            not support
+            or support.mode != "simultaneous_grasp"
+            or surface
+            or contact_feedback
+            or config.get("finger_closure")
+            or retention
+        ):
+            raise ValueError(
+                "Bilateral pad-force feedback requires exclusive simultaneous finger ownership"
+            )
+        from .contact_force_control import BilateralContactForce
+
+        world_mesh = mesh.copy()
+        world_mesh.apply_transform(settled["settled_world_from_object"])
+        force_servo = BilateralContactForce(
+            model,
+            data,
+            config["contact_force_feedback"],
+            candidate,
+            settled["settled_world_from_object"],
+            world_mesh,
+            scene_sha256=digest(Path(config["output"]) / "scene/scene.xml"),
+            allowed_penetration_m=config["planning"]["max_penetration_m"],
+        )
     support_geoms = set(support.idx["geoms"]) if support else set()
+    pose_feedback = None
+    pose_hold_goal = None
+    if config.get("object_pose_feedback") is not None:
+        if (
+            not force_servo
+            or coordination
+            or rotation_feedback
+            or not freeze_lift_at_hold
+        ):
+            raise ValueError(
+                "Pose feedback requires bilateral force control and exclusive hold pose ownership"
+            )
+        from .wrist_coordination import ObjectFrameCoordinator
+
+        pose_feedback = ObjectFrameCoordinator(
+            model,
+            [
+                (config["robot"]["root_body"], "fixture_"),
+                (
+                    config["support_robot"]["root_body"],
+                    config["support_robot"]["fixture_prefix"],
+                ),
+            ],
+            config["object_pose_feedback"],
+            initial_rotation,
+        )
     all_robot_geoms = hand_geoms | support_geoms
     table = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "table")
+    patch_motion = None
+    if config.get("contact_patch_motion") is not None:
+        if not force_servo:
+            raise ValueError(
+                "Contact-motion logging requires explicit force-controlled pad ownership"
+            )
+        from .contact_patch_motion import (
+            ContactPatchMotion,
+            summarize as summarize_contact_motion,
+        )
+
+        patch_motion = ContactPatchMotion(
+            model,
+            obj,
+            force_servo.role_geoms,
+            force_servo.pads,
+            config["contact_patch_motion"],
+        )
     sample_every = max(1, round(0.02 / model.opt.timestep))
     from .simulation_health import step_rejection
 
@@ -672,14 +808,23 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
         if support and phase == "hold":
             phase = support.phase(data.time)
         lifted = phase in ("lift", "hold", "support_approach", "support_seat")
+        if guidance and phase == "hold":
+            guidance.enter(data.time, object_transform(model, data))
         if feedback and lifted:
             pose = object_transform(model, data)
+            if guidance:
+                pose = guidance.feedback_pose(pose, data.time)
             clearance = float(
                 (mesh.vertices @ pose[2, :3]).min() + pose[2, 3] - table_top
             )
-            displacement = clearance_feedback(
-                displacement, clearance, goal["lift_m"], model.opt.timestep, feedback
-            )
+            if not (freeze_lift_at_hold and phase == "hold"):
+                displacement = clearance_feedback(
+                    displacement,
+                    clearance,
+                    goal["lift_m"],
+                    model.opt.timestep,
+                    feedback,
+                )
             q[z_index] = closed[z_index] + displacement
         if contact_feedback and lifted:
             from .grasp_feedback import contact_closure
@@ -698,7 +843,11 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
             mujoco.mj_jacBody(model, data, None, jac, idx["root"])
             rotation_correction = orientation_correction(
                 rotation_correction,
-                object_transform(model, data)[:3, :3],
+                (
+                    guidance.feedback_pose(object_transform(model, data), data.time)
+                    if guidance
+                    else object_transform(model, data)
+                )[:3, :3],
                 initial_rotation,
                 jac[:, idx["dofs"][rotation_indices]],
                 model.opt.timestep,
@@ -729,6 +878,59 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
             if coordination and phase == "hold":
                 target = coordination.target(
                     model, target, object_transform(model, data), model.opt.timestep
+                )
+            if guidance and phase == "hold":
+                target = guidance.target(model, target, data.time)
+                if guidance.rejection:
+                    aborted = guidance.rejection
+                    break
+                if retention:
+                    current_pose = object_transform(model, data)
+                    retention.update(
+                        current_pose[:3, 3],
+                        data.xpos[idx["root"]],
+                        data.xmat[idx["root"]].reshape(3, 3),
+                        model.opt.timestep,
+                        thumb_force_n=previous_group_forces.get("thumb", 0),
+                        opposing_force_n=previous_opposing_force,
+                        reference_error_m=float(
+                            np.linalg.norm(current_pose[:3, 3] - guidance.goal[:3, 3])
+                        ),
+                    )
+                    hand = guidance.hands[0]  # verified world-aligned scalar slides
+                    try:
+                        target = retention.apply(
+                            target, hand["q"][:3], hand["limits"][:3]
+                        )
+                    except ValueError as error:
+                        aborted = str(error)
+                        break
+            if pose_feedback and phase == "hold":
+                current_pose = object_transform(model, data)
+                if pose_hold_goal is None:
+                    pose_hold_goal = current_pose.copy()
+                target = pose_feedback.target(
+                    model,
+                    target,
+                    current_pose,
+                    model.opt.timestep,
+                    desired_pose=guidance.goal if guidance else pose_hold_goal,
+                )
+                if pose_feedback.rejection:
+                    aborted = pose_feedback.rejection
+                    break
+            if force_servo:
+                activation = (
+                    settings["approach_s"]
+                    + config["contact_force_feedback"]["close_activation_fraction"]
+                    * settings["close_s"]
+                )
+                target = force_servo.target(
+                    model,
+                    data,
+                    target,
+                    active=data.time >= activation,
+                    dt=model.opt.timestep,
                 )
             if support.settings.get("actuator_bias_compensation", False):
                 from .support_control import bias_compensated_target
@@ -840,6 +1042,9 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
                     phase=phase,
                     minimum_object_height_m=height,
                     object_position_m=transform[:3, 3].tolist(),
+                    object_rotation=transform[:3, :3].tolist(),
+                    **(guidance.observation(transform, data.time) if guidance else {}),
+                    **(retention.diagnostics() if retention else {}),
                     wrist_position_m=data.xpos[idx["root"]].tolist(),
                     wrist_rotation=data.xmat[idx["root"]].reshape(3, 3).tolist(),
                     rotation_change_deg=tilt,
@@ -850,6 +1055,17 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
                     opposing_closure_correction_rad=closure_correction,
                     wrist_rotation_correction_rad=rotation_correction.tolist(),
                     **(surface.diagnostics() if surface else {}),
+                    **(force_servo.diagnostics() if force_servo else {}),
+                    **(
+                        dict(contact_patch_motion=patch_motion.sample(model, data))
+                        if patch_motion
+                        else {}
+                    ),
+                    **(
+                        dict(object_pose_feedback=pose_feedback.diagnostics())
+                        if pose_feedback
+                        else {}
+                    ),
                     **(
                         dict(primary_contact_force_by_geom_n=patch_forces)
                         if config.get("contact_patch_logging", False)
@@ -903,6 +1119,13 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
         extra = support_hold_metrics(records, float(model.body_mass[obj] * 9.81))
         metrics.update(extra)
         failures.extend(support_rejections(extra, support.rejection))
+    if guidance and guidance.max_command_error_m > 1e-6:
+        failures.append("reference_command_pose_error")
+    if pose_feedback and (
+        pose_feedback.max_position_residual_m > 1e-6
+        or pose_feedback.max_rotation_residual_rad > 1e-6
+    ):
+        failures.append("object_pose_feedback_command_error")
     if coordination:
         from .wrist_coordination import hold_world_motion
 
@@ -952,11 +1175,26 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
             for i, value in enumerate(peak_forces)
         },
         controller=dict(
+            **{
+                key: config[key]
+                for key in (
+                    "contact_force_feedback",
+                    "object_pose_feedback",
+                    "freeze_lift_at_hold",
+                )
+                if key in config
+            },
             clearance_feedback=feedback,
             contact_feedback=contact_feedback,
             orientation_feedback=rotation_feedback,
             close_offset_rad=settings["close_offset_rad"],
             duration_s=duration,
+            **(dict(grasp_retention=config["grasp_retention"]) if retention else {}),
+            **(
+                dict(reference_guidance=config["reference_guidance"])
+                if guidance
+                else {}
+            ),
             **(
                 dict(finger_surface_feedback=config["finger_surface_feedback"])
                 if surface
@@ -980,10 +1218,44 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
         mujoco_version=mujoco.__version__,
         solver_warning_counts=solver_warnings,
         simulation_final_time_s=float(data.time),
+        simulation_timestep_s=float(model.opt.timestep),
         simulation_requested_duration_s=float(duration),
         object_assistance=False,
         arm_reachability_validated=False,
         physical_hardware_validated=False,
+        **(
+            dict(
+                contact_patch_motion_summary=summarize_contact_motion(
+                    records, config["contact_patch_motion"]
+                )
+            )
+            if patch_motion
+            else {}
+        ),
+        **(
+            dict(
+                object_pose_feedback=config["object_pose_feedback"],
+                object_pose_feedback_final=pose_feedback.diagnostics(),
+                object_pose_feedback_observations="privileged simulator object pose; immutable hold/reference goal",
+                object_pose_feedback_max_position_residual_m=pose_feedback.max_position_residual_m,
+                object_pose_feedback_max_rotation_residual_rad=pose_feedback.max_rotation_residual_rad,
+            )
+            if pose_feedback
+            else {}
+        ),
+        **(
+            dict(
+                reference_mode="world_increment_after_grasp",
+                reference_capture_start_reproduced=False,
+                reference_anchor_world_from_object=None
+                if guidance.anchor is None
+                else guidance.anchor.tolist(),
+                reference_start_time_s=guidance.start,
+                reference_max_command_error_m=guidance.max_command_error_m,
+            )
+            if guidance
+            else {}
+        ),
         **(
             dict(
                 coordination=coordination.diagnostics(),
@@ -992,6 +1264,19 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
                 coordination_world_horizontal_limit_m=0.02,
             )
             if coordination
+            else {}
+        ),
+        **(
+            dict(
+                contact_force_feedback=config["contact_force_feedback"],
+                contact_force_feedback_observations=(
+                    "privileged simulator pad forces, object pose, bilateral object wrenches and free-body vertical acceleration"
+                    if force_servo.payload
+                    else "privileged solved simulator pad forces and object pose"
+                ),
+                contact_force_feedback_final=force_servo.diagnostics(),
+            )
+            if force_servo
             else {}
         ),
         **(
@@ -1098,8 +1383,16 @@ def verify_frozen_controller(config, selected):
         "object_frame_coordination",
         "finger_closure",
         "finger_surface_feedback",
+        "reference_guidance",
+        "grasp_retention",
+        "contact_force_feedback",
+        "object_pose_feedback",
+        "freeze_lift_at_hold",
     ):
-        if config.get(key) != selected["controller"].get(key):
+        recorded = selected["controller"].get(
+            key, selected.get("configuration", {}).get(key)
+        )
+        if config.get(key) != recorded:
             raise ValueError("Frozen validation cannot change controller feedback")
     if config.get("support_controller") != selected.get("support_controller"):
         raise ValueError("Frozen validation cannot change second-hand support control")
@@ -1191,7 +1484,15 @@ def main():
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument(
         "--phase",
-        choices=["prepare", "plan", "approach", "evaluate", "validate", "review"],
+        choices=[
+            "prepare",
+            "plan",
+            "approach",
+            "pad-patches",
+            "evaluate",
+            "validate",
+            "review",
+        ],
         required=True,
     )
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
@@ -1227,6 +1528,10 @@ def main():
         return prepare(config)
     if args.phase == "plan":
         return plan(config)
+    if args.phase == "pad-patches":
+        from .pad_grasp_planning import reassess_patches
+
+        return reassess_patches(config)
     if args.phase == "approach":
         return refine_approaches(config)
     if args.phase == "evaluate":

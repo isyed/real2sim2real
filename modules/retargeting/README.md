@@ -81,3 +81,8 @@ The same audit accepts foot or other task-specific samples through explicit
 independent of the legacy `hands` field. Inspect the demonstrated interaction
 first: a successful foot push does not require hand-contact phases, and missing
 hand proximity alone is not a reason to reject its reference.
+
+`insertion_geometry` discovers projected openings, checks convex-union occupancy
+and bounds swept-sphere clearance with explicit sampling allowances. These are
+geometry diagnostics, not whole-robot or physical grasp certificates. See
+[HANDLE_INSERTION.md](../../docs/HANDLE_INSERTION.md) for the prepared-scene audit.

@@ -636,3 +636,13 @@ anatomical joint centres nor control readiness. Secondary views overlap with
 the stereo-depth source; this is a consistency audit, not independent 3D ground
 truth. Approximate visual labels stay separate from automatic matching. Source
 image, input-array and implementation hashes accompany every report.
+
+`demonstration_strategy` exports synchronized approach/lift crops and audits
+reconstructed object/table motion without interpreting image proximity as contact.
+See [GUIDED_MOTION.md](../../docs/GUIDED_MOTION.md) for the strategy audit and the
+separate bounded object-motion control pilot.
+
+`visible_region_geometry` checks fixed original/settled pose hypotheses against
+observation-defined image regions, common-ray depth errors, coverage and direct
+stereo features. It preserves unresolved underside contacts and performs no shape
+fit or robot execution. See [VISIBLE_REGION_GEOMETRY.md](../../docs/VISIBLE_REGION_GEOMETRY.md).

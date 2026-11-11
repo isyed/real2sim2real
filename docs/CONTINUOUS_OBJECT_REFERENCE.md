@@ -125,6 +125,15 @@ do not replace acceptance anchors. A planned-target tangent gap is not an
 independent measurement of material slip. Existing contact-motion diagnostics
 separate sampled sliding from centroid migration.
 
+Its additional `load_readiness` diagnostic reports the first saved confirmation
+of a sustained thumb plus two opposing pads per hand at half their requested
+normal pressure. The default dwell is 0.1 s with no observation gap above 30 ms.
+Both hands must qualify simultaneously for bilateral readiness. Transient touches,
+missing samples or zero release targets cannot create a readiness event. This
+uses privileged simulated forces and preceding-step pressure requests; it is not
+an independent observation, force-closure certificate or replacement acceptance
+gate. Earlier readiness can coexist with worse subsequent drift.
+
 For bounded seating experiments, `finger_feedback_override` may change pressure
 activation within closure, normal gain and normal speed within the existing
 controller validator. It cannot increase force targets, joint-offset budgets or
@@ -216,6 +225,58 @@ Stationary admission uses a half-physics-step tolerance at a declared endpoint
 that falls between integration-grid points. It still requires the complete sample
 count, matching controller/configuration and a passing physical verdict; this
 rounding tolerance cannot admit a shortened hold.
+
+## Joint closure wrists and loaded finger posture
+
+`closing_grasp_plan --config ...` jointly fits both wrist displacements and all
+ten finger chains from a pinned, table-supported acquisition-completion state.
+Required settings are `source_result`, `source_sha256`, `time_s`,
+`loaded_response_fraction` (0–1), `maximum_joint_change_rad` (<=0.35),
+`nonpad_clearance_m` (0.5–3 mm), `target_gap_m` (-0.5–0 mm),
+`maximum_evaluations` (<=100), new `output` and `deadline_s` (<=900).
+Use an unmodified continuous arm baseline. Source verdicts are retained.
+
+By default, the empirical response is the original nominal closed posture minus
+the saved actual finger posture at acquisition. This includes transient tracking
+and is not a static compliance model. Optional `response_time_s` instead selects
+a suspended, bilaterally loaded observation from a stationary source. Its saved
+position-motor command minus actual posture estimates loaded deflection. Existing
+support-hand gravity/Coriolis bias is removed before fitting so live compensation
+is not counted twice. Record the calibration time, forces and finger speed; a
+single observation remains an approximation, not a validated force model.
+
+The position-only fit checks predicted loaded finger poses while bounding the
+actual proposed commands within native limits and 0.35 rad of the original closed
+targets. Both commands and predicted poses must remain legal. Self/environment
+collision constraints apply to both configurations: compliance must not hide a
+nominal command that crosses another finger. Arm joints move by
+at most 0.03 rad during fitting; resulting wrist translations and rotations must
+be within 6 mm and 0.06 rad. Pad seating, non-pad finger clearance, full-robot
+environment penetration and conservative table gap are checked independently.
+Temporary 30 mm query margins never enter dynamics. Forces do not enter this
+geometric objective; complete loaded dynamics must test the approximation.
+
+The proposal uses `real2sim2real.closing-grasp-plan/1`. It pins all finger goals,
+contact frames, original nominal anchors and `closing_wrist_offsets`. Pass the
+same offsets to continuous planning and the pinned proposal as replay's
+`finger_seating_plan`. Runtime rejects a different wrist spec, an incomplete pad
+set, changed nominal anchors, or a legacy finger-only proposal on a nonzero new
+wrist preload. Finger changes remain owned by the live finger controller.
+
+`closing_wrist_offsets` has exactly `vectors_object_m` and
+`rotation_vectors_object_rad`, each with `right` and `left` vectors. Translation
+and axis-angle rotation use the current commanded object's axes. Rotation acts
+about the wrist origin without an orbit. Smooth preload rises over the existing
+close window, stays fixed relative to the moving object through the capture,
+then recovers to zero during terminal table settling before supported opening.
+Raw reference poses, capture timestamps, acquisition anchor and acceptance gates
+stay unchanged. Zero offsets reproduce the original command path exactly.
+
+Every nonzero proposal requires fresh dense whole-arm IK/collision/speed admission
+and assembled arm/finger/environment screening, followed by a complete matching
+stationary pass before demonstrated motion. A new grasp still needs complete
+return/release revalidation even though its nominal preload recovers before
+opening. The original release certificate does not transfer to a changed grasp.
 
 ## Fitting release over a wrist-rotation path
 

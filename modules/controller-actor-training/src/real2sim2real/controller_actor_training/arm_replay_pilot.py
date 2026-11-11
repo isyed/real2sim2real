@@ -159,6 +159,7 @@ def rollout(config, interaction=None):
             "wrist_withdrawal.py",
             "pad_seating_plan.py",
             "finger_acquisition.py",
+            "closing_wrist_offsets.py",
             "arm_clearance_audit.py",
         )
     }
@@ -183,6 +184,12 @@ def rollout(config, interaction=None):
     if {a["name"] for a in arms} != {"left", "right"}:
         raise ValueError("Both hands must have arms")
     parent = json.loads(Path(audit["config"]["trial"]).read_text())
+    from .closing_wrist_offsets import nonzero
+
+    if nonzero(parent.get("continuous_protocol", {}).get("closing_wrist_offsets")) and (
+        finger_mode != "live_contact_force" or not config.get("finger_seating_plan")
+    ):
+        raise ValueError("Closing wrist preload requires its coupled live finger plan")
     required_posture = parent.get("continuous_protocol", {}).get(
         "finger_release_posture"
     )
@@ -379,7 +386,14 @@ def rollout(config, interaction=None):
         if config.get("finger_seating_plan"):
             from .pad_seating_plan import bind
 
-            bind(live_fingers, model, config["finger_seating_plan"])
+            bind(
+                live_fingers,
+                model,
+                config["finger_seating_plan"],
+                closing_wrist_offsets=parent.get("continuous_protocol", {}).get(
+                    "closing_wrist_offsets"
+                ),
+            )
     finger_path = None
     if finger_plan_admission or parent.get("continuous_protocol"):
         from .arm_finger_plan import path_screen

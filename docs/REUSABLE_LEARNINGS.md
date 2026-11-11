@@ -411,6 +411,26 @@ queries with inconsistent witnesses must not enter contact admission. Near-conta
 margin queries are a separate planning model, and missing pairs are distance lower
 bounds rather than exact zero-distance observations.
 
+Joint wrist/finger acquisition planning must account for opposition: moving a
+wrist toward an unloaded finger can unload its thumb across a thin object wall.
+Fit both sides together, preserve full-hand collision clearance and keep the
+original acquisition clock. Measured command/posture displacement at closure is
+often transient; use a separately identified loaded hold to estimate preload,
+remove any existing actuator bias compensation, and then test that approximation
+in free-object dynamics. Earlier or more numerous pad contacts alone do not
+establish retention. Report force build-up and the complete drift interval.
+
+Keep closure preload, its finger/contact proposal and the newly audited wrist
+path coupled by hashes and exact settings. Recovering a nominal preload before
+opening does not inherit a release pass from another loaded grasp. A zero-offset
+replay is a useful exact regression check, distinct from robustness evidence.
+
+Check both load-deflected and commanded postures when identifying preload. A
+collision-free loaded prediction can require a nominal thumb command that passes
+through another finger. Enforce the original self/environment limits in both
+configurations, then screen the entire arm/finger trajectory; reject before
+physics when that commanded path is unsafe.
+
 Measure correction authority with small signed pressure changes and thumb/finger
 redistribution before training an actor. Higher force targets can change object
 rotation, rolling and the other hand's load; they do not guarantee less grasp

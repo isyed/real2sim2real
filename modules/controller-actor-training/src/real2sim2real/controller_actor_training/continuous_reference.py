@@ -213,6 +213,7 @@ def run(config):
         "finger_release",
         "wrist_withdrawal",
         "finger_release_posture",
+        "closing_wrist_offsets",
     } != {
         "baseline_result",
         "baseline_sha256",
@@ -308,6 +309,15 @@ def run(config):
         if release is None:
             raise ValueError("Wrist withdrawal requires supported finger release")
         validate_withdrawal(withdrawal, release)
+    closing = config.get("closing_wrist_offsets")
+    if closing is not None:
+        from .closing_wrist_offsets import validate
+
+        validate(closing)
+        if release is None:
+            raise ValueError(
+                "Closure preload needs an explicit supported-release recovery clock"
+            )
     opening_targets = {}
     posture_spec = config.get("finger_release_posture")
     if posture_spec:
@@ -399,6 +409,19 @@ def run(config):
             wrist = np.eye(4)
             wrist[:3, 3], wrist[:3, :3] = data.xpos[root], data.xmat[root].reshape(3, 3)
             target = change @ wrist
+            if closing is not None:
+                from .closing_wrist_offsets import transform as closing_transform
+
+                target = closing_transform(
+                    time,
+                    role,
+                    target,
+                    command,
+                    closing,
+                    base["rollout"],
+                    float(reference.elapsed[-1]),
+                    release["start_s"],
+                )
             if withdrawal:
                 from .wrist_withdrawal import transform
 
@@ -477,9 +500,15 @@ def run(config):
         protocol["wrist_withdrawal"] = withdrawal
     if posture_spec:
         protocol["finger_release_posture"] = posture_spec
+    if closing is not None:
+        protocol["closing_wrist_offsets"] = closing
     source = out / "source-trial"
     source.mkdir()
     (source / "continuous_reference.py").write_bytes(implementation)
+    if closing is not None:
+        (source / "closing_wrist_offsets.py").write_bytes(
+            Path(__file__).with_name("closing_wrist_offsets.py").read_bytes()
+        )
     np.savez_compressed(
         source / "states.npz", qpos=states, ctrl=controls, timestamps_s=times
     )
@@ -495,6 +524,15 @@ def run(config):
         physics_run=False,
         source_hashes=sources,
         implementation_sha256=digest(source / "continuous_reference.py"),
+        **(
+            dict(
+                closing_offsets_implementation_sha256=digest(
+                    source / "closing_wrist_offsets.py"
+                )
+            )
+            if closing is not None
+            else {}
+        ),
     )
     write_json(source / "result.json", report)
     write_json(out / "protocol.json", dict(config=config, **protocol))

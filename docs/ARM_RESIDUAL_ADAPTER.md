@@ -1,9 +1,10 @@
 # CPU residual environment for arm-mounted articulated hands
 
-This adapter currently accepts staged replay results. The separately supported
-[continuous reference protocol](CONTINUOUS_OBJECT_REFERENCE.md) has acquisition
-anchors and table-return phases; its results are rejected here until the learning
-observations and rewards are adapted to that task.
+This adapter accepts staged replay and complete
+[continuous reference](CONTINUOUS_OBJECT_REFERENCE.md) motion with supported
+finger release. Continuous stationary diagnostics remain excluded. Continuous
+replays retain the original acquisition anchor, capture clock and release gate;
+the added observations and rewards distinguish carrying from placement/release.
 
 `ArmResidualEnv` supplies scalar NumPy `reset`, `step` and `close` methods around
 the audited two-arm replay. It provides observations, bounded pressure actions,
@@ -26,10 +27,16 @@ pressure applies per pad, not as a total across four fingers. Positive increases
 requested normal pressure; it does not directly prescribe a joint direction.
 
 Declare `max_offset_n` (positive, <=2 N), `max_rate_n_s` (positive, <=10 N/s),
-`active_phases` (close/lift/hold) and `policy_period_s` (10–100 ms, an integer
+`active_phases` (close/lift/hold/return) and `policy_period_s` (10–100 ms, an integer
 controller-period multiple). Offsets move toward the target at the controller
 clock and return toward zero outside active phases. Nonzero target changes stay
 between 0.1 and 10 N per pad. Actual measured force can differ from the target.
+
+Release and settling cannot be enabled as pressure-action phases. Offsets decay
+toward zero outside enabled phases, and the frozen supported-release controller
+remains the sole owner of opening/unhooking. Once release starts it disables the
+pressure servo and clears pad targets/offsets. This first continuous adapter lets
+an actor improve acquisition/carrying; it does not learn a new release trajectory.
 
 The existing live finger servo remains the sole finger actuator owner. Its native
 force/joint limits, geometric guards and joint-offset/rate constraints remain.
@@ -50,9 +57,18 @@ to expose every hidden controller state; a learner can use history. Hardware
 sensing/noise/delay adapters are separate work. Prior commands are labelled as
 prior commands, not expert labels or counterfactual current-state commands.
 
-Drift anchors use the same first recorded hold sample as the independent task
-evaluator and do not move when contact slips. An anchor-validity flag is false
-until that sample exists. Physics, controller and policy clocks remain distinct.
+Staged drift anchors use the first recorded hold sample. Continuous anchors use
+the first recorded sample at/after acquisition completion, matching the independent
+task evaluator. Anchors never move when contact slips; a validity flag stays false
+until the corresponding sample exists. Physics, controller and policy clocks remain
+distinct.
+
+Continuous observations add a six-stage one-hot vector (approach, acquisition,
+carry, placement, release, settled), table contacts/load/clearance/object speed,
+actual release latch/progress/support dwell/opening error, and total hand normal
+force. The scheduled phase remains separately observable. A scheduled release
+without the actual supported-release latch is still placement, not successful
+release. The schema records all vector slices and stage ordering.
 
 ## API and evidence
 
@@ -98,7 +114,13 @@ Dense learning costs are capped at 100 per complete horizon; raw acceptance
 metrics remain uncapped. Complete success adds 10, complete rejection subtracts
 10. Early physical failure subtracts 110, covering the remaining bounded cost
 and failed-completion penalty. A higher reward never overrides a failed task gate.
-Full phase-aware acquisition/placement/release tasks need their own protocol.
+For continuous tasks, tracking costs apply after approach, while grasp/contact
+retention costs apply during carry, including descent. Clearance deficit applies
+only on reference-defined suspended hold frames (weight 4, scale 10 mm). Placement
+costs penalize missing table support and excessive clearance (weight 4). After the
+actual release latch, hand force costs encourage unloading; settled opening error
+is also penalized (weight 2). A table-penetration cost beyond 3 mm applies throughout
+(weight 4). These provisional rewards do not replace the unchanged physical gates.
 
 Outputs include the unchanged physical-state archive format, `result.json`,
 `policy-trace.npz` with observations/actions, and `environment.json` with rewards.
@@ -157,5 +179,6 @@ remain separate work. G1/SONIC checkpoints are not compatible merely because
 this adapter exists.
 
 Continuous acquisition, demonstrated return and finger release require a separate
-phase-aware extension and full zero-action verification. See
+full zero-action verification for each frozen controller. The implemented
+phase-aware extension preserves the staged path. See
 [continuous tracking and residual-learning boundaries](CONTINUOUS_TRACKING_PROXY.md).

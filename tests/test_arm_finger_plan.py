@@ -107,6 +107,19 @@ def test_stationary_admission_pins_clock_posture_physics_and_complete_hold(tmp_p
     report["success"] = False
     with pytest.raises(ValueError, match="Passing"):
         validate_stationary(proposed())
+    report.update(physics_run=True, rejected_for=["hold_slip"])
+    diagnostic = proposed()
+    diagnostic["diagnostic_stationary"] = diagnostic.pop("validated_stationary")
+    receipt = validate_stationary(diagnostic)
+    assert receipt["diagnostic_only"] and not receipt["promotion_eligible"]
+    assert receipt["stationary_rejected_for"] == ["hold_slip"]
+    with pytest.raises(ValueError, match="retune"):
+        validate_stationary(dict(diagnostic, control_period_s=0.002))
+    report["rejected_for"] = ["incomplete_pilot"]
+    diagnostic = proposed()
+    diagnostic["diagnostic_stationary"] = diagnostic.pop("validated_stationary")
+    with pytest.raises(ValueError):
+        validate_stationary(diagnostic)
 
 
 def test_finger_path_screen_leaves_physical_state_and_native_limits_unchanged():

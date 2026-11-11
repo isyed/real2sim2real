@@ -78,6 +78,14 @@ def compare(baseline_path, candidate_path):
         )
     )
     equality = {k: baseline[k] == candidate[k] for k in sorted(fields)}
+    for k in (
+        "continuous_protocol",
+        "continuous_metrics",
+        "motion_condition",
+        "demonstrated_motion_executed",
+        "stationary_admission",
+    ):
+        equality[k] = baseline.get(k) == candidate.get(k)
     return dict(
         schema="real2sim2real.arm-zero-residual-verification/1",
         baseline_result=str(baseline_path),

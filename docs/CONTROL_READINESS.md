@@ -12,6 +12,20 @@ under distinct, pinned identities. Better mean object-pose tracking does not era
 failed retention or clearance gates. See [continuous tracking proxies and the
 phase-aware residual-learning boundary](CONTINUOUS_TRACKING_PROXY.md).
 
+For an explicitly requested full-motion diagnostic before a stationary pass,
+`diagnostic_stationary: {result, sha256}` pins the complete stationary arm trial.
+The runner permits only the motion-condition/output/purpose change, retains full
+path/collision checks, and appends `diagnostic_motion_without_stationary_promotion`.
+This cannot produce a passing task result or substitute for `validated_stationary`.
+Incomplete holds and residual-on-residual promotion remain rejected.
+
+`arm_motion_review --config ...` builds a synchronized browser comparison from two
+pinned full-motion result/review receipts. Config contains two `runs` entries,
+each with `label` and `result: {path, sha256}`, plus a fresh `output`. Native frame
+IDs, duration and recorded phase/timestamp samples must match. Different audited
+grasps/paths are explicitly labelled as a visual comparison, not a controlled
+single-variable experiment. Existing state/video artifacts remain unchanged.
+
 ## Two holds and two kinds of arm check
 
 Initial hand fitting positions the embodiment's real pads and joints at proposed

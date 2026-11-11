@@ -113,6 +113,8 @@ def rollout(config, interaction=None):
         raise ValueError(
             "Live pad feedback and separate finger trim cannot share ownership"
         )
+    if config.get("finger_seating_plan") and finger_mode != "live_contact_force":
+        raise ValueError("Seating proposals require the live finger owner")
     if config.get("finger_feedback_override") and finger_mode != "live_contact_force":
         raise ValueError("Finger feedback overrides require the live owner")
     simulation_case = validate_case(config)
@@ -121,7 +123,9 @@ def rollout(config, interaction=None):
         if finger_mode != "live_contact_force":
             raise ValueError("Replanned finger ownership requires live feedback")
     if config.get("motion_condition", "demonstrated") == "demonstrated" and (
-        config.get("finger_plan") or config.get("validated_stationary")
+        config.get("finger_plan")
+        or config.get("finger_seating_plan")
+        or config.get("validated_stationary")
     ):
         from .arm_finger_plan import validate_stationary
 
@@ -151,6 +155,9 @@ def rollout(config, interaction=None):
             "continuous_reference.py",
             "finger_release.py",
             "finger_release_plan.py",
+            "wrist_withdrawal.py",
+            "pad_seating_plan.py",
+            "arm_clearance_audit.py",
         )
     }
     audit_path = Path(config["audit"])
@@ -352,6 +359,10 @@ def rollout(config, interaction=None):
             from .finger_release_plan import bind
 
             bind(live_fingers, model, config["finger_release_posture"])
+        if config.get("finger_seating_plan"):
+            from .pad_seating_plan import bind
+
+            bind(live_fingers, model, config["finger_seating_plan"])
     finger_path = None
     if finger_plan_admission or parent.get("continuous_protocol"):
         from .arm_finger_plan import path_screen
@@ -458,6 +469,20 @@ def rollout(config, interaction=None):
                 else float(data.time)
             )
             control_updates += 1
+            withdrawal = parent.get("continuous_protocol", {}).get("wrist_withdrawal")
+            if withdrawal and motion_condition == "demonstrated":
+                from .wrist_withdrawal import release_ready
+
+                if live_fingers is None or live_fingers.release is None:
+                    raise ValueError("Wrist withdrawal requires live supported release")
+                if not release_ready(
+                    control_time,
+                    withdrawal,
+                    parent["continuous_protocol"]["finger_release"],
+                    live_fingers.release.started_s,
+                ):
+                    aborted = "withdrawal_without_supported_unhooking"
+                    break
             i = min(
                 np.searchsorted(times, control_time, side="right") - 1, len(times) - 2
             )
@@ -821,6 +846,14 @@ def rollout(config, interaction=None):
             desired.qpos[qids] = targets[sample_index]
             mujoco.mj_kinematics(model, desired)
             record["wrist_tracking"] = wrist_errors(data, desired, roots)
+            if parent.get("continuous_protocol", {}).get("wrist_withdrawal") and source[
+                "phase"
+            ] in ("release", "released_settle"):
+                from .arm_finger_plan import hand_table_clearance
+
+                record["hand_table_clearance_m"] = hand_table_clearance(
+                    model, data, hands["left"] | hands["right"], table
+                )
             desired.qpos[qids] = target
             mujoco.mj_kinematics(model, desired)
             record["commanded_wrist_tracking"] = wrist_errors(data, desired, roots)

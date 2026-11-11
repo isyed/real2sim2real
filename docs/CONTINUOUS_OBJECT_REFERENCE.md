@@ -131,6 +131,54 @@ controller validator. It cannot increase force targets, joint-offset budgets or
 joint-speed limits. Check stationary behavior before promoting a moving controller;
 label any moving run without that prerequisite as a rejected development diagnostic.
 
+## Opposing-pad seating and coordinated withdrawal
+
+`pad_seating_plan` fits the eight non-thumb pad chains at a pinned, table-supported
+acquisition-completion state. Inputs are `source_result`, `source_sha256`, `time_s`,
+`maximum_joint_change_rad` (<=0.35), `target_gap_m` (-0.5 to 0 mm),
+`maximum_evaluations` (<=150), new `output` and `deadline_s` (<=900). It preserves
+wrists, thumbs, object pose and native finger/control limits. Each proposal records
+collision witnesses, their agreement with the reconstructed surface and the
+original physical verdict. Signed query distances must agree with their witness
+segments. Neither a geometry fit nor a witness from simulation is an independent
+contact observation.
+
+Arm replay accepts a pinned `finger_seating_plan: {"path": "...", "sha256": "..."}`.
+It changes only closed finger targets and the corresponding pad contact frames.
+Optional `close_fraction` (0.5–1) finishes commanded finger closure earlier within
+the original acquisition interval. The object reference and acquisition drift
+anchor keep their declared clock. Original pressure targets, correction budgets
+and robot limits are retained. Fresh full-hand path screening and a complete
+passing stationary trial are required before promoting this proposal to motion.
+
+Optional plan `wrist_withdrawal` contains `delay_s` (0.25–1), `duration_s` (0.5–1.5)
+and `vectors_world_m` for `right` and `left`. Each vector is <=30 mm and has no
+downward component. The withdrawal must finish inside the release window; both
+wrists retain their orientations. It creates new arm commands, so a fresh dense
+arm audit and assembled arm/finger/environment screen are required.
+
+Finger release also supports optional `thumb_duration_s` (0.5 to `duration_s`).
+This selects a shorter opening clock for the owned thumb chains. The wrist delay
+must allow that clock plus the 50 ms latch tolerance to finish. The same thumb
+schedule is used by kinematic preparation, full-hand screening and live control.
+If supported release fails to latch within 50 ms of its declared start, the run
+aborts before wrist withdrawal. Accelerating thumb opening can collide with still
+closed fingers; a clear arm path alone does not admit it.
+
+Path diagnostics identify the worst colliding geometry pair and timestamp. Table
+clearance reuses `arm_clearance_audit`'s collision-geometry height envelope, which
+extends the tabletop plane beyond its finite footprint. A positive gap guarantees
+clearance; a negative gap alone does not prove collision. This avoids inconsistent
+zero returns from separated mesh/mesh distance queries. Existing collision and
+physical release criteria still determine acceptance. Original rejection receipts
+are preserved, and saved-state clearance audits can verify existing runs without
+rerunning physics.
+
+Stationary admission uses a half-physics-step tolerance at a declared endpoint
+that falls between integration-grid points. It still requires the complete sample
+count, matching controller/configuration and a passing physical verdict; this
+rounding tolerance cannot admit a shortened hold.
+
 Reference scoring includes acquisition/return and separates `complete_protocol`
 from native-duration `moving_reference`; terminal settling cannot inflate the
 latter. These use reconstructed references, not official challenge ground truth.

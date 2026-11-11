@@ -69,3 +69,32 @@ def test_kinematic_release_leaves_old_waypoint_schedule_exact():
     )
     with pytest.raises(ValueError):
         FingerRelease(dict(settings(), duration_s=0.1))
+
+
+def test_thumbs_unhook_before_the_remaining_fingers_finish_opening():
+    r = FingerRelease(dict(settings(), duration_s=1.5, thumb_duration_s=0.5))
+    r.unhook_mask = np.array([True, False])
+    for t in [3.0, 3.1]:
+        r.command(t, 0.1, [1.0, 1.0], [0.0, 0.0], [1.0, 1.0], **observation())
+    target = r.command(3.6, 0.1, [1.0, 1.0], [0.0, 0.0], [1.0, 1.0], **observation())
+    assert target[0] == 0.0
+    assert target[1] > 0.5
+    assert r.diagnostics()["thumb_fraction"] == 1.0
+    from real2sim2real.controller_actor_training.arm_finger_feedback import (
+        finger_waypoint,
+    )
+
+    rollout = dict(
+        approach_s=1.0,
+        close_s=0.8,
+        finger_release=dict(settings(), duration_s=1.5, thumb_duration_s=0.5),
+    )
+    planned = finger_waypoint(
+        3.6,
+        [1.0, 1.0],
+        [0.0, 0.0],
+        [1.0, 1.0],
+        rollout,
+        release_fast_mask=[True, False],
+    )
+    assert planned[0] == 0.0 and planned[1] > 0.5

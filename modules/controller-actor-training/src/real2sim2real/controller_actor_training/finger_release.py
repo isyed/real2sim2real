@@ -13,7 +13,7 @@ def validate_release(settings):
         maximum_speed_m_s=(0, 0.02),
     )
     if (
-        set(settings) != set(bounds)
+        set(settings) - {"thumb_duration_s"} != set(bounds)
         or any(
             not np.isfinite(settings[k]) or not lo <= settings[k] <= hi
             for k, (lo, hi) in bounds.items()
@@ -21,6 +21,11 @@ def validate_release(settings):
         or min(settings["start_s"], settings["maximum_speed_m_s"]) <= 0
     ):
         raise ValueError("Explicit bounded table-supported finger release required")
+    if "thumb_duration_s" in settings and (
+        not np.isfinite(settings["thumb_duration_s"])
+        or not 0.5 <= settings["thumb_duration_s"] <= settings["duration_s"]
+    ):
+        raise ValueError("Thumb unhooking must finish within the release window")
 
 
 def release_fraction(time, settings):
@@ -42,6 +47,8 @@ class FingerRelease:
         self.initial = None
         self.fraction = 0.0
         self.open_error = None
+        self.unhook_mask = None
+        self.thumb_fraction = 0.0
 
     def command(
         self,
@@ -86,7 +93,20 @@ class FingerRelease:
             return None
         self.fraction = release_fraction(time, dict(s, start_s=self.started_s))
         self.open_error = float(np.max(np.abs(values[2] - values[1]), initial=0))
-        return (1 - self.fraction) * self.initial + self.fraction * values[1]
+        result = (1 - self.fraction) * self.initial + self.fraction * values[1]
+        if self.unhook_mask is not None and "thumb_duration_s" in s:
+            mask = np.asarray(self.unhook_mask, bool)
+            if mask.shape != values[0].shape:
+                raise ValueError("Thumb mask must match owned finger commands")
+            self.thumb_fraction = release_fraction(
+                time, dict(s, start_s=self.started_s, duration_s=s["thumb_duration_s"])
+            )
+            result[mask] = (1 - self.thumb_fraction) * self.initial[
+                mask
+            ] + self.thumb_fraction * values[1][mask]
+        else:
+            self.thumb_fraction = self.fraction
+        return result
 
     def diagnostics(self):
         return dict(
@@ -94,4 +114,5 @@ class FingerRelease:
             fraction=self.fraction,
             supported_duration_s=self.support_s,
             maximum_open_error_rad=self.open_error,
+            thumb_fraction=self.thumb_fraction,
         )

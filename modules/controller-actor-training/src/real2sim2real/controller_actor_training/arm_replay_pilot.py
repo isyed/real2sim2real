@@ -115,6 +115,12 @@ def rollout(config, interaction=None):
         )
     if config.get("finger_seating_plan") and finger_mode != "live_contact_force":
         raise ValueError("Seating proposals require the live finger owner")
+    if "acquisition_profile" in config:
+        from .acquisition_profile import validate
+
+        validate(config["acquisition_profile"])
+        if finger_mode != "live_contact_force":
+            raise ValueError("Acquisition profiles require the live finger owner")
     if config.get("finger_feedback_override") and finger_mode != "live_contact_force":
         raise ValueError("Finger feedback overrides require the live owner")
     simulation_case = validate_case(config)
@@ -124,6 +130,7 @@ def rollout(config, interaction=None):
             raise ValueError("Replanned finger ownership requires live feedback")
     if config.get("motion_condition", "demonstrated") == "demonstrated" and (
         config.get("finger_plan")
+        or config.get("acquisition_profile")
         or config.get("finger_seating_plan")
         or config.get("finger_feedback_override", {}).get("unloaded_acquisition")
         or config.get("validated_stationary")
@@ -160,6 +167,7 @@ def rollout(config, interaction=None):
             "pad_seating_plan.py",
             "finger_acquisition.py",
             "closing_wrist_offsets.py",
+            "acquisition_profile.py",
             "arm_clearance_audit.py",
         )
     }
@@ -282,6 +290,30 @@ def rollout(config, interaction=None):
     )
     motion_condition = config.get("motion_condition", "demonstrated")
     parent, targets = apply_condition(parent, targets, motion_condition)
+    acquisition_path = None
+    if config.get("acquisition_profile"):
+        from .acquisition_profile import arm_targets, screen
+
+        targets = arm_targets(
+            times,
+            targets,
+            arms,
+            parent["configuration"]["rollout"],
+            config["acquisition_profile"],
+        )
+        acquisition_path = screen(
+            model,
+            qids,
+            targets,
+            times,
+            speed_limits,
+            audit["config"]["criteria"]["joint_margin_rad"],
+        )
+        write_json(out / "acquisition-path.json", acquisition_path)
+        if not acquisition_path["accepted"]:
+            raise ValueError(
+                "Acquisition arm schedule fails native speed/margin admission"
+            )
     accelerations = np.gradient(np.gradient(targets, times, axis=0), times, axis=0)
     inertia_control = (
         InertialFeedforward(config["inertial_feedforward"], limits)
@@ -395,6 +427,10 @@ def rollout(config, interaction=None):
                 ),
             )
     finger_path = None
+    if config.get("acquisition_profile"):
+        from .acquisition_profile import bind_fingers
+
+        bind_fingers(live_fingers, model, config["acquisition_profile"])
     if finger_plan_admission or parent.get("continuous_protocol"):
         from .arm_finger_plan import path_screen
 
@@ -999,6 +1035,7 @@ def rollout(config, interaction=None):
         demonstrated_motion_executed=motion_condition == "demonstrated",
         finger_plan_admission=finger_plan_admission,
         finger_path_screen=finger_path,
+        acquisition_command_path=acquisition_path,
         stationary_admission=stationary_admission,
         finger_control_mode=finger_mode,
         controller_period_s=control_period,

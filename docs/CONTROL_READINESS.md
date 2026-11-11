@@ -149,3 +149,35 @@ arm-mounted hold before promoting the new grasp to continuous motion. Keep the
 final reference free of diagnostic pauses and revalidate return/release when
 contacts or wrist orientation change. Do not repeat an entire old robustness
 matrix until the new nominal candidate merits it.
+
+## Staged debugging and continuous task validation
+
+Staged acquisition/lift/hold is usually the cheaper diagnostic: it separates
+closure, loading and retention, and a smooth lift can reduce wrist tracking
+transients. It is not inherently a weaker experiment if drift is still anchored
+at acquisition completion and the complete hold is measured. Report any
+hold-only drift separately; resetting the anchor at the start of the hold can
+hide early slip. Differences in lift height, orientation, duration and clock
+also prevent treating staged and continuous results as a one-variable comparison.
+
+`fixture_hold` binds a pinned paired acquisition hypothesis to either a declared
+7 cm, 2 s staged lift or the retained continuous object-command prefix, frozen
+at its first suspended sample. Both conditions retain the native finger-pressure
+settings, force limits, free object and separate physics/feedback clocks. It
+checks the actual acquisition command path, native lift-command joint limits,
+and the full physical hold with the shared retention/load/collision criteria.
+The new fixture abstraction has position-controlled wrists; it does not replay
+an older arm controller or inherit its wrist/clearance feedback success.
+
+An optional bounded acquisition blend holds robot targets at the initial object
+pose through closure, then rejoins the native-time object commands. This changes
+robot commands only; it must not retime the source reference. The joined path
+needs fresh admission. A prefix-hold result cannot validate the remainder of
+the demonstration, table return or release.
+
+`fixture_hold_diagnostics` compares saved actual wrist FK against nominal fixture
+commands, separating tracking error from object-relative grasp drift. All
+object pose errors it reports are relative to the declared diagnostic goal,
+not full-demonstration accuracy scores. `fixture_hold_review` renders saved
+states on CPU with explicit fixture and intentional-pause labels and portable
+video playback. These tools never automatically promote an arm or moving trial.

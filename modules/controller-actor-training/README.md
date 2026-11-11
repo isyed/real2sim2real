@@ -482,5 +482,11 @@ the matching saved calibrated RGB/depth and masks, retaining occlusion and missi
 evidence explicitly. Both run under finite CPU deadlines and leave old results
 unchanged. Neither claims loaded success or independently verified contact
 patches. See [control readiness and preservation of earlier evidence](../../docs/CONTROL_READINESS.md).
+`fixture_hold --config <config.json>` binds a paired hypothesis to a declared
+staged or continuous-prefix stationary diagnostic with separately fixed physics
+and feedback clocks. `fixture_hold_diagnostics --directory <trial>` separates
+saved wrist tracking from grasp drift; `fixture_hold_review --directory <trial>`
+renders CPU video without rerunning physics. New holds do not inherit earlier
+arm, continuous-motion or release passes.
 `arm_replay_review --refresh-page` updates protocol explanations using immutable
 saved video, with prominent stationary hold/start/end labeling.

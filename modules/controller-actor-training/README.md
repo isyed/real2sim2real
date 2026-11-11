@@ -4,6 +4,9 @@ The [continuous object-reference route](../../docs/CONTINUOUS_OBJECT_REFERENCE.m
 places robot acquisition on the capture clock, followed by the demonstrated lift
 and table return. It emits a planning-only artifact for fresh arm/finger admission
 and evaluates complete free-object motion with acquisition-anchored retention.
+The same route includes bounded unloaded-pad acquisition, optional non-pad finger
+clearance fitting, and a saved-state position-motor audit. Geometry, stationary
+retention, demonstrated motion and bilateral release have separate admission steps.
 
 The [CPU arm residual environment](../../docs/ARM_RESIDUAL_ADAPTER.md) adds a
 reset/step interface for bounded bilateral pressure corrections on frozen arm

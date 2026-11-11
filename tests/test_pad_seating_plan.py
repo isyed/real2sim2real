@@ -7,6 +7,11 @@ import pytest
 
 from real2sim2real.artifacts import digest
 from real2sim2real.controller_actor_training.pad_seating_plan import bind
+from real2sim2real.controller_actor_training.pad_seating_plan import (
+    nonpad_chain_geoms,
+    nonpad_clearance_passes,
+    contact_witness,
+)
 from real2sim2real.controller_actor_training.arm_finger_feedback import finger_waypoint
 
 
@@ -109,3 +114,46 @@ def test_unusable_seating_is_rejected_before_mutating_live_commands(tmp_path, ca
         bind(live, model, write(tmp_path, p))
     np.testing.assert_array_equal(live.hands[0]["waypoints"][2], [0.1])
     np.testing.assert_array_equal(live.servo.pads[0]["point_body"], [0, 0, 0])
+
+
+def test_nonpad_clearance_excludes_visuals_pad_and_other_fingers():
+    model = SimpleNamespace(
+        dof_jntid=np.array([0, 1]),
+        jnt_bodyid=np.array([2, 3]),
+        ngeom=5,
+        geom_bodyid=np.array([2, 2, 3, 4, 3]),
+        geom_contype=np.array([0, 1, 1, 1, 1]),
+        geom_conaffinity=np.array([0, 1, 1, 1, 1]),
+    )
+    assert nonpad_chain_geoms(model, dict(dofs=[0, 1], gid=4)) == [1, 2]
+    good = [dict(gap_m=0.001, witness_distance_error_m=0)]
+    assert nonpad_clearance_passes(good, 0.001)
+    assert not nonpad_clearance_passes([], 0.001)
+    assert not nonpad_clearance_passes(
+        [dict(gap_m=0, witness_distance_error_m=0)], 0.001
+    )
+    assert not nonpad_clearance_passes(
+        [dict(gap_m=0.001, witness_distance_error_m=0.003)], 0.001
+    )
+    assert nonpad_clearance_passes(
+        [dict(gap_m=0.03, witness_distance_error_m=None, distance_is_lower_bound=True)],
+        0.001,
+    )
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+def test_contact_witness_orders_pad_then_object_and_preserves_signed_gap(reverse):
+    normal = np.array([-1 if reverse else 1, 0, 0])
+    c = SimpleNamespace(
+        geom1=2 if reverse else 1,
+        geom2=1 if reverse else 2,
+        pos=np.array([0.1, 0.2, 0.3]),
+        frame=np.r_[normal, np.zeros(6)],
+        dist=0.002,
+    )
+    gap, segment = contact_witness(SimpleNamespace(contact=[c]), 1, {2}, 0.03)
+    assert gap == 0.002
+    np.testing.assert_allclose(segment[:3], [0.099, 0.2, 0.3])
+    np.testing.assert_allclose(segment[3:], [0.101, 0.2, 0.3])
+    gap, segment = contact_witness(SimpleNamespace(contact=[c]), 7, {2}, 0.03)
+    assert gap == 0.03 and not np.any(segment)

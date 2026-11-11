@@ -125,6 +125,7 @@ def rollout(config, interaction=None):
     if config.get("motion_condition", "demonstrated") == "demonstrated" and (
         config.get("finger_plan")
         or config.get("finger_seating_plan")
+        or config.get("finger_feedback_override", {}).get("unloaded_acquisition")
         or config.get("validated_stationary")
     ):
         from .arm_finger_plan import validate_stationary
@@ -157,6 +158,7 @@ def rollout(config, interaction=None):
             "finger_release_plan.py",
             "wrist_withdrawal.py",
             "pad_seating_plan.py",
+            "finger_acquisition.py",
             "arm_clearance_audit.py",
         )
     }

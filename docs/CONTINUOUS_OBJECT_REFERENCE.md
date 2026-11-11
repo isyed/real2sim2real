@@ -131,6 +131,32 @@ controller validator. It cannot increase force targets, joint-offset budgets or
 joint-speed limits. Check stationary behavior before promoting a moving controller;
 label any moving run without that prerequisite as a rejected development diagnostic.
 
+Optional `finger_feedback_override.unloaded_acquisition` enables an earlier,
+one-shot opposing-pad seek. Its exact fields are `start_fraction` (0 through the
+normal pressure activation fraction), `end_after_close_s` (0–1),
+`gain_m_per_n_s` (0–0.003, exclusive of zero) and `max_normal_speed_m_s`
+(0–0.006, exclusive of zero). The acquisition window is measured from the
+original approach/close clock; neither the reference nor the drift anchor moves.
+Only non-thumb pads activate early. Before a pad's first solved contact at the
+existing observation threshold, it uses the declared seeking rate. First contact
+latches permanently, including transient contact: the pad then uses ordinary
+pressure rates and cannot restart fast seeking after losing contact. Existing
+geometry guards, force goals, per-finger joint-speed and offset budgets remain
+in force. Early offsets survive handoff to normal pressure activation. Release
+disables seeking. Per-pad diagnostics distinguish `acquisition_contact_seen` from
+`acquisition_seeking`; neither means stable load-bearing contact. Keep a complete
+matched stationary comparison before promoting changes to demonstrated motion.
+
+`finger_motor_audit --result ... --output ... --deadline-s 60` verifies the pinned
+scene/state archives and reconstructs each saved finger position motor's effort
+from its command, position, velocity, affine bias and native command/force limits.
+It accepts only scalar hinge, unit-gear, fixed-gain position actuators and excludes
+the separate `pilot__` arm controller. It reports per-joint tracking error and
+sampled effort/command clipping by phase without a contact solve or physics step.
+Low torque-limit utilization can coexist with tracking error in a compliant
+position actuator; this does not establish why a particular pad is unloaded.
+The source verdict stays unchanged, and the output pins its own implementation.
+
 ## Opposing-pad seating and coordinated withdrawal
 
 `pad_seating_plan` fits the eight non-thumb pad chains at a pinned, table-supported
@@ -142,6 +168,18 @@ collision witnesses, their agreement with the reconstructed surface and the
 original physical verdict. Signed query distances must agree with their witness
 segments. Neither a geometry fit nor a witness from simulation is an independent
 contact observation.
+
+Optional `nonpad_clearance_m` (0.5–3 mm) also fits clearance from the object for
+every collidable non-pad geometry on the controlled finger-joint bodies. This
+includes unnamed proximal colliders but excludes visual-only geometry, unrelated
+fingers and the designated pad. Position-only contact queries use 30 mm temporary
+margins on this scratch model; the margins never enter dynamics. An absent pair
+is recorded as a censored 30 mm lower bound, not as a measured zero distance or
+a contact witness. Signed contact witnesses preserve pad/object ordering.
+Admission requires pad seating and non-pad clearance within their declared
+tolerances, consistent witnesses, source-mesh agreement and the original maximum
+robot penetration. It remains a static hypothesis at frozen wrists and thumbs;
+the compliant robot may reach a different loaded posture.
 
 Arm replay accepts a pinned `finger_seating_plan: {"path": "...", "sha256": "..."}`.
 It changes only closed finger targets and the corresponding pad contact frames.

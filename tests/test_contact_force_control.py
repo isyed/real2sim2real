@@ -221,9 +221,11 @@ def test_stationary_promotion_pins_controller_candidate_completion_and_states(tm
 
 @pytest.mark.parametrize("payload_adaptation", [False, True])
 @pytest.mark.parametrize("anchor_mode", [None, "planned", "solved_contact"])
+@pytest.mark.parametrize("acquisition", [False, True])
 def test_force_feedback_owns_fingers_and_preserves_physical_state_and_limits(
     payload_adaptation,
     anchor_mode,
+    acquisition,
     monkeypatch,
 ):
     mj = pytest.importorskip("mujoco")
@@ -280,6 +282,10 @@ def test_force_feedback_owns_fingers_and_preserves_physical_state_and_limits(
     candidate = dict(hands[0], support=hands[1])
     mesh = trimesh.creation.box(extents=[0.2, 0.2, 0.2])
     control = settings()
+    if acquisition:
+        from test_finger_acquisition import recipe
+
+        control["unloaded_acquisition"] = recipe()
     if anchor_mode:
         control["normal_observation"] = anchor_mode
         control["contact_anchor"] = dict(
@@ -324,6 +330,51 @@ def test_force_feedback_owns_fingers_and_preserves_physical_state_and_limits(
     np.testing.assert_array_equal(
         controller.target(model, data, q, active=False, dt=0.002), q
     )
+    if acquisition:
+        # Exercise earlier activation for opposing fingers only, using unloaded
+        # observations. This validates command ownership, not physical grasping.
+        from real2sim2real.controller_actor_training import contact_force_control
+
+        original_observer = contact_force_control.object_pad_observations
+        load = [0.0]
+        monkeypatch.setattr(
+            contact_force_control,
+            "object_pad_observations",
+            lambda *args: {
+                p["gid"]: dict(
+                    force_n=load[0], point_world_m=None, outward_normal_world=None
+                )
+                for p in controller.pads
+            },
+        )
+        for p in controller.pads:
+            p.pop("acquisition_contact_seen", None)
+        early = controller.target(
+            model, data, q, active=False, dt=0.002, acquisition_active=True
+        )
+        for p in controller.pads:
+            if p["group"] == "thumb":
+                np.testing.assert_array_equal(early[p["qids"]], q[p["qids"]])
+            else:
+                assert np.linalg.norm(early[p["qids"]] - q[p["qids"]]) > 0
+        load[0] = 0.2
+        touched = controller.target(
+            model, data, q, active=False, dt=0.002, acquisition_active=True
+        )
+        load[0] = 0
+        lost = controller.target(
+            model, data, q, active=False, dt=0.002, acquisition_active=True
+        )
+        assert all(not p["acquisition_seeking"] for p in controller.pads)
+        assert np.linalg.norm(lost - q) > 0  # no offset drop before normal activation
+        assert np.linalg.norm(touched - q) > 0
+        assert all(
+            np.linalg.norm(p["offset"]) <= control["max_joint_offset_rad"]
+            for p in controller.pads
+        )
+        monkeypatch.setattr(
+            contact_force_control, "object_pad_observations", original_observer
+        )
     command = controller.target(
         model, data, q, active=True, dt=0.002, retention_active=anchor_mode is not None
     )

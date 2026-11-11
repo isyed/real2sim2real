@@ -1,5 +1,9 @@
 # Testing the reusable modules
 
+`tests/test_pressure_policy.py` checks copied bounded requests, causal drift
+activation with a fixed-anchor flag, saturation, invalid settings and rejection
+of changed gates, clocks or incomplete timelines in pressure-authority trials.
+
 `tests/test_arm_residual_env.py` covers bounded pressure actions, policy clocks,
 immutable source binding, reset/terminal semantics, time-normalized rewards,
 fixed grasp anchors and deadline truncation. The extended mounted-hand MuJoCo

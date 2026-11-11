@@ -12,6 +12,23 @@ import numpy as np
 from real2sim2real.artifacts import digest
 
 
+def feedback_settings(original, overrides=None):
+    from .contact_force_control import validate_settings
+
+    if overrides and set(overrides) - {
+        "normal_observation",
+        "minimum_observed_force_n",
+        "contact_anchor",
+        "loaded_tangent_gap_m",
+    }:
+        raise ValueError(
+            "Arm feedback overrides may change normal observations or retention rules only"
+        )
+    result = {**deepcopy(original), **deepcopy(overrides or {})}
+    validate_settings(result)
+    return result
+
+
 def finger_waypoint(time, pre, opened, closed, rollout):
     from .object_grasp_pilot import smoothstep
 
@@ -37,7 +54,9 @@ def finger_waypoint(time, pre, opened, closed, rollout):
 
 
 class ArmFingerFeedback:
-    def __init__(self, model, data, parent, roots, mesh, finger_actuators):
+    def __init__(
+        self, model, data, parent, roots, mesh, finger_actuators, *, overrides=None
+    ):
         import mujoco
         from real2sim2real.retargeting.grasp_kinematics import robot_indices
         from .object_grasp_pilot import load_plan
@@ -57,6 +76,7 @@ class ArmFingerFeedback:
             raise ValueError(
                 "Live arm binding requires the admitted simultaneous pad-pressure rule without extra posture/closure controllers"
             )
+        force = feedback_settings(force, overrides)
         plan = load_plan(config)
         if (
             parent["candidate"] not in plan["candidates"]
@@ -142,8 +162,16 @@ class ArmFingerFeedback:
             self.rollout["approach_s"]
             + self.settings["close_activation_fraction"] * self.rollout["close_s"]
         )
+        extra = {}
+        if self.settings.get("contact_anchor"):
+            extra["retention_active"] = bool(
+                time
+                >= self.rollout["approach_s"]
+                + self.rollout["close_s"]
+                + self.rollout["lift_s"]
+            )
         target = self.servo.target(
-            model, data, nominal, active=time >= activation, dt=dt
+            model, data, nominal, active=time >= activation, dt=dt, **extra
         )
         if self.support_bias:
             target = bias_compensated_target(model, data, target, self.support_indices)

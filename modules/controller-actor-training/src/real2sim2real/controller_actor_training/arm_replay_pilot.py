@@ -107,6 +107,8 @@ def run(config):
         raise ValueError(
             "Live pad feedback and separate finger trim cannot share ownership"
         )
+    if config.get("finger_feedback_override") and finger_mode != "live_contact_force":
+        raise ValueError("Finger feedback overrides require the live owner")
     simulation_case = validate_case(config)
     if config.get("precontact_support_alignment") and not config.get("object_feedback"):
         raise ValueError(
@@ -126,6 +128,8 @@ def run(config):
             "arm_finger_feedback.py",
             "contact_force_control.py",
             "payload_pressure.py",
+            "contact_patch_motion.py",
+            "contact_anchor.py",
         )
     }
     audit_path = Path(config["audit"])
@@ -303,8 +307,28 @@ def run(config):
         if condition != "loaded":
             raise ValueError("Live contact feedback requires loaded contacts")
         live_fingers = ArmFingerFeedback(
-            model, data, parent, roots, mesh, [dst for _, dst in finger_pairs]
+            model,
+            data,
+            parent,
+            roots,
+            mesh,
+            [dst for _, dst in finger_pairs],
+            overrides=config.get("finger_feedback_override"),
         )
+    contact_motion = diagnostic_data = None
+    if config.get("contact_patch_motion"):
+        from .contact_patch_motion import ContactPatchMotion
+
+        if live_fingers is None:
+            raise ValueError("Named pad telemetry requires live finger binding")
+        contact_motion = ContactPatchMotion(
+            model,
+            obj,
+            live_fingers.servo.role_geoms,
+            live_fingers.servo.pads,
+            config["contact_patch_motion"],
+        )
+        diagnostic_data = mujoco.MjData(model)
     desired = mujoco.MjData(model)
     feedback = (
         ArmObjectFeedback(config["object_feedback"], list(roots))
@@ -339,6 +363,7 @@ def run(config):
     reference_objects = np.array(reference_objects)
     feedback_rate_limited_steps = 0
     records, qstates, controls, timestamps = [], [], [], []
+    velocities = []
     max_pen = max_arm_pen = max_error = 0.0
     max_speed_ratio, min_margin = 0.0, float("inf")
     saturation = np.zeros(len(names), int)
@@ -681,6 +706,17 @@ def run(config):
                 record["finger_contact_trim"] = trim.diagnostics()
             if live_fingers:
                 record.update(live_fingers.diagnostics())
+            if contact_motion:
+                # Re-solve on a separate data object at the saved physical state.
+                # Neither refreshed contacts nor solver warmstarts feed the run.
+                diagnostic_data.time = data.time
+                for field in ("qpos", "qvel", "act", "ctrl", "qacc_warmstart"):
+                    getattr(diagnostic_data, field)[:] = getattr(data, field)
+                mujoco.mj_forward(model, diagnostic_data)
+                record["contact_patch_motion"] = contact_motion.sample(
+                    model, diagnostic_data
+                )
+                velocities.append(data.qvel.copy())
             if height_alignment:
                 record["support_height_alignment"] = height_alignment.diagnostics()
             if feedback:
@@ -736,9 +772,15 @@ def run(config):
         failures.append("arm_joint_margin")
     if aborted or data.time < times[-1] - model.opt.timestep:
         failures.append("incomplete_pilot")
-    np.savez_compressed(
-        out / "states.npz", qpos=qstates, ctrl=controls, timestamps_s=timestamps
-    )
+    state_arrays = dict(qpos=qstates, ctrl=controls, timestamps_s=timestamps)
+    if contact_motion:
+        state_arrays["qvel"] = velocities
+    np.savez_compressed(out / "states.npz", **state_arrays)
+    motion_summary = None
+    if contact_motion:
+        from .contact_patch_motion import summarize
+
+        motion_summary = summarize(records, config["contact_patch_motion"])
     report = dict(
         schema="real2sim2real.arm-replay-pilot/1",
         finger_control_mode=finger_mode,
@@ -748,6 +790,14 @@ def run(config):
         fixed_controller_clock=config.get("control_period_s") is not None,
         live_finger_source_hashes=live_fingers.source_hashes if live_fingers else None,
         live_finger_feedback_final=live_fingers.diagnostics() if live_fingers else None,
+        live_finger_feedback_settings=live_fingers.settings if live_fingers else None,
+        contact_patch_motion_summary=motion_summary,
+        contact_patch_motion_observations=(
+            "Separate-data forward solve at saved qpos/qvel/ctrl and warmstart; "
+            "sampled diagnostic, not per-step contact history"
+            if contact_motion
+            else None
+        ),
         config=config,
         records=records,
         **metrics,
@@ -775,7 +825,9 @@ def run(config):
         saturation_fraction=dict(zip(names, (saturation / max(steps, 1)).tolist())),
         control_mode="bounded joint PD plus bias compensation; "
         + (
-            "archived fingers with bounded contact trim; "
+            "live finger pressure feedback; "
+            if live_fingers
+            else "archived fingers with bounded contact trim; "
             if trim
             else "archived finger commands; "
         )

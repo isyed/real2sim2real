@@ -345,3 +345,24 @@ failed/incomplete stationary promotion, changed control gains or relaxed referen
 limits, and verifies distinct media names for repeated candidate IDs across studies.
 Run the optional MuJoCo cases alongside the bilateral, support, guided-motion and
 contact-replan tests after changes to the shared fixture runner.
+
+
+`tests/test_surface_patch.py` checks missing/collinear point rejection,
+two-dimensional pad-radius coverage, noisy depth, proposed-normal disagreement
+and repeated-view counts. A passing sampled plane never certifies thickness,
+continuous bearing area or insertion. Real stereo evidence remains downstream.
+`tests/test_contact_anchor.py` checks once-only material anchors, tangential-only
+correction, rigid-world invariance, speed bounds and contact/error freezes.
+The optional MuJoCo force-controller ownership test exercises planned and observed
+normal modes with explicit synthetic loaded-pad observations, without modifying
+physical object/robot coordinates or native limits. It is an ownership test, not
+a simulated grasp-validation result.
+
+Force-control tests also require a wider loaded tangent guard to preserve the
+original normal guard and the original unloaded-pad guard, with all native limits
+unchanged. Live-binding tests reject force-budget or joint-offset overrides and
+preserve source dictionaries. Acquisition tests exercise arm-retention timelines
+and freeze counters without changing source records or acceptance anchors.
+After shared-runner changes, run an exact saved-state regression downstream:
+adding qvel/telemetry changes archive contents but must preserve qpos, ctrl and
+native timestamps. Controller changes still require fresh full-length physics.

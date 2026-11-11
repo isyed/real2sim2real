@@ -8,6 +8,7 @@ import trimesh
 from real2sim2real.controller_actor_training.contact_force_control import (
     normal_force_step,
     validate_settings,
+    contact_geometry_allowed,
 )
 
 
@@ -34,6 +35,21 @@ def test_force_servo_presses_when_low_and_releases_when_high():
     release, _ = normal_force_step([0], [0], [0.01], 4, 2, 0.01, limits, s)
     assert release[0] > 0
     np.testing.assert_array_equal(offset, q)
+
+
+def test_loaded_continuation_never_chases_unloaded_or_normal_distant_pad():
+    s = settings()
+    assert not contact_geometry_allowed(0.001, 0.020, 1, s)
+    s["loaded_tangent_gap_m"] = 0.025
+    validate_settings(s)
+    assert contact_geometry_allowed(0.001, 0.020, 1, s)
+    assert not contact_geometry_allowed(0.001, 0.020, 0.05, s)
+    assert not contact_geometry_allowed(0.0081, 0.020, 1, s)
+    assert not contact_geometry_allowed(0.001, 0.026, 1, s)
+    assert contact_geometry_allowed(0.001, 0.014, 0, s)
+    s["loaded_tangent_gap_m"] = 0.031
+    with pytest.raises(ValueError):
+        validate_settings(s)
 
 
 def test_joint_stop_antiwindup_uses_remaining_joints_and_caps_integral():
@@ -204,8 +220,11 @@ def test_stationary_promotion_pins_controller_candidate_completion_and_states(tm
 
 
 @pytest.mark.parametrize("payload_adaptation", [False, True])
+@pytest.mark.parametrize("anchor_mode", [None, "planned", "solved_contact"])
 def test_force_feedback_owns_fingers_and_preserves_physical_state_and_limits(
     payload_adaptation,
+    anchor_mode,
+    monkeypatch,
 ):
     mj = pytest.importorskip("mujoco")
     from real2sim2real.controller_actor_training.contact_force_control import (
@@ -261,6 +280,11 @@ def test_force_feedback_owns_fingers_and_preserves_physical_state_and_limits(
     candidate = dict(hands[0], support=hands[1])
     mesh = trimesh.creation.box(extents=[0.2, 0.2, 0.2])
     control = settings()
+    if anchor_mode:
+        control["normal_observation"] = anchor_mode
+        control["contact_anchor"] = dict(
+            gain_s_inv=1, max_speed_m_s=0.001, minimum_force_n=0.1, maximum_error_m=0.01
+        )
     if payload_adaptation:
         control["payload_adaptation"] = dict(
             reference_weight_n=4.905,
@@ -275,13 +299,34 @@ def test_force_feedback_owns_fingers_and_preserves_physical_state_and_limits(
             maximum_acceleration_m_s2=3.0,
         )
     controller = BilateralContactForce(model, data, control, candidate, np.eye(4), mesh)
+    if anchor_mode:
+        # Supply a declared loaded-pad observation to exercise the anchor branch.
+        # This ownership fixture is not a physical force-validation experiment.
+        from real2sim2real.controller_actor_training import contact_force_control
+
+        def observations(model, data, object_id, pad_ids):
+            return {
+                p["gid"]: dict(
+                    force_n=1.0,
+                    point_world_m=data.xpos[p["body"]]
+                    + data.xmat[p["body"]].reshape(3, 3) @ p["point_body"],
+                    outward_normal_world=p["normal_object"],
+                )
+                for p in controller.pads
+            }
+
+        monkeypatch.setattr(
+            contact_force_control, "object_pad_observations", observations
+        )
     q = data.qpos.copy()
     ranges = model.jnt_range.copy()
     forces = model.actuator_forcerange.copy()
     np.testing.assert_array_equal(
         controller.target(model, data, q, active=False, dt=0.002), q
     )
-    command = controller.target(model, data, q, active=True, dt=0.002)
+    command = controller.target(
+        model, data, q, active=True, dt=0.002, retention_active=anchor_mode is not None
+    )
     owned = np.concatenate([p["qids"] for p in controller.pads])
     unowned = np.setdiff1d(np.arange(model.nq), owned)
     np.testing.assert_array_equal(command[unowned], q[unowned])
@@ -289,6 +334,8 @@ def test_force_feedback_owns_fingers_and_preserves_physical_state_and_limits(
     np.testing.assert_array_equal(model.jnt_range, ranges)
     np.testing.assert_array_equal(model.actuator_forcerange, forces)
     assert np.linalg.norm(command[owned] - q[owned]) > 0
+    if anchor_mode:
+        assert controller.anchors.diagnostics()["latched_pads"] > 0
 
 
 def test_cross_study_review_names_cannot_overwrite_same_candidate_media(tmp_path):

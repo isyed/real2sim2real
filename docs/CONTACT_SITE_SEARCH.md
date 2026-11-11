@@ -107,3 +107,34 @@ An empty validation-supported set must not fall back to discovery candidates or
 proceed to robot fitting. Sparse or inconsistent wall observations may still
 require additional calibrated views or metric measurements. Mink IK or MPC
 cannot supply missing scene evidence.
+
+
+## A supported point is not a finite contact patch
+
+`egocentric.surface_patch.fit_patch` evaluates an observed metric point cloud
+around a proposed contact: two-dimensional convex-hull coverage at the requested
+pad radius, plane residuals and normal consistency. `normal_repeatability` counts
+passing views and bounds their pairwise normal spread. Degenerate lines, partial
+coverage, missing points and noisy depth remain explicit rejections. Fits do not
+replace mesh normals or prove a continuous material surface.
+
+The CPU stage `controller_actor_training.stereo_patch_audit` accepts pinned
+surface-survey reports and previously supported distinct source faces. It decodes
+the supplied synchronized stereo pair, matches a bounded local pixel grid using
+the declared full disparity range, triangulates each correspondence and excludes
+points outside the local object region or behind hand masks. It checks each frame
+separately; no pooling of points creates an invented repeated-view count. Nearby
+image patches overlap and remain correlated. Model-seeded masks/poses are priors;
+these are consistency observations, not independent ground truth.
+
+All correspondence failures, model/source hashes, implementation snapshots and
+source-image overlays are saved downstream. Sparse source neighborhoods remain
+insufficient. A plane fit, even if consistent, does not verify wall thickness,
+finite bearing strength, underside support or the whole finger/palm insertion
+sweep. Original-pose and settled-model point heights must be labeled separately;
+neither is a measured free insertion gap. Recheck force/torque balance only after
+the contact geometry is admitted, with unchanged declared physical assumptions.
+
+```bash
+python -m real2sim2real.controller_actor_training.stereo_patch_audit --config /private/patch-audit.json
+```

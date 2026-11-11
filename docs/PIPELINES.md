@@ -188,3 +188,21 @@ Use [acquisition diagnostics](ACQUISITION_DIAGNOSTICS.md) to compare successful
 and rejected postures through closing, lift and hold entry. Pinned, identical-state
 contact replays expose delayed pad seating, loads on other links and pressure
 history without changing the source controller, drift anchors or verdicts.
+
+
+For arm-mounted contact retention, declare `control_period_s` independently of
+`timestep_s`. `arm_retention_audit` compares coherent sampled pad motion, actual
+wrist-relative object drift and pressure freezes through acquisition and hold.
+Its diagnostics preserve source verdicts. Keep normal, tangential-anchor and
+loaded-pad-continuation experiments separate; unfreezing pressure can worsen
+rotation or push more finger corrections against their bounds. If no complete
+nominal candidate passes, return to contact posture/equilibrium planning before
+a payload/friction matrix or actor training. See
+[arm retention diagnostics](ARM_HAND_INTEGRATION.md#diagnose-retained-contacts-at-a-declared-feedback-rate).
+
+For observation-limited contact planning, `stereo_patch_audit` checks local raw
+stereo neighborhoods at already supported points before hand fitting. Repeated
+finite plane coverage remains distinct from material thickness, bearing area and
+insertion clearance. Sparse or noisy patches leave admission rejected; retain the
+source mesh and force-balance assumptions while seeking the specific missing
+views/measurements. See [finite contact patches](CONTACT_SITE_SEARCH.md#a-supported-point-is-not-a-finite-contact-patch).

@@ -118,6 +118,28 @@ def test_phase_integration_and_coherent_force_deficit_do_not_use_old_servo_force
     )
 
 
+def test_arm_retention_timeline_keeps_native_relative_drift_and_freeze_counts():
+    from real2sim2real.controller_actor_training.arm_retention_audit import (
+        retention_timeline,
+    )
+
+    source = records()
+    for row in source:
+        for pad in row["contact_patch_motion"]["pads"].values():
+            pad.update(
+                sliding=True, rolling_compatible=False, object_collision_geoms=[1]
+            )
+    source[-1]["object_position_m"][0] = 0.006
+    source[-1]["contact_force_feedback"]["primary:thumb"]["frozen_steps"] = 7
+    before = deepcopy(source)
+    report = retention_timeline(source, settings())
+    assert report["timeline"][-1]["relative_change_from_first_hold"]["primary"][
+        "translation_m"
+    ] == pytest.approx(0.006)
+    assert report["timeline"][-1]["frozen_pad_counts"]["primary:thumb"] == 7
+    assert source == before
+
+
 def test_world_transform_invariance_and_no_candidate_promotion():
     a, b = trial(), trial()
     b["success"] = False

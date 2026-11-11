@@ -79,7 +79,7 @@ def test_phase_deviation_reveals_insertion_error_and_never_time_aligns():
     assert not phase_object_deviation(a, b)["available"]
 
 
-def test_comparison_exposes_feedback_rate_changes_at_same_physics_step(tmp_path):
+def test_comparison_exposes_feedback_rate_and_contact_rule_changes(tmp_path):
     import json
     from real2sim2real.artifacts import digest
     from real2sim2real.controller_actor_training.arm_replay_comparison import compare
@@ -102,12 +102,18 @@ def test_comparison_exposes_feedback_rate_changes_at_same_physics_step(tmp_path)
         if period is not None:
             r["controller_period_s"] = period
             r["config"]["control_period_s"] = period
+            r["config"]["object_feedback"] = {"gain_s_inv": 1}
+            r["config"]["finger_feedback_override"] = {"loaded_tangent_gap_m": 0.025}
         path = folder / "result.json"
         path.write_text(json.dumps(r))
         paths.append(path)
     out = tmp_path / "comparison"
     r = compare(paths, out)
-    assert r["differing_base_control_settings"] == ["control_period_s"]
+    assert r["differing_base_control_settings"] == [
+        "object_feedback",
+        "finger_feedback_override",
+        "control_period_s",
+    ]
     assert [row["controller_period_s"] for row in r["rows"]] == [0.00025, 0.001]
     text = (out / "review.html").read_text()
     assert "0.250 / 0.250" in text and "0.250 / 1.000" in text

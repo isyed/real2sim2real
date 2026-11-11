@@ -21,15 +21,21 @@ model backends. Execution needs the selected modules and their local assets.
 ```mermaid
 flowchart TD
     A[Video and calibration] --> B[Metric object, tabletop and demonstrated object poses]
-    B --> C[Observation-supported robot contacts and insertion paths]
-    C --> D[Bounded grasp and hold evaluation]
-    D --> E[Two-arm IK, joint speed and collision audit]
-    E --> F[Torque-driven object-motion control]
-    F --> G[Longer motion and fixed-controller robustness tests]
-    G --> H[Separate decision about policy training]
-    B --> I[Human hand observations]
+    B --> C[Observation-supported hand contacts and insertion checks]
+    C --> D[Fixture grasp and stationary hold]
+    C --> E[Arm assembly and complete two-arm IK/path audit]
+    D --> F[Arm-mounted stationary hold]
+    E --> F
+    F --> G[Continuous object motion, return and release]
+    G --> H[Frozen-controller robustness and training decision]
+    B --> I[Uncertain human-hand cues]
     I --> C
 ```
+
+Fixture retention and arm-path fitting answer different questions; their order
+can depend on experiment cost. Both precede promotion to arm-mounted moving
+control. See [control readiness](CONTROL_READINESS.md) for the two hold types,
+actual enforced gates, legacy diagnostic exceptions and orchestration gaps.
 
 Human hands supply optional timing, contact-region and grasp-strategy cues. The
 robot plans contacts and chooses feasible wrist postures for its own embodiment.

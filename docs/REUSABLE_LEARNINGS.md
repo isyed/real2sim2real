@@ -480,3 +480,16 @@ Label stationary review videos with the intentional command-freeze time and
 full simulated endpoint. Motion stopping in a diagnostic is not a truncated
 capture or a faithful replay of a continuously moving demonstration. Reuse
 immutable media for text-only corrections; do not change archived physics.
+
+Use a side-thumb contact when a top-thumb route collides, but separately check the
+complete insertion posture, all five finite pad samples and the paired load path.
+Reconstructed first-hit geometry must still provide a finite side patch. Reducing
+a planning preload can recover coverage at the original distance criterion;
+report the target change and retain the criterion. Static point equilibrium,
+finite-patch equilibrium and actual supported load are distinct evidence.
+
+Keep fixture retention, complete arm-path feasibility and arm-mounted retention
+as separate claims. A fixture hold can precede expensive arm fitting to isolate
+contacts, while an arm hold necessarily follows arm assembly/IK. Old staged holds
+cannot admit changed continuous acquisition, contacts or reference clocks. The
+named arm recipe is only part of this workflow; see [control readiness](CONTROL_READINESS.md).

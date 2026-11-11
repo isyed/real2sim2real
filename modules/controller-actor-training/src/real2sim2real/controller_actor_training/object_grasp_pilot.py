@@ -108,8 +108,15 @@ def set_wrist_frame(model, data, config, position, rotation):
     )
 
 
-def set_root_frame(model, data, root_name, fixture_prefix, position, rotation):
-    """Place one named Cartesian wrist without changing another hand's axes."""
+def set_root_frame(
+    model, data, root_name, fixture_prefix, position, rotation, *, preserve_state=False
+):
+    """Place a wrist; optionally retain all live state during constant rebuilding.
+
+    The default retains historical initialization behavior. Planning with an
+    already placed object/other hand must use ``preserve_state=True`` and then
+    refresh forward kinematics after setting the desired joint coordinates.
+    """
     import mujoco
 
     root = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, root_name)
@@ -125,7 +132,11 @@ def set_root_frame(model, data, root_name, fixture_prefix, position, rotation):
         if joint < 0 or model.jnt_bodyid[joint] != root:
             raise ValueError("Fixture joint must belong to the selected hand root")
         model.jnt_axis[joint] = rotation.T @ vector
-    mujoco.mj_setConst(model, data)
+    # mj_setConst uses its data argument as workspace and resets joint state.
+    # Constants depend on model.qpos0, not the caller's live pose: a separate
+    # workspace computes identical constants without corrupting retained state.
+    workspace = mujoco.MjData(model) if preserve_state else data
+    mujoco.mj_setConst(model, workspace)
 
 
 def settle(config):

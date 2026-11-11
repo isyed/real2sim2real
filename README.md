@@ -5,10 +5,21 @@ repairing that reconstruction, retargeting it to a robot, and training a
 correction controller in simulation. Dataset-specific experiments and private
 configuration belong in downstream repositories.
 
+Choose a named recipe or compose stages using the [multiple-pipeline guide](docs/PIPELINES.md).
+It covers human-reference learning, calibrated interaction reconstruction, and
+robot contact planning followed by demonstrated object-motion control.
+
 For robot manipulation without a trusted human finger reference, see the
 [object-centric grasp workflow](docs/OBJECT_CENTRIC_GRASPS.md). The
 [reusable learning index](docs/REUSABLE_LEARNINGS.md) maps findings to modules,
 tests and explicit limitations.
+
+[Demonstrated object-motion transfer](docs/GUIDED_MOTION.md) and
+[bounded grasp retention](docs/GRASP_RETENTION.md) keep trajectory fidelity and
+physical acceptance separate. [Visible-region geometry](docs/VISIBLE_REGION_GEOMETRY.md)
+checks observation agreement before accepting a physically settled pose.
+[Arm path audits](docs/ARM_PATH_AUDIT.md) check explicit embodiments against saved
+wrist trajectories before dynamic integration.
 
 Original project contributions are licensed under [Apache License 2.0](LICENSE).
 Bundled third-party components and upstream documentation retain their own
@@ -34,6 +45,7 @@ their own retargeting and controller/embodiment configuration.
 python3.11 -m venv .venv
 .venv/bin/python -m pip install -e .
 .venv/bin/r2s2r modules
+.venv/bin/r2s2r pipelines
 .venv/bin/r2s2r plan --config examples/full-pipeline.json
 ```
 
@@ -78,6 +90,8 @@ not certify a grasp or a policy. See [validation](docs/VALIDATION.md).
 - [Architecture and future modules](docs/ARCHITECTURE.md)
 - [Reproducibility and migration](docs/REPRODUCIBILITY.md)
 - [CPU tests and optional runtime validation](docs/TESTING.md)
+- [Demonstration warm start and residual reward design](docs/DEMONSTRATION_RESIDUAL_CONTROL.md)
+- [Contributing and owner approval](CONTRIBUTING.md)
 - [Partial repair and locked-anchor diagnostics](docs/REPAIR_WINDOW_DIAGNOSTICS.md)
 - [Complete diagnostic translation candidates](docs/DIAGNOSTIC_CANDIDATES.md)
 - [Upstream provenance and licenses](docs/THIRD_PARTY.md)

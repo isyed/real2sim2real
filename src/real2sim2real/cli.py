@@ -4,12 +4,22 @@ import argparse
 import json
 from .pipeline import stage_registry, read_config, plan, execute
 from .artifacts import load
+from .pipeline_profiles import PROFILES
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="r2s2r")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("modules", help="List selectable modules")
+    sub.add_parser("pipelines", help="List named, composable pipeline recipes")
+    p = sub.add_parser("assess", help="Check an explicit set of pinned evidence claims")
+    p.add_argument("--config", required=True)
+    p = sub.add_parser(
+        "adopt", help="Wrap a saved control experiment as a verified artifact"
+    )
+    p.add_argument("--kind", choices=["grasp-trial", "arm-path-audit"], required=True)
+    p.add_argument("--source", required=True)
+    p.add_argument("--output", required=True)
     for name in ["plan", "run"]:
         p = sub.add_parser(name)
         p.add_argument("--config", required=True)
@@ -22,6 +32,16 @@ def main(argv=None):
     try:
         if args.command == "modules":
             result = list(stage_registry())
+        elif args.command == "pipelines":
+            result = PROFILES
+        elif args.command == "assess":
+            from .evidence_assessment import run
+
+            result = {"output": str(run(args.config))}
+        elif args.command == "adopt":
+            from .control_artifacts import adopt
+
+            result = {"output": str(adopt(args.source, args.output, args.kind))}
         elif args.command == "inspect":
             result = load(args.artifact)
         else:

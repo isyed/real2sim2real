@@ -45,6 +45,14 @@ def prepare(config):
     output = Path(config["output"]) / "scene"
     output.mkdir(parents=True, exist_ok=False)
     original = trimesh.load(mesh_path, force="mesh", process=True)
+    if config["collision"].get("microhole_repair") is not None:
+        from real2sim2real.retargeting.mesh_microholes import close_microholes
+
+        original, repair = close_microholes(
+            original, **config["collision"]["microhole_repair"]
+        )
+        repair["source_sha256"] = digest(mesh_path)
+        write_json(output / "microhole_repair.json", repair)
     inertia = mass_properties(
         original.vertices, original.faces, mass_kg=config["physics"]["mass_kg"]
     )

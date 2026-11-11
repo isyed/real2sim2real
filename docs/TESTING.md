@@ -1,5 +1,136 @@
 # Testing the reusable modules
 
+`tests/test_arm_finger_feedback.py` checks native finger waypoint timing,
+reconstruction before feedback, and exclusive actuator ownership. Its optional
+MuJoCo test binds hands under actuated arms while preserving physical arm/object
+state and joint/force limits. `test_reference_extension.py` checks explicit longer
+holds without reference retiming. Regional contact tests check equal sampling,
+declared rigid frames, disjoint faces, empty-region rejection and fixed-budget
+COM sensitivity. Actual path/dynamics and observation admission remain separate.
+Arm-replay tests also verify exact physics-step/controller-period ratios and
+matching scheduled update times. Comparison tests require changed feedback
+periods to be visible even when the physics step stays fixed. A downstream
+default-path state-archive regression remains separate physical evidence.
+
+`tests/test_acquisition_compare.py` checks phase/gap-safe sliding integration,
+coherent-force versus preceding-servo observations, world-transform invariance,
+missing unloaded centroids, unchanged failed verdicts, explicit configuration
+changes, matched clocks/physics/wrists and immutable state-identical audit inputs.
+It also checks safe HTML data embedding. These diagnostics do not admit control.
+
+`tests/test_payload_posture.py` checks nominal/heavy deadband, continuous load
+interpolation, joint/fraction speed bounds, observation freezes, finger-only
+command ownership, return to the original pad point and rejection of failed,
+incomplete or nonfinite endpoint evidence. Endpoint geometry and transition
+retention still require scene checks and complete downstream physical rollouts.
+
+`test_contact_patch_motion.py` separates normal motion, tangential material slip
+and patch-centroid migration; verifies gap-safe integration and common-motion
+invariance; and checks optional MuJoCo point-velocity telemetry without physical
+state writes. `test_bilateral_patch_replan.py` verifies bounded owned-finger
+changes while freezing wrists and unselected joints. Actual surface support,
+collision admission and fresh physics remain downstream evidence.
+
+`tests/test_payload_pressure.py` checks supported-load estimation with acceleration
+compensation, external-support freezing, opposite-sign pressure allocation,
+bounded rate/targets and invalid observations. The contact-force ownership test
+also runs with payload adaptation enabled in the optional MuJoCo runtime. It
+preserves object state and joint/actuator limits. These checks do not establish
+payload robustness; repeat the frozen downstream cases before arm dynamics.
+
+`tests/test_grasp_sensitivity.py` checks bounded physical cases, mandatory nominal
+replay, immutable controller/gate admission, changed/failed/incomplete source
+rejection and early stopping on a state-archive mismatch. A trial that never enters
+reference motion must still return an explicit completion verdict and fail
+reference admission. Downstream free-object cases remain required evidence.
+
+Contact-force and wrist-coordination tests also cover optional tangent/normal
+velocity control, joint stops, immutable externally supplied pose goals, bounded
+3D corrections, robot-only ownership and rejection of controller retuning between
+stationary and moving trials. Actual grasp retention remains a downstream physics
+test; improved object orientation alone is not a passing grasp.
+
+`test_control_pipelines.py` validates typed recipes, copied evidence, configuration
+hashes, upstream rebinding and rejected grasp/arm admission.
+`test_reference_extension.py` preserves native frames, prefix poses, clock and
+relative grasp while rejecting truncation and insufficient duration.
+`test_arm_robustness.py` freezes controller settings and uses an optional MuJoCo
+fixture to check that physical perturbations preserve initialized robot state.
+`test_evidence_assessment.py` rejects empty cohorts, missing/false claims,
+changed evidence and truthy non-Boolean values. These tests do not establish
+physical robustness; downstream matched trials remain required.
+
+`tests/test_arm_tracking_control.py` covers causal velocity/acceleration bounds,
+integral rate/travel limits, torque anti-windup and bounded inertial coupling.
+`tests/test_arm_reference_evaluation.py` checks that object translation and
+rotation affect MPPE/ADD, and rejects empty scoring cohorts. Retention and
+reference acceptance still require downstream actuator-driven trials.
+
+`tests/test_arm_object_feedback.py` checks rigid object-relative rotation including
+its wrist lever arm, correction rate/travel bounds, contact/reference freezes,
+signed support-load response and singular-Jacobian behavior. The optional MuJoCo
+contact-isolation regression in `test_arm_replay_pilot.py` checks that table
+contacts and nonneighbor arm collisions remain enabled. Real loaded/unloaded
+comparisons and timestep sensitivity are downstream experiments, not unit-test
+claims of physical success.
+`tests/test_arm_replay_comparison.py` preserves missing-reference failures and
+hold-only maxima, including transient support-load corrections that return to zero.
+
+`tests/test_arm_hand_assembly.py` checks independent arm placement, retained
+finger/contact defaults, fixture removal, free-object preservation, source asset
+resolution, MuJoCo Euler mounting semantics and copied fixture axes.
+`tests/test_arm_replay_pilot.py` checks torque-bounded control, bias/velocity
+feedforward, contact ownership and a MuJoCo force-clipped actuator with an
+independently falling object. The actual two-arm path and grasp-transfer results
+remain downstream experiment evidence. See [arm integration](ARM_HAND_INTEGRATION.md).
+
+`tests/test_arm_path_audit.py` checks native-clock velocity ratios, clock-reset
+rejection, joint-neighbor classification through fixed mounts without hiding
+world or folded-arm collisions, and an optional MuJoCo body-pose IK fixture that
+leaves the free object's state unchanged. Run this with the existing pad,
+guided-motion, grasp, support and wrist tests in the MuJoCo runtime. Actual URDF
+mounting comparisons and real-scene arm-path failures remain separate evidence.
+
+`tests/test_grasp_retention.py` checks common-motion invariance, correction
+direction, contact/reference freezes, speed/travel limits and robot-only command
+ownership. `tests/test_visible_region_geometry.py` checks disjoint image regions,
+occluder exclusion, first-visible ray depth and missing-ray preservation. Run the
+guided-motion, object-grasp, bimanual-support and wrist-coordination tests in the
+optional MuJoCo runtime after changing the shared runner. Baseline state-archive
+identity and actual longer/slippery validation are separate experiment evidence.
+
+`tests/test_guided_motion.py` checks timestamp-preserving motion transfer,
+feedback coordinates, missing intervals and fidelity independently of stationary
+task success. Its optional MuJoCo test checks wrist limits and no object-state
+writes. `tests/test_demonstration_strategy.py` checks original starting clearance
+and frame IDs without inferring contact. Run the existing grasp, bimanual-support
+and wrist-coordination tests after changing the shared runner.
+
+`tests/test_insertion_geometry.py` covers projected openings, swept-probe
+clearance, overlapping collision-piece membership and between-sample obstacles.
+Run `tests/test_object_grasp.py`, `tests/test_pad_planning.py` and
+`tests/test_bimanual_support.py` in the optional MuJoCo runtime after changing
+shared prepared-scene verification.
+
+`tests/test_contact_site_search.py` covers observation-first surface sampling,
+discovery-only shortlists, lifting-force direction, provenance, deduplication and
+exclusion of failed validation from combined contact screening. Existing furniture
+support reconstruction remains covered by `tests/test_surface_support.py`.
+
+`tests/test_stereo_contact_evidence.py` checks sparse stereo correspondence and
+triangulation against known synthetic disparities, including ambiguous, textureless,
+reverse-inconsistent and search-boundary cases. No GPU or private images are needed.
+
+`tests/test_contact_region_audit.py` and `tests/test_paired_contacts.py` cover
+visibility/depth evidence, local convex-union boundaries, per-pad force budgets,
+paired diagnostic provenance and rejection of unsupported contact regions.
+They run on CPU without private observations; they do not certify a grasp.
+
+`tests/test_pad_planning.py` covers pad frames/Jacobians, position-normal fits,
+intermediate path collisions, gravity moments, shared pad budgets, nearby opposed
+patch evidence and bounded microhole repair. Run it in the optional MuJoCo runtime
+as well as the lightweight suite. Synthetic checks do not certify a physical grasp.
+
 Run these commands from the repository root with Python 3.11 or 3.12:
 
 ```bash
@@ -176,3 +307,76 @@ bounded independent finger tracking/force offsets, and rejection of solver clock
 resets or warnings. Run it with the grasp/support tests in the optional MuJoCo
 runtime. Model contact evidence and unchanged baseline state archives remain
 separate experiment checks.
+
+`test_arm_path_planning.py` checks declared seed selection, rejected-path exclusion
+and whole-path ranking. `test_finger_contact_trim.py` checks owned hand actuators,
+rate/travel bounds, force/reference freezes, physical joint stops and floating
+point interpolation at a stop. `test_arm_object_feedback.py` also checks the
+precontact force gate and single-observation support-height latch.
+`test_arm_clearance_audit.py` checks that saved geometric robot/table intersections
+exclude ordinary object/table support. These options require separate nominal
+and frozen-condition physics validation; unit tests do not promote them.
+
+`tests/test_contact_replan.py` checks pivot-preserving support rotation, horizontal
+insertion and vertical seating, extra opening-gap isolation, bounded finger-only
+changes, rotated compiled-mesh clearance, and loaded-wrist rebasing without
+moving the object or any world body. MuJoCo-dependent tests need the optional
+runtime. Downstream fixture/arm dynamics and matched material tests are required
+before promoting any planned contact change; see [contact replanning](CONTACT_REPLANNING.md).
+
+Coupled grasp tests additionally cover rigid loaded-to-initial wrist transfer,
+bounded wrist/finger search without changing native limits, explicit off-center
+collision-pad patches, and inward-facing opening-wall selection in a declared
+world. Optional MuJoCo tests validate pad ownership, local/world transforms and
+normal/position Jacobians. Downstream contact rejection and baseline state-hash
+regression remain separate evidence from these tests.
+
+`tests/test_bilateral_grasp.py` checks inner/outer rim selection, both-hands-close
+before-lift timing, shared vertical feedback, equal namespaced fixture bounds,
+mutual-collision two-hand IK without moving the object, and FK-preserving closed
+wrist re-centering. It also prevents stationary diagnostics from being promoted
+as demonstrated-motion success. Optional MuJoCo tests exercise the actual compiled
+hand/fixture semantics; downstream free-object rollouts remain necessary.
+
+`tests/test_contact_force_control.py` checks signed pressure/release, rate and
+travel bounds, joint-stop anti-windup, object-specific solved force normals,
+finger-only command ownership and unchanged physical state/limits. It rejects
+failed/incomplete stationary promotion, changed control gains or relaxed reference
+limits, and verifies distinct media names for repeated candidate IDs across studies.
+Run the optional MuJoCo cases alongside the bilateral, support, guided-motion and
+contact-replan tests after changes to the shared fixture runner.
+
+
+`tests/test_surface_patch.py` checks missing/collinear point rejection,
+two-dimensional pad-radius coverage, noisy depth, proposed-normal disagreement
+and repeated-view counts. A passing sampled plane never certifies thickness,
+continuous bearing area or insertion. Real stereo evidence remains downstream.
+`tests/test_contact_anchor.py` checks once-only material anchors, tangential-only
+correction, rigid-world invariance, speed bounds and contact/error freezes.
+The optional MuJoCo force-controller ownership test exercises planned and observed
+normal modes with explicit synthetic loaded-pad observations, without modifying
+physical object/robot coordinates or native limits. It is an ownership test, not
+a simulated grasp-validation result.
+
+Force-control tests also require a wider loaded tangent guard to preserve the
+original normal guard and the original unloaded-pad guard, with all native limits
+unchanged. Live-binding tests reject force-budget or joint-offset overrides and
+preserve source dictionaries. Acquisition tests exercise arm-retention timelines
+and freeze counters without changing source records or acceptance anchors.
+After shared-runner changes, run an exact saved-state regression downstream:
+adding qvel/telemetry changes archive contents but must preserve qpos, ctrl and
+native timestamps. Controller changes still require fresh full-length physics.
+
+
+`test_arm_motion_condition.py` checks that a stationary diagnostic preserves the
+source, complete command clock and acquisition prefix while freezing only hold
+commands and references. Demonstrated motion is the unchanged default.
+`test_arm_finger_plan.py` checks hand identity, original acquisition, bounded
+finger changes, FK wrist preservation, immutable stationary physics evidence and
+rejection of clock retuning or incomplete holds. Its MuJoCo path-screen test
+preserves physical state/native limits and rejects a new environment collision.
+Patch-replan tests require thin-wall projection to preserve the intended wall
+side and seed offsets to respect frozen joints and search bounds. Reference-score
+tests reject stationary runs as demonstrated-motion evidence. Actual candidate
+admission, complete stationary holds and matched motion retries remain downstream
+physics evidence.

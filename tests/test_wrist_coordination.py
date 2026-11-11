@@ -75,6 +75,40 @@ def test_world_audit_detects_motion_hidden_by_comoving_wrists():
     assert hold_world_motion([])["hold_world_horizontal_drift_m"] is None
 
 
+def test_explicit_pose_goal_is_not_reanchored_to_measured_drift():
+    c = ObjectFrameCoordinator.__new__(ObjectFrameCoordinator)
+    c.settings = settings()
+    c.target_rotation = np.eye(3)
+    c.pivot = None
+    c.translation = np.zeros(3)
+    c.rotation = np.eye(3)
+    goal = np.eye(4)
+    goal[:3, 3] = [0.3, 0.4, 0.5]
+    goal[:3, :3] = Rotation.from_euler("y", 0.2).as_matrix()
+    original = goal.copy()
+    measured = goal.copy()
+    measured[2, 3] -= 0.1
+    measured[:3, :3] = Rotation.from_euler("y", 0.3).as_matrix()
+    c.update(measured, 0.1, goal)
+    np.testing.assert_allclose(c.translation, [0, 0, 0.002])
+    assert Rotation.from_matrix(c.rotation).as_rotvec()[1] < 0
+    measured[2, 3] -= 0.1
+    c.update(measured, 0.1, goal)
+    np.testing.assert_array_equal(c.pivot, original[:3, 3])
+    np.testing.assert_array_equal(goal, original)
+    for _ in range(300):
+        c.update(measured, 0.1, goal)
+    assert np.linalg.norm(c.translation) <= c.settings["max_translation_m"] + 1e-12
+    assert (
+        Rotation.from_matrix(c.rotation).magnitude()
+        <= c.settings["max_rotation_rad"] + 1e-12
+    )
+    invalid = goal.copy()
+    invalid[0, 0] *= 2
+    with pytest.raises(ValueError, match="desired object pose"):
+        c.update(measured, 0.1, invalid)
+
+
 def test_coordinated_fixture_commands_leave_object_and_physical_state_untouched():
     mj = pytest.importorskip("mujoco")
     from real2sim2real.controller_actor_training.object_grasp_pilot import (
@@ -138,6 +172,19 @@ def test_coordinated_fixture_commands_leave_object_and_physical_state_untouched(
     assert commands[5] <= 0.5
     assert projected.max_position_residual_m < 1e-10
     assert projected.max_rotation_residual_rad < 1e-10
+    # The same checked transform supports an externally fixed/moving object goal.
+    moving = ObjectFrameCoordinator(
+        m, [("a", "a_"), ("b", "b_")], settings(), np.eye(3)
+    )
+    goal = np.eye(4)
+    goal[:3, 3] = [0.01, 0.02, 0.03]
+    goal[:3, :3] = Rotation.from_euler("z", -0.1).as_matrix()
+    result = moving.target(m, original, np.eye(4), 0.01, desired_pose=goal)
+    np.testing.assert_array_equal(d.qpos, original)
+    np.testing.assert_array_equal(result[12:], original[12:])
+    assert moving.max_position_residual_m < 1e-10
+    assert moving.max_rotation_residual_rad < 1e-10
+    assert not moving.rejection
 
 
 def test_frozen_validation_rejects_changed_coordinated_controller():

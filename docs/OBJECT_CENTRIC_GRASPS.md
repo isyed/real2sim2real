@@ -8,9 +8,12 @@ then evaluates a short grasp/lift/hold in CPU MuJoCo. Human finger trajectories
 are not control targets. Optional uncertain position cues can influence proposal
 ranking; they cannot override geometric or physical admission checks.
 
-The current pilot supports an articulated hand on a six-joint, force-limited
-Cartesian wrist fixture. **It does not include a robot arm or establish arm
-reachability, whole-body balance, hardware execution or full-task success.**
+The initial grasp pilot uses an articulated hand on a six-joint, force-limited
+Cartesian wrist fixture. A fixture pass does not establish arm reachability.
+The [arm integration extension](ARM_HAND_INTEGRATION.md) adds explicit two-arm
+path audits and torque-driven replay; the [pipeline recipe](PIPELINES.md) exposes
+these as composable stages. Hardware execution and full-task success require
+separate evidence.
 The [second-hand support extension](BIMANUAL_SUPPORT.md) adds another articulated
 hand after the initial lift, with collision checks, bounded load sharing and
 matched parked-hand comparisons. It retains the same primary task gates.

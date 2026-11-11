@@ -72,7 +72,7 @@ def world_triangles(data, pieces):
     return np.concatenate(triangles), np.concatenate(colors)
 
 
-def panel(triangles, colors, azimuth, elevation, center, scale):
+def panel(triangles, colors, azimuth, elevation, center, scale, *, depth_buffer=False):
     az, el = np.deg2rad([azimuth, elevation])
     view = np.array([np.cos(az) * np.cos(el), np.sin(az) * np.cos(el), np.sin(el)])
     right = np.array([-np.sin(az), np.cos(az), 0])
@@ -89,6 +89,31 @@ def panel(triangles, colors, azimuth, elevation, center, scale):
         255,
     ).astype(np.uint8)
     image = Image.new("RGB", (520, 460), (231, 236, 243))
+    if depth_buffer:
+        # Thin geometry near a large table triangle cannot be ordered correctly
+        # by triangle centroids. Use orthographic per-pixel depth for plan views.
+        pixels = np.asarray(image).copy()
+        depth = np.full((460, 520), -np.inf)
+        for t, z, color in zip(xy, camera_tri[:, :, 2], shade):
+            lo = np.maximum(np.floor(t.min(0)).astype(int), [0, 0])
+            hi = np.minimum(np.ceil(t.max(0)).astype(int), [519, 459])
+            if (hi < lo).any():
+                continue
+            a, b, c = t
+            denom = (b[1] - c[1]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[1] - c[1])
+            if abs(denom) < 1e-10:
+                continue
+            y, x = np.mgrid[lo[1] : hi[1] + 1, lo[0] : hi[0] + 1]
+            x, y = x + 0.5, y + 0.5
+            u = ((b[1] - c[1]) * (x - c[0]) + (c[0] - b[0]) * (y - c[1])) / denom
+            v = ((c[1] - a[1]) * (x - c[0]) + (a[0] - c[0]) * (y - c[1])) / denom
+            w = 1 - u - v
+            values = u * z[0] + v * z[1] + w * z[2]
+            region = np.s_[lo[1] : hi[1] + 1, lo[0] : hi[0] + 1]
+            keep = (u >= 0) & (v >= 0) & (w >= 0) & (values > depth[region])
+            depth[region][keep] = values[keep]
+            pixels[region][keep] = color
+        return Image.fromarray(pixels)
     draw = ImageDraw.Draw(image)
     polygons = xy.reshape(-1, 6).tolist()
     for i in np.argsort(camera_tri[:, :, 2].mean(1)):
@@ -96,10 +121,13 @@ def panel(triangles, colors, azimuth, elevation, center, scale):
     return image
 
 
-def render(config, directory, output):
+def render(config, directory, output, *, stem=None):
     import mujoco
     import imageio_ffmpeg
 
+    stem = directory.name if stem is None else stem
+    if not stem or Path(stem).name != stem or stem in (".", ".."):
+        raise ValueError("Local nonempty review media name required")
     report = json.loads((directory / "result.json").read_text())
     if digest(directory / "states.npz") != report["states_sha256"]:
         raise ValueError("Recorded trial changed")
@@ -139,7 +167,7 @@ def render(config, directory, output):
     count = len(states["qpos"])
     step = 2
     fps = 1 / float(np.median(np.diff(states["timestamps_s"]))) / step
-    path = output / (directory.name + ".mp4")
+    path = output / (stem + ".mp4")
     writer = imageio_ffmpeg.write_frames(
         str(path),
         (1040, 520),
@@ -170,9 +198,24 @@ def render(config, directory, output):
             row = report["records"][i]
             draw.text(
                 (15, 10),
-                f"Saved physics | {directory.name} | {row['phase']} | {row['time_s']:.2f}s",
+                f"Saved physics | {stem} | {row['phase']} | {row['time_s']:.2f}s",
                 fill=(20, 30, 45),
             )
+            if row.get("payload_pressure"):
+                load = row["payload_pressure"]
+                scales = load["pressure_scales"]
+                draw.text(
+                    (15, 25),
+                    f"Supported-load estimate {load['estimated_weight_n']:.2f} N | primary/support pressure scales {scales[0]:.2f} / {scales[1]:.2f} | simulator observations",
+                    fill=(20, 30, 45),
+                )
+            if row.get("payload_posture"):
+                posture = row["payload_posture"]
+                draw.text(
+                    (15, 483),
+                    f"Load-driven posture {posture['fraction']:.2f} | requested {posture['desired_fraction']:.2f} | bounded finger transition",
+                    fill=(20, 30, 45),
+                )
             draw.text(
                 (15, 502),
                 f"Object bottom {row['minimum_object_height_m'] * 1000:.1f} mm | wrist fixture, arm not modelled | no object assistance",
@@ -180,7 +223,7 @@ def render(config, directory, output):
             )
             writer.send(np.asarray(image))
             if i == indices[len(indices) // 2] or i == indices[-1]:
-                image.save(output / (directory.name + f"-{i:04d}.jpg"), quality=92)
+                image.save(output / (stem + f"-{i:04d}.jpg"), quality=92)
     finally:
         writer.close()
     reader = imageio_ffmpeg.read_frames(str(path))
@@ -191,7 +234,7 @@ def render(config, directory, output):
         raise ValueError("Rendered video incomplete")
     from real2sim2real.review_media import prepare
 
-    portable = prepare(path, output / (directory.name + ".playback"))
+    portable = prepare(path, output / (stem + ".playback"))
     return dict(
         path=path.name,
         frames=decoded,
@@ -283,6 +326,32 @@ def review(config):
     return videos
 
 
+def unique_trial_media_names(trials):
+    """Preserve unique stems and disambiguate repeated candidate names by study."""
+    paths = [Path(p).resolve() for p in trials]
+    if len(set(paths)) != len(paths):
+        raise ValueError("Duplicate review trial paths would overwrite media")
+    depth = 1
+    names = [p.name for p in paths]
+    while len(set(names)) != len(names):
+        depth += 1
+        names = ["--".join(p.parts[-depth:]) for p in paths]
+    return names
+
+
+def protocol_fidelity_limits(path):
+    """Read explicit criteria or their pinned source for a frozen sensitivity run."""
+    protocol = json.loads(Path(path).read_text())
+    if "fidelity_limits" in protocol:
+        return protocol["fidelity_limits"]
+    if "source_result" in protocol:
+        source = Path(protocol["source_result"]).parent.parent / "protocol.json"
+        if digest(source) != protocol["protocol_sha256"]:
+            raise ValueError("Inherited reference-acceptance protocol changed")
+        return json.loads(source.read_text())["fidelity_limits"]
+    return None
+
+
 def review_trials(
     config, trials, output, *, title="Fixed-grasp controller diagnostics"
 ):
@@ -292,9 +361,10 @@ def review_trials(
     output = Path(output)
     output.mkdir(parents=True, exist_ok=False)
     sections, videos = [], []
-    for directory in map(Path, trials):
+    trials = list(map(Path, trials))
+    for directory, stem in zip(trials, unique_trial_media_names(trials)):
         result = json.loads((directory / "result.json").read_text())
-        video = render(config, directory, output)
+        video = render(config, directory, output, stem=stem)
         videos.append(
             dict(
                 **video,
@@ -302,16 +372,38 @@ def review_trials(
                 source_result_sha256=digest(directory / "result.json"),
             )
         )
-        stem = directory.name
         verdict = (
-            "Pass"
+            "Physical gates passed"
             if result["success"]
-            else "Rejected: " + ", ".join(result["rejected_for"])
+            else "Physical gates rejected: " + ", ".join(result["rejected_for"])
         )
-        support_note = ""
+        motion_condition = (
+            "Demonstrated object-motion increments"
+            if result.get("configuration", {}).get("reference_guidance")
+            else "Stationary lift/hold diagnostic"
+        )
+        support_note = f"<p>Motion condition: {motion_condition}.</p>"
+        protocol_path = directory.parent / "protocol.json"
+        if (
+            result.get("configuration", {}).get("reference_guidance")
+            and protocol_path.exists()
+        ):
+            limits = protocol_fidelity_limits(protocol_path)
+            if limits:
+                from .retention_experiment import assess
+
+                assessment = assess(result, limits)
+                score = assessment["fidelity"]
+                support_note += f"<p>Complete physical plus reference acceptance: {'pass' if assessment['combined_pass'] else 'fail'}.</p>"
+                if score:
+                    support_note += (
+                        f"<p>Peak reference position error {score['maximum_position_error_m'] * 1000:.2f} mm "
+                        f"(limit {limits['position_m'] * 1000:g} mm); rotation error "
+                        f"{score['maximum_rotation_error_deg']:.2f} degrees (limit {limits['rotation_deg']:g}).</p>"
+                    )
         if "support_load_fraction" in result:
             drift = result["support_wrist_drift_m"]
-            support_note = (
+            support_note += (
                 f"<p>Second hand: mean upward force on the object {result['support_mean_upward_force_n']:.2f} N; "
                 f"at least 10% of object weight in {result['support_load_fraction'] * 100:.1f}% of hold samples; "
                 f"support-wrist drift {'unavailable' if drift is None else f'{drift * 1000:.1f} mm'}. "

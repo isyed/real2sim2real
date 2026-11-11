@@ -4,8 +4,22 @@ The implementation keeps capture-specific data and outcomes downstream. This
 index maps findings to reusable mechanisms, checks and explicit remaining work.
 It is not an assertion that a new scene, hand or robot has been validated.
 
+[Pad contact planning](PAD_CONTACT_PLANNING.md) adds collision-pad geometry,
+orientation, closing paths and static balance. Finite patch samples share one
+force budget per pad; failed balance is not a control success.
+
 | Finding | Reusable implementation | Verification / interpretation |
 | --- | --- | --- |
+| A new contact posture can recover one payload and fail another | `grasp_sensitivity` freezes one candidate/controller across the full declared case set | Keep alternate case failures and completion flags; successful cases from different plans cannot be pooled without a separately tested observation-based selection policy |
+| A moving contact centroid does not by itself establish rolling or sliding | `contact_patch_motion` records solved-contact point velocities, relative angular motion and separate centroid migration; `contact_patch_audit` requires identical replay states | Common-motion, normal/tangent separation, gap-safe integration and read-only MuJoCo tests; rolling-compatible observations are explicitly not material correspondence |
+| Pressure adjustment can leave contact near a curved pad tip | `bilateral_patch_replan` refits bounded pad rays/finger posture with fixed wrists and unchanged object targets | Frozen-joint bounds plus finite-patch, whole-pair path and static-wrench admission; every accepted proposal still requires fresh physical cases |
+| Payload changes may need different pressure without independent wrist corrections | `payload_pressure` consumes supported force/acceleration and allocates bounded pressure goals through `BilateralContactForce` | Weight and sharing filters, isolation freezes, slew/force caps and robot-only ownership tests; measured load balance and retained grasp require frozen physical trials |
+| A nominal grasp pass can fail after either increasing or decreasing payload | `grasp_sensitivity` pins the complete accepted trial, replays nominal states, then varies only declared mass/inertia and sliding friction | Reject controller/gate overrides and incomplete/changed sources; stop on nominal mismatch; retain physical and reference acceptance separately for every case |
+| Improving object orientation can increase sliding within a bilateral grasp | Optional explicit-goal `wrist_coordination` plus `contact_force_control`, admitted through `bilateral_evaluate` | Freeze the stationary goal or reference clock; retain both wrists' relative drift gates alongside world-pose metrics. Pressure, common wrist motion and planned-site tangent correction are separate tested hypotheses |
+| Different imitation and task-control strategies need explicit boundaries | `pipeline_profiles`, `object_control_stage`, `control_artifacts` | Typed recipes, pinned configuration, source-preserving adoption and failed-audit admission tests; see [pipelines](PIPELINES.md) |
+| A short nominal pass does not establish a longer or robust controller | `reference_extension`, `arm_robustness`, `evidence_assessment` | Preserve reference prefix/clock and frozen controller; reject missing evidence and changed physical gates; keep perturbation failures |
+| Rebuilding MuJoCo constants can reset initialized robot state | `arm_robustness.apply_case`, shared `simulation_health` in arm replay | MuJoCo state-preservation regression; nominal archive equality is downstream evidence |
+| A requested reference horizon may exceed an old export | `guided_motion.select_interval` | Reject truncated ends, gaps and duplicate frame IDs instead of silently shortening the experiment |
 | A moving camera cannot define the simulation world | `egocentric` calibration, camera motion and upright support; `object_task` metric scene export | Explicit units, source hashes and world transforms; finite observed table extent remains an assumption |
 | Crop localization and pose-model improvements must be compared separately | `hand_experiment`, `hand_tracks`, shared-crop HaMeR/HaWoR workers | `test_video_hand_observations.py`; common fitter and matched observations |
 | Appearance tracks do not guarantee finger identity | `hand_point_tracks`, `hand_observation_policy`, `multiview_points`, `hand_anchor_audit` | Point-track and observation-policy tests; ambiguity/unknown evidence remains explicit |
@@ -72,3 +86,259 @@ See [object-centric grasp workflow](OBJECT_CENTRIC_GRASPS.md) and
 [test instructions](TESTING.md) for interfaces and validation commands.
 The [task-first roadmap](OBJECT_CENTRIC_ROADMAP.md) separates physical success,
 optional skill-graph execution and later human-derived object-motion accuracy.
+
+## Contact evidence and paired support
+
+An accurate whole-object collision proxy can still misrepresent a thin contact
+wall. Check the local union boundary against wall thickness, then check the contact
+region against visible image/depth evidence. Missing visibility is not agreement.
+Depth-window sensitivity is essential when a wall occupies only a few pixels.
+
+Opposite-side contact sets can balance a gravity moment that defeats a single-hand
+grasp. That result does not validate simultaneous hand placement or establish that
+the reconstructed contact surface is observed. Keep static balance, observation
+support, paired robot IK/collisions and dynamic success as separate stages. See
+[Contact region audits](CONTACT_REGION_AUDIT.md) for the reusable implementations.
+
+Before correcting a thin contact surface, distinguish ambiguous stereo from a
+repeatable metric disagreement. A smaller image patch can remove adjacent pixels
+while also destroying match uniqueness. Direct stereo checks, reverse matching
+and textured-image controls are implemented in
+[Stereo contact evidence](STEREO_CONTACT_EVIDENCE.md). Successful background
+matches do not validate contact surfaces; absent contact matches cannot justify
+fitting geometry toward a controller's acceptance threshold.
+
+Better observation does not necessarily produce a useful contact: a visible upper
+surface can only push the object down under its allowed friction cone. Search
+surface coverage first, freeze an observation-supported shortlist, and test force
+directions and gravity balance before spending time fitting hands. See
+[Contact site search](CONTACT_SITE_SEARCH.md). Preserve failures and keep point
+depth support separate from verified surface normals and finite contact area.
+
+A preserved handle opening does not guarantee hook access: the finite tabletop
+can block the turn beneath a rim. Audit the opening, proxy intrusion and the full
+tool sweep separately. A required extra gap identifies a pre-grasp tilt/lift
+subproblem; changing IK or MPC does not supply that gap. See
+[Handle insertion](HANDLE_INSERTION.md) for the geometry checks and module map.
+
+Demonstrated object motion can improve trajectory following while exceeding a
+grasp-slip limit. Keep motion fidelity and physical retention as independent
+requirements. Transfer from an achieved grasp is not replay of a reconstructed
+floating start. Review actual human contact strategy before selecting insertion
+templates, and compare the same object-local surfaces before/after settling.
+See [Reference-guided motion and strategy](GUIDED_MOTION.md).
+
+Bounded wrist correction can pass a nominal retention test while saturating and
+failing a longer hold. Check actual loaded fingers as well as wrist-relative
+displacement and reference fidelity; following an object does not prove a stable
+contact layout. Freeze candidates before altered-duration/material cases. See
+[Grasp retention](GRASP_RETENTION.md).
+
+A settled pose can satisfy gravity while fitting observed surfaces worse than the
+original reconstruction. Compare both on identical image rays, report coverage,
+and inspect nearby background depth before changing the table or object. Raised
+visible upper surfaces do not prove usable underside support. See
+[Visible-region geometry](VISIBLE_REGION_GEOMETRY.md).
+
+Independent wrist fixtures can select a grasp that forces the full robot's arms
+to cross or exceed wrist limits. Check the mounted hand frames, both arms,
+parked/support insertion phases, native joint-speed limits and elbow clearance
+together. Individual-arm reachability is not a bimanual path. Preserve source
+motion while making robot grasp selection arm-aware. See
+[Arm path audit](ARM_PATH_AUDIT.md).
+## Arm assembly and two-arm transfer
+
+Keep mount documentation, exact assembly geometry, coordinated IK and dynamic
+contact retention as separate evidence. Reparenting a retained fixture requires
+copying its joint axes as well as its base transform. MuJoCo and SciPy lowercase
+Euler conventions differ. Fixed-base arm placement can admit a path that a shared
+torso cannot reproduce, but an IK pass does not validate actuator-driven tracking.
+Use implicit actuator damping and capped arm forces in a bounded transfer pilot;
+velocity feedforward must be evaluated rather than assumed beneficial. Reuse
+unchanged grasp/support gates and keep the free object unassisted. Details and
+entry points are in [ARM_HAND_INTEGRATION.md](ARM_HAND_INTEGRATION.md).
+
+Isolate wrist tracking with and without hand–object contact before blaming a
+grasp or changing embodiment. Imported neighboring collision meshes can jam a
+joint even when a path audit excludes those pairs from its reported collision
+score. Record explicit exclusions and retain all nonneighbor/environment checks.
+Report nominal-path and commanded-pose errors separately, and compare simulation
+timesteps before accepting a near-threshold result. Object-relative correction
+during acquisition can follow object lag downward; compare correction after grasp
+establishment, and record actual feedback engagement. A configured load-sharing
+option that never updates is not an effective load-sharing experiment. Keep the
+demonstrated motion, contact gates and torque budgets fixed throughout these tests.
+
+A transient tracking error can come from acceleration demands rather than a
+constant offset. Bounded filtered inertial feedforward can reduce that error
+without increasing torque limits or retiming the motion. Integral correction
+must earn its place through grasp checks: lower tracking error can coexist with
+worse second-hand drift. Preserve a frozen baseline, reject unsuccessful
+ablations, repeat the candidate and test a finer integration step. A short pilot
+pass does not establish full-sequence or material/observation robustness.
+
+Object-trajectory fidelity and human-hand imitation are separate objectives.
+Use demonstrated object motion as the task target, robot-specific planning for
+feasible grasps, and uncertain human contact observations as cues. Object ADD-AUC
+and MPPE can improve without finger imitation; measure them on an explicitly
+declared reference, geometry and time interval. Report moving intervals separately
+from stationary padding. In lifted-object observation audits, an image-context
+region labelled `nearby_table` is not necessarily the tabletop: verify its actual
+contents before interpreting depth as table height.
+
+Recent arm/contact planning extensions:
+
+- `arm_path_planning` preserves explicit whole-path seed choices and ranks only
+  passing paths. Dense replay admission still applies; coarse sampled speed can
+  miss a limit violation (`test_arm_path_planning.py`).
+- `phase_object_deviation` locates divergence during insertion rather than
+  attributing every later object error to arm lag (`test_arm_replay_comparison.py`).
+- `finger_contact_trim` isolates bounded owned-finger recovery with contact,
+  reference, rate and travel gates (`test_finger_contact_trim.py`). A failed
+  force-recovery candidate remains a diagnostic, not a promoted controller.
+- `SupportHeightAlignment` latches a single precontact observation rather than
+  chasing subsequent motion. `arm_clearance_audit` makes table intersections
+  explicit; neither a small correction nor an IK pass establishes insertion
+  access (`test_arm_object_feedback.py`, `test_arm_clearance_audit.py`).
+
+## Separate insertion clearance from contact retention
+
+Raise the support palm around its intended contact region while preserving the
+world insertion direction. Audit positive table clearance and the sweep beneath
+the object separately; a collision-free final pose does not make its approach
+safe. If payload sag is plausible, add insertion space below the object and seat
+upward only after insertion. Keep such geometry assumptions separate from fresh
+payload physics. See [contact replanning](CONTACT_REPLANNING.md).
+
+Use actual pad points, surface normals and individual finger loads to assess
+opposition. Tiny fingertip errors or improved aggregate contact fractions can
+coexist with an effectively single-finger grasp. A fixed-wrist finger fit that
+hits its bounds with large normal errors calls for a different wrist/contact
+layout, not relaxed acceptance criteria.
+
+## Preserve the active pad patch and all bearing contacts
+
+A center ray through a curved pad may select a different patch from the one
+supporting a loaded object. Preserve an explicit, collision-hull-validated local
+point and normal when a simulated contact is used to initialize replanning.
+Label its provenance; it is not new camera evidence. Include any palm bearing
+needed for torque balance when jointly changing the wrist and fingers.
+
+Evaluate a loaded fit again from the original task start: rigid object-relative
+transfer, opening, approach, preload, force balance and finite patch support can
+all reject an otherwise convincing local fit. Small pose residuals do not imply
+that every intended pad actually touches the object. Planning failures do not
+replace an already passing physical baseline.
+
+## Bilateral grasp admission requires retention under load
+
+Opposing rim contacts can substantially shorten the combined contact lever and
+pass static gravity balance while still slipping during a real simulated lift.
+Verify both hands together; separately valid hand fits can have intersecting
+palms. Explicit hand-axis and inner/outer-wall conventions matter for wrist
+initialization. Fixture re-centering can recover planning travel without moving
+waypoints, but requires a fresh interpolation/collision check.
+
+Use a stationary hold to distinguish acquisition/retention problems from moving
+reference tracking. Label that diagnostic separately so it cannot qualify the
+original task. A brief lift or a static force budget is not evidence of sustained
+contact-force realization. Independent wrist corrections inherited from a staged
+support controller may need a coordinated controller for opposing grasps.
+
+## Assign one owner to the lift offset during reference following
+
+Once a grasp has achieved its initial lift, continuing to regulate the lowest
+object vertex can raise the object center as the object tilts. This may conflict
+with the demonstrated center trajectory even while the grasp remains loaded.
+An explicit frozen hold offset keeps reference motion in charge; evaluate it
+under the same physical and pose criteria as the unfrozen controller.
+
+Contact-force feedback can stabilize a complete stationary hold while moving
+reference tests still fail grasp drift or rotation. Freeze the grasp, gains,
+physical settings and fidelity limits before promotion. Distinguish measured
+current contact normals from planned contact labels, and keep per-pad failures
+visible beneath aggregate contact/load statistics.
+
+## Validate posture changes during acquisition, not just their endpoints
+
+Different fixed finger postures can pass different payloads. Do not pool their
+successful cases into one robustness claim. A supported-load-driven transition
+needs its own frozen policy, bounded owned-joint changes, intermediate collision
+checks and fresh acquisition/hold/reference tests across the complete matrix.
+Keep simulator force/acceleration observations explicit; neither case identity
+nor actual simulator mass should select the posture. Retain pressure limits,
+object targets, grasp anchors, reference timing and acceptance criteria. See
+[supported-load posture transitions](PAYLOAD_POSTURE.md).
+
+Matching a final finger posture and estimated payload does not reproduce the
+contact state reached by using that posture from acquisition. Compare pad seating
+times, other-link loads and object-local contact locations before attributing
+drift to force-budget exhaustion. Similar unsaturated pressure offsets can coexist
+with different bearing contacts. Integrate sliding only over loaded observations:
+less accumulated slip during missing contact is not better retention. Keep
+post-step contact forces separate from preceding-step servo observations. See
+[acquisition diagnostics](ACQUISITION_DIAGNOSTICS.md).
+
+## Arm transfer needs both live command ownership and whole-path speed checks
+
+Archived pressure commands do not reproduce a feedback controller under new arm
+dynamics. Reconstruct its nominal finger schedule before adding live pressure
+corrections; otherwise saved corrections are applied twice. Keep motor, arm and
+object ownership separate and pin the source contact plan.
+
+A path can fit poses with clear geometry and generous joint-limit margins while
+crossing a wrist singularity. Check native-time joint speeds across the complete
+path. Compare continuous starting branches and explicit base placements without
+mid-path jumps, retiming or collision exclusions. A longer hold/reference horizon
+is a new cohort; retain narrow failures and check numerical sensitivity.
+
+Closer-to-COM contact hypotheses can improve point observation coverage yet
+still fail wrench balance. Upward-force capacity alone ignores lateral forces
+and moments. Test explicit COM uncertainty with the same physical budgets, keep
+normals/finite-patch/access uncertainty visible, and preserve rejected plans.
+
+Physics-step refinement also changes feedback frequency when a controller updates
+on every step. Record both clocks and hold the outer period fixed for an isolated
+integration study. Similar gains, video speed and target poses do not establish
+identical discrete control. Retain numerical failures rather than promoting a
+single passing setting. Including all capture object poses after an independent
+grasp is distinct from executing the original acquisition and release.
+
+
+### Contact retention and finite surface evidence
+
+Keep outer feedback frequency fixed when comparing contact integration settings.
+Record coherent contact motion on separate simulator data so instrumentation does
+not perturb the controller. A pad may retain contact while sliding; a controller
+may freeze because its planned material point differs from that solved contact.
+Check both before raising pressure. Observed-normal or tangential-anchor changes
+can worsen retention and object rotation; evaluate them separately and preserve
+rejections. A loaded-pad continuation guard must retain normal distance and
+native force/joint bounds, and must not chase an unloaded pad.
+
+Stereo support at isolated contact points does not verify finite pad coverage or
+surface normals. Test local observed metric neighborhoods and repeated-view
+consistency. Reject noisy/partial patches without replacing the input geometry.
+Original reconstructed point height, a settled model height and verified insertion
+clearance are different quantities. Additional views or measurements are justified
+when the existing calibrated streams cannot resolve thickness or a bearing patch.
+
+
+### Posture admission and stationary-to-motion transfer
+
+Preserve the intended surface side when projecting contact proposals on thin
+walls. Nearest Euclidean distance alone can swap an inner grasp surface for an
+outer one. Keep a bounded original-normal neighborhood, disclose every rejected
+projection, and recheck both finite pad patches and force balance.
+
+A new finger posture can retain audited wrist poses, but it still needs a fresh
+assembled-arm/finger/environment path check and actual dynamics. Preserve the
+original acquisition waypoints and native limits. A complete stationary pass can
+coexist with moving-reference failure at exactly the same controller rate. Pin
+the stationary candidate, clock and physical artifacts before motion; do not
+retune between the two and then describe them as one controller pass.
+
+Simulation controller rate is an experimental setting until matched to each
+embodiment's documented interfaces and measured latency/sensing. Separate the
+hand's command and tactile rates from the arm's update rate. Similar stationary
+results at two rates do not establish moving-contact rate robustness.

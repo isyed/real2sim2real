@@ -32,8 +32,8 @@ or threshold is edited. Exceeding the budget rejects planning.
 
 Command sampling is 10–25 ms, within a 1,000-sample audit budget, with subsequent
 controller interpolation. Native capture timing has no speed scaling. Terminal
-settling adds a declared 1–2 seconds. The first route retains the grasp during
-table return; release/retraction remains separate work.
+settling adds a declared 1–2 seconds. Optional finger release follows that window;
+arm withdrawal is a separate planning task.
 
 ```bash
 python -m real2sim2real.controller_actor_training.continuous_reference \
@@ -44,6 +44,35 @@ Required keys: `baseline_result`, `baseline_sha256`, new `output`,
 `sample_period_s`, `terminal_settle_s`, `maximum_table_adjustment_m`, and
 `deadline_s` (<=900). The bounded CPU CLI writes `protocol.json` and
 `source-trial/{result.json,states.npz}`, plus an implementation snapshot.
+
+Optional `finger_release` contains `duration_s` (0.5–2), `settle_s` (0.5–2),
+`support_dwell_s` (0.1–0.5), `maximum_clearance_m` (<=0.005) and
+`maximum_speed_m_s` (<=0.02). Its start is derived from capture duration plus
+terminal settling. The native capture is not stretched. The plan opens owned
+finger joints while keeping the wrists at their final object-relative poses.
+
+The live controller additionally requires consecutive observed table support:
+table contact, at least half the object weight in table normal force, clearance
+between -3 mm and the configured maximum, and translational speed below the
+configured bound. It latches once, blends its last pressure-corrected finger
+command to the open posture, and disables pressure correction. Delayed or blocked
+release cannot silently extend the protocol or become a success. Simulator state
+and contact forces are privileged observations, not a hardware estimator.
+
+An acquisition `q_open` posture may still pinch the object at the final wrist
+poses. `finger_release_plan` can search explicitly named finger joints against
+named hand collision geometries and the object's collision pieces at a pinned
+returned state. It preserves wrist/object coordinates and native joint limits,
+with at most 0.5 rad change from the nominal open posture. Config keys are
+`source_result`, `source_sha256`, `time_s`, `joints`, `geoms`,
+`maximum_joint_change_rad`, `clearance_m` (1–5 mm), `maximum_evaluations` (<=200),
+new `output`, and `deadline_s` (<=900).
+
+A geometrically accepted `posture.json` can be supplied to arm replay as
+`finger_release_posture: {"path": "...", "sha256": "..."}`. The adapter only changes
+the release destination of owned fingers, then screens the full arm/finger path.
+An endpoint clearance is a planning hypothesis; it never substitutes for the
+live release checks below. Preserve rejected nominal opening trials as evidence.
 
 Use module CLIs for this experimental preparation route. Pass the new plan and
 its source hashes to `arm_path_audit`, retaining original collision/joint/speed
@@ -61,6 +90,7 @@ Preserve both protocols and identify which one each result evaluates.
 - `hold` covers reference mesh clearance above the existing task minimum
   (50 mm downstream). It can contain motion.
 - `return` follows suspension; `settle` follows capture completion.
+- Optional `release` and `released_settle` follow supported return.
 
 Raw pose error covers acquisition, lift and return under existing 20 mm/10 degree
 limits. Clearance, opposing-contact and load-sharing gates apply to the
@@ -70,15 +100,36 @@ Both wrist-frame drifts anchor at the first actual saved sample at or after
 acquisition completion and cover lift, carry, return and settling. Existing 10 mm
 limits remain; these measurements are stricter than post-lift anchoring.
 Arm and robot constraints retain their original limits.
+With release enabled, retention ends at the declared release start. Intentional
+opening is assessed separately; closure/lift failures remain unchanged.
 
 New table-return requirements reject sampled mesh/table penetration above 3 mm.
 Terminal settling needs table contact in >=80% of final samples, maximum final
 clearance <=5 mm and the declared settling duration within 50 ms sampling tolerance.
-These checks do not certify release or hardware placement.
+Release separately requires actual finger opening within 0.1 rad, combined
+hand/object normal force <=1 N (including non-pad contacts), >=80% table-contact
+samples, <=5 mm object translation drift and a full declared post-opening settling
+window within 50 ms sampling tolerance. All these checks use saved physical states.
+Neither this test nor a sampled path audit certifies hardware placement.
 
 `stationary_hold` follows acquisition and the demonstrated lift to the first
 suspended sample, then freezes wrists and object target for the remaining clock.
-It omits table-return evaluation. Existing staged inputs retain their old behavior.
+It disables release and omits table-return evaluation. Existing staged inputs
+retain their old behavior.
+
+`continuous_retention_audit --results ... --output ...` reads pinned arm artifacts
+and reports closure, early-lift and suspended windows: loaded-pad fractions,
+coherent forces versus requested pressure, planned normal/tangent gaps, offset
+saturation, wrist tracking and wrist-relative object offsets. Diagnostic anchors
+do not replace acceptance anchors. A planned-target tangent gap is not an
+independent measurement of material slip. Existing contact-motion diagnostics
+separate sampled sliding from centroid migration.
+
+For bounded seating experiments, `finger_feedback_override` may change pressure
+activation within closure, normal gain and normal speed within the existing
+controller validator. It cannot increase force targets, joint-offset budgets or
+joint-speed limits. Check stationary behavior before promoting a moving controller;
+label any moving run without that prerequisite as a rejected development diagnostic.
 
 Reference scoring includes acquisition/return and separates `complete_protocol`
 from native-duration `moving_reference`; terminal settling cannot inflate the

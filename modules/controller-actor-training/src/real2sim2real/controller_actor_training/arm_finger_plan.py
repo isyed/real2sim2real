@@ -145,7 +145,9 @@ def validate_stationary(config):
         raise ValueError("Pinned stationary arm hold changed")
     report = json.loads(path.read_text())
     if report.get("residual_adapter") is not None:
-        raise ValueError("Residual stationary holds require policy-aware promotion; do not silently omit the actor")
+        raise ValueError(
+            "Residual stationary holds require policy-aware promotion; do not silently omit the actor"
+        )
     if (
         report.get("schema") != "real2sim2real.arm-replay-pilot/1"
         or report["success"] is not True
@@ -209,7 +211,10 @@ def path_screen(
         scratch.qpos[qids] = target
         for hand in live.hands:
             scratch.qpos[hand["qids"]] = finger_waypoint(
-                time, *hand["waypoints"], live.rollout
+                time,
+                *hand["waypoints"],
+                live.rollout,
+                release_open=hand.get("release_open"),
             )
         mujoco.mj_fwdPosition(model, scratch)
         for contact in scratch.contact:

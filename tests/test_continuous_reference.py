@@ -99,3 +99,54 @@ def test_stationary_diagnostic_freezes_return_without_changing_source():
     assert parent == original
     assert all(r["phase"] == "hold" for r in actual["records"][1:])
     np.testing.assert_array_equal(held[1:], np.tile(targets[1], (4, 1)))
+
+
+def test_release_does_not_hide_capture_drift_and_requires_actual_open_contacts():
+    protocol = dict(
+        acquisition_end_s=1.8,
+        capture_duration_s=12,
+        terminal_settle_s=1,
+        release_planned=True,
+        finger_release=dict(start_s=13.1, duration_s=0.8, settle_s=0.8),
+    )
+    rows = records()
+    for t in [13.91, 14.3, 14.69]:
+        r = deepcopy(rows[-1])
+        r.update(
+            time_s=t,
+            phase="released_settle",
+            wrist_position_m=[1, 0, 0],
+            finger_release=dict(fraction=1.0, maximum_open_error_rad=0.01),
+            contact_patch_motion=dict(
+                pads={"test": {"force_n": 0.0}}, other_object_contacts_n={}
+            ),
+        )
+        rows.append(r)
+    metrics, failures = evaluate_continuous(rows, protocol, 0)
+    assert not failures and metrics["release"]["accepted"]
+    assert metrics["hold_slip_m"] == 0.011
+    rows[-1]["finger_release"]["maximum_open_error_rad"] = 0.2
+    assert "incomplete_finger_release" in evaluate_continuous(rows, protocol, 0)[1]
+    parent = dict(
+        records=rows,
+        continuous_protocol=protocol,
+        configuration=dict(rollout=dict(finger_release=protocol["finger_release"])),
+    )
+    stationary, _ = apply_condition(parent, np.zeros((len(rows), 2)), "stationary_hold")
+    assert "finger_release" not in stationary["configuration"]["rollout"]
+    assert parent["configuration"]["rollout"]["finger_release"]
+
+
+def test_incomplete_release_keeps_a_serializable_rejection():
+    import json
+
+    protocol = dict(
+        acquisition_end_s=1.8,
+        capture_duration_s=12,
+        terminal_settle_s=1,
+        finger_release=dict(start_s=13.1, duration_s=0.8, settle_s=0.8),
+    )
+    metrics, failures = evaluate_continuous(records()[:3], protocol, 0)
+    assert "incomplete_table_return" in failures
+    assert "incomplete_finger_release" in failures
+    json.dumps(metrics, allow_nan=False)

@@ -32,6 +32,13 @@ def apply_condition(parent, targets, condition):
     ):
         raise ValueError("An independently specified stationary reference is required")
     result = deepcopy(parent)
+    if parent.get("continuous_protocol") and parent["continuous_protocol"].get(
+        "release_planned"
+    ):
+        result["configuration"]["rollout"].pop("finger_release", None)
+        result["continuous_protocol"]["release_disabled_for_stationary_diagnostic"] = (
+            True
+        )
     held = values.copy()
     held[first:] = values[first]
     for i in indices:

@@ -1,5 +1,12 @@
 # Testing the reusable modules
 
+`test_finger_release.py` checks table-load gating, smooth opening without a command
+jump, blocked release and no automatic re-close. `test_finger_release_plan.py`
+checks pinned, bounded finger-only posture binding without changing acquisition.
+Mounted-hand runtime tests verify release does not write arm or object state.
+These unit checks do not establish a successful physical release; saved-state
+opening, residual-contact and tabletop stability checks remain required.
+
 `test_continuous_reference.py` checks capture-clock motion without an independent
 lift, raw-reference preservation under bounded table command projection, nonfinite
 input rejection, reference-defined phases, acquisition-anchored drift and table

@@ -69,7 +69,13 @@ def evaluate_continuous(records, protocol, table_z, *, stationary=False):
     """Acquisition-anchored retention and independently declared table return."""
     from .grasp_feedback import relative_translation_drift
 
-    retained = [r for r in records if r["time_s"] >= protocol["acquisition_end_s"]]
+    release = protocol.get("finger_release") if not stationary else None
+    retained = [
+        r
+        for r in records
+        if r["time_s"] >= protocol["acquisition_end_s"]
+        and (not release or r["time_s"] < release["start_s"])
+    ]
     if not retained:
         return {}, ["missing_continuous_retention"]
     drift = {}
@@ -80,7 +86,12 @@ def evaluate_continuous(records, protocol, table_z, *, stationary=False):
             [r[prefix + "wrist_rotation"] for r in retained],
         )
     penetration = max(0.0, max(table_z - r["minimum_object_height_m"] for r in records))
-    final = [r for r in records if r["time_s"] >= protocol["capture_duration_s"]]
+    final = [
+        r
+        for r in records
+        if r["time_s"] >= protocol["capture_duration_s"]
+        and (not release or r["time_s"] < release["start_s"])
+    ]
     result = dict(
         **drift,
         retention_anchor_time_s=retained[0]["time_s"],
@@ -99,7 +110,7 @@ def evaluate_continuous(records, protocol, table_z, *, stationary=False):
         )
         result.update(
             final_table_contact_fraction=contact,
-            final_maximum_clearance_m=final_clearance,
+            final_maximum_clearance_m=final_clearance if final else None,
             final_settle_coverage_s=coverage,
         )
         if (
@@ -108,6 +119,58 @@ def evaluate_continuous(records, protocol, table_z, *, stationary=False):
             or coverage < protocol["terminal_settle_s"] - 0.05
         ):
             failures.append("incomplete_table_return")
+    if release:
+        after = [
+            r
+            for r in records
+            if r["time_s"] >= release["start_s"] + release["duration_s"]
+        ]
+        contact = (
+            float(np.mean([r["table_contacts"] > 0 for r in after])) if after else 0.0
+        )
+        opened = all(
+            r.get("finger_release", {}).get("fraction", 0) >= 1 - 1e-6
+            and r["finger_release"].get("maximum_open_error_rad") is not None
+            and r["finger_release"]["maximum_open_error_rad"] <= 0.1
+            for r in after
+        )
+        forces = [
+            sum(p["force_n"] for p in r["contact_patch_motion"]["pads"].values())
+            + sum(r["contact_patch_motion"]["other_object_contacts_n"].values())
+            for r in after
+        ]
+        coverage = after[-1]["time_s"] - after[0]["time_s"] if after else 0.0
+        movement = max(
+            (
+                float(
+                    np.linalg.norm(
+                        np.asarray(r["object_position_m"])
+                        - after[0]["object_position_m"]
+                    )
+                )
+                for r in after
+            ),
+            default=float("inf"),
+        )
+        max_force = max(forces, default=float("inf"))
+        release_pass = bool(
+            after
+            and opened
+            and contact >= 0.8
+            and max_force <= 1.0
+            and movement <= 0.005
+            and coverage >= release["settle_s"] - 0.05
+        )
+        result["release"] = dict(
+            accepted=release_pass,
+            all_fingers_open=bool(opened and after),
+            final_table_contact_fraction=contact,
+            maximum_hand_object_force_n=max_force if after else None,
+            object_translation_drift_m=movement if after else None,
+            observed_settle_s=coverage,
+        )
+        if not release_pass:
+            failures.append("incomplete_finger_release")
     return result, failures
 
 
@@ -121,7 +184,7 @@ def run(config):
 
     implementation = Path(__file__).read_bytes()
 
-    if set(config) != {
+    if set(config) - {"finger_release"} != {
         "baseline_result",
         "baseline_sha256",
         "output",
@@ -197,6 +260,18 @@ def run(config):
     if approach + close >= reference.elapsed[-1]:
         raise ValueError("Acquisition must finish within the capture")
     duration = float(reference.elapsed[-1] + config["terminal_settle_s"])
+    release = None
+    if config.get("finger_release"):
+        from .finger_release import validate_release
+
+        if "start_s" in config["finger_release"]:
+            raise ValueError(
+                "Release starts only after the declared table-settling window"
+            )
+        release = dict(config["finger_release"], start_s=duration)
+        validate_release(release)
+        base["rollout"]["finger_release"] = release
+        duration += release["duration_s"] + release["settle_s"]
     times = np.r_[np.arange(0, duration, config["sample_period_s"]), duration]
     if len(times) > 1000:
         raise ValueError("Continuous plan exceeds the dense arm-audit budget")
@@ -220,6 +295,12 @@ def run(config):
             carried,
             reference.elapsed[-1],
         )
+        if release and time >= release["start_s"]:
+            phase = (
+                "release"
+                if time < release["start_s"] + release["duration_s"]
+                else "released_settle"
+            )
         carried |= phase == "hold"
         if (
             time < approach + close
@@ -237,13 +318,29 @@ def run(config):
         change = command @ np.linalg.inv(anchor)
         wrists = []
         for hand, idx in zip(hands, indices):
-            data.qpos[idx["q"]] = finger_waypoint(
+            waypoint = finger_waypoint(
                 time,
                 hand["q_pregrasp"],
                 hand["q_open"],
                 hand["q_closed"],
-                base["rollout"],
+                {k: v for k, v in base["rollout"].items() if k != "finger_release"},
             )
+            if release:
+                opened_waypoint = finger_waypoint(
+                    time,
+                    hand["q_pregrasp"],
+                    hand["q_open"],
+                    hand["q_closed"],
+                    base["rollout"],
+                )
+                fingers = np.array(
+                    [
+                        not n.startswith(hand["fixture_prefix"])
+                        for n in hand["joint_names"]
+                    ]
+                )
+                waypoint[fingers] = opened_waypoint[fingers]
+            data.qpos[idx["q"]] = waypoint
             mujoco.mj_kinematics(model, data)
             root = idx["root"]
             wrist = np.eye(4)
@@ -306,10 +403,19 @@ def run(config):
         raw_reference_preserved=True,
         native_timing_preserved=True,
         terminal_settle_s=config["terminal_settle_s"],
-        release_planned=False,
+        release_planned=release is not None,
         phase_gates="50 mm clearance and load support on reference-defined suspended hold; raw pose error over full capture; drift anchored at acquisition completion",
         finger_plan_admission=finger_admission,
     )
+    if release:
+        protocol["finger_release"] = release
+        protocol["release_criteria"] = dict(
+            maximum_open_error_rad=0.1,
+            maximum_hand_object_force_n=1.0,
+            maximum_object_translation_drift_m=0.005,
+            minimum_table_contact_fraction=0.8,
+            maximum_sample_tolerance_s=0.05,
+        )
     source = out / "source-trial"
     source.mkdir()
     (source / "continuous_reference.py").write_bytes(implementation)

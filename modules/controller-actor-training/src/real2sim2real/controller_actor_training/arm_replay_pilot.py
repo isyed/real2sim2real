@@ -149,6 +149,8 @@ def rollout(config, interaction=None):
             "arm_motion_condition.py",
             "arm_finger_plan.py",
             "continuous_reference.py",
+            "finger_release.py",
+            "finger_release_plan.py",
         )
     }
     audit_path = Path(config["audit"])
@@ -172,6 +174,11 @@ def rollout(config, interaction=None):
     if {a["name"] for a in arms} != {"left", "right"}:
         raise ValueError("Both hands must have arms")
     parent = json.loads(Path(audit["config"]["trial"]).read_text())
+    if config.get("finger_release_posture") and (
+        finger_mode != "live_contact_force"
+        or not parent.get("continuous_protocol", {}).get("release_planned")
+    ):
+        raise ValueError("A release posture requires continuous live-finger release")
     parent = effective_parent(parent, audit)
     old, _, mesh = load_scene(parent["configuration"])
     archive = Path(audit["config"]["trial"]).with_name("states.npz")
@@ -341,6 +348,10 @@ def rollout(config, interaction=None):
             [dst for _, dst in finger_pairs],
             overrides=config.get("finger_feedback_override"),
         )
+        if config.get("finger_release_posture"):
+            from .finger_release_plan import bind
+
+            bind(live_fingers, model, config["finger_release_posture"])
     finger_path = None
     if finger_plan_admission or parent.get("continuous_protocol"):
         from .arm_finger_plan import path_screen
@@ -406,6 +417,7 @@ def rollout(config, interaction=None):
         raise ValueError(
             "Choose filtered tracking compensation or legacy velocity feedforward"
         )
+    task = json.loads(Path(parent["configuration"]["task"]).read_text())
     reference_objects = []
     for record in parent["records"]:
         pose = np.eye(4)
@@ -609,8 +621,47 @@ def rollout(config, interaction=None):
                 kd=config["kd_nm_s_per_rad"],
             )
             if live_fingers:
+                release_observation = {}
+                if (
+                    live_fingers.release
+                    and control_time >= live_fingers.release.settings["start_s"] - 0.5
+                ):
+                    actual_pose = object_transform(model, data)
+                    object_geoms = set(np.where(model.geom_bodyid == obj)[0])
+                    on_table = sum(
+                        table in (c.geom1, c.geom2)
+                        and bool(object_geoms & {c.geom1, c.geom2})
+                        for c in data.contact[: data.ncon]
+                    )
+                    table_load = 0.0
+                    for contact_index, contact in enumerate(data.contact[: data.ncon]):
+                        if table in (contact.geom1, contact.geom2) and object_geoms & {
+                            contact.geom1,
+                            contact.geom2,
+                        }:
+                            contact_force = np.zeros(6)
+                            mujoco.mj_contactForce(
+                                model, data, contact_index, contact_force
+                            )
+                            table_load += max(0.0, float(contact_force[0]))
+                    dof = model.joint("task_object_free").dofadr[0]
+                    release_observation["table_observation"] = dict(
+                        table_contacts=on_table,
+                        clearance_m=float(
+                            (
+                                mesh.vertices @ actual_pose[:3, :3].T
+                                + actual_pose[:3, 3]
+                            )[:, 2].min()
+                            - task["table"]["top_z_m"]
+                        ),
+                        speed_m_s=float(np.linalg.norm(data.qvel[dof : dof + 3])),
+                        table_load_fraction=table_load
+                        / float(model.body_mass[obj] * 9.81),
+                    )
                 if pressure_offsets is None:
-                    live_fingers.command(model, data, control_time, control_period)
+                    live_fingers.command(
+                        model, data, control_time, control_period, **release_observation
+                    )
                 else:
                     live_fingers.command(
                         model,
@@ -618,6 +669,7 @@ def rollout(config, interaction=None):
                         control_time,
                         control_period,
                         pressure_offsets=pressure_offsets,
+                        **release_observation,
                     )
             else:
                 for src, dst in finger_pairs:
@@ -818,7 +870,6 @@ def rollout(config, interaction=None):
             if record["minimum_object_height_m"] < -0.04:
                 aborted = "object_dropped"
                 break
-    task = json.loads(Path(parent["configuration"]["task"]).read_text())
     metrics = measure_hold(records, table_top_m=task["table"]["top_z_m"])
     metrics.update(support_hold_metrics(records, float(model.body_mass[obj] * 9.81)))
     continuous_metrics, continuous_failures = None, []

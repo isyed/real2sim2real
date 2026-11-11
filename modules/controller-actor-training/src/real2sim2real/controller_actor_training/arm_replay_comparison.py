@@ -129,6 +129,7 @@ def compare(paths, output):
                 result_sha256=digest(path),
                 config=report["config"],
                 integration_timestep_s=actual_step,
+                controller_period_s=report.get("controller_period_s", actual_step),
                 metrics=summarize(report),
                 object_deviation_from_first_run=phase_object_deviation(
                     baseline_records, report["records"]
@@ -141,6 +142,8 @@ def compare(paths, output):
         timestep_s=0.002,
         velocity_feedforward=False,
         exclude_adjacent_arm_collisions=False,
+        control_period_s=None,
+        finger_control_mode="archived",
     )
     keys = (
         "placement",
@@ -164,6 +167,8 @@ def compare(paths, output):
                 json.dumps(
                     r["integration_timestep_s"]
                     if k == "timestep_s"
+                    else r["controller_period_s"]
+                    if k == "control_period_s"
                     else r["config"].get(k, defaults.get(k)),
                     sort_keys=True,
                 )
@@ -182,6 +187,7 @@ def compare(paths, output):
     write_json(output / "comparison.json", result)
     headers = [
         "Run",
+        "Physics / controller period (ms)",
         "Primary slip (mm)",
         "Support drift (mm)",
         "Clearance (mm)",
@@ -201,7 +207,8 @@ def compare(paths, output):
         )
         relative = os.path.relpath(link, output)
         values = [
-            f'<a href="{html.escape(relative, quote=True)}">{html.escape(row["name"])}</a>'
+            f'<a href="{html.escape(relative, quote=True)}">{html.escape(row["name"])}</a>',
+            f"{row['integration_timestep_s'] * 1000:.3f} / {row['controller_period_s'] * 1000:.3f}",
         ]
         for key, factor in (
             ("hold_slip_m", 1000),

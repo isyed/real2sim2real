@@ -15,7 +15,7 @@ from real2sim2real.review_media import prepare as prepare_playback, player as vi
 from .object_grasp_review import display_pieces, world_triangles, panel
 
 
-def render(directory):
+def render(directory, *, follow_object=False):
     import mujoco
     import imageio_ffmpeg
 
@@ -49,7 +49,9 @@ def render(directory):
     scale = 420 / max(np.ptp(vertices, axis=0).max(), 0.1)
     step = max(1, round(len(times) / 160))
     fps = 1 / (float(np.median(np.diff(times))) * step)
-    video = directory / "rollout.mp4"
+    stem = "rollout-follow" if follow_object else "rollout"
+    playback_name = "playback-follow" if follow_object else "playback"
+    video = directory / (stem + ".mp4")
     writer = imageio_ffmpeg.write_frames(
         str(video),
         (1040, 520),
@@ -76,6 +78,12 @@ def render(directory):
             triangles, colors = world_triangles(data, pieces)
             frame = Image.new("RGB", (1040, 520), "white")
             frame.paste(panel(triangles, colors, -60, 25, center, scale), (0, 40))
+            if follow_object:
+                close_center = data.xpos[model.body("task_object").id].copy() + [
+                    0,
+                    0,
+                    0.04,
+                ]
             frame.paste(panel(triangles, colors, 20, 15, close_center, 900), (520, 40))
             draw = ImageDraw.Draw(frame)
             draw.text(
@@ -89,15 +97,26 @@ def render(directory):
                 + str(report["success"]),
                 fill="black",
             )
+            draw.text(
+                (12, 25),
+                "Finger control: "
+                + report.get("finger_control_mode", "archived")
+                + (
+                    " | right camera follows object; left overview fixed"
+                    if follow_object
+                    else ""
+                ),
+                fill="black",
+            )
             writer.send(np.asarray(frame))
     finally:
         writer.close()
-    playback = prepare_playback(video, directory / "playback")
+    playback = prepare_playback(video, directory / playback_name)
     media = video_html(
-        "rollout.mp4",
-        "playback/video.webm",
-        "playback/preview.gif",
-        embedded_webm=directory / "playback/video.webm",
+        stem + ".mp4",
+        playback_name + "/video.webm",
+        playback_name + "/preview.gif",
+        embedded_webm=directory / playback_name / "video.webm",
     )
     fields = [
         "success",
@@ -119,24 +138,34 @@ def render(directory):
         "object_feedback",
         "feedback_observation_source",
         "contact_exclusions",
+        "finger_control_mode",
     ):
         if key in report:
             metrics[key] = report[key]
+    finger_description = (
+        "live finger-pressure feedback with privileged simulator observations"
+        if report.get("finger_control_mode") == "live_contact_force"
+        else "recorded finger commands"
+    )
     (directory / "review.html").write_text(
-        '<!doctype html><meta charset="utf-8"><style>body{font:17px system-ui;max-width:1100px;margin:30px auto}video{width:100%}pre{white-space:pre-wrap}</style><h1>Two-arm control transfer</h1><p>Saved simulated dynamics, not hardware execution. Both Cartesian wrist fixtures are removed. Torque-limited arm actuators and recorded finger commands act on a free object. The straight mounts are hypotheses; hardware assembly and policy readiness are not established.</p>'
+        '<!doctype html><meta charset="utf-8"><style>body{font:17px system-ui;max-width:1100px;margin:30px auto}video{width:100%}pre{white-space:pre-wrap}</style><h1>Two-arm control transfer</h1><p>Saved simulated dynamics, not hardware execution. Both Cartesian wrist fixtures are removed. Torque-limited arm actuators and '
+        + finger_description
+        + " act on a free object. The straight mounts are hypotheses; hardware assembly and policy readiness are not established.</p>"
         + media
         + '<p><a href="result.json">Full result and provenance</a></p><pre>'
         + html.escape(json.dumps(metrics, indent=2))
         + "</pre>"
     )
     write_json(
-        directory / "review-receipt.json",
+        directory
+        / ("review-receipt-follow.json" if follow_object else "review-receipt.json"),
         dict(
             result_sha256=digest(directory / "result.json"),
             video_sha256=digest(video),
             playback=playback,
             implementation_sha256=digest(Path(__file__)),
             physics_rerun=False,
+            right_camera_follows_object=follow_object,
         ),
     )
 
@@ -145,6 +174,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--directory", type=Path, required=True)
     parser.add_argument("--worker", action="store_true")
+    parser.add_argument("--follow-object", action="store_true")
     args = parser.parse_args()
     if not args.worker:
         from real2sim2real.bounded_process import run
@@ -157,6 +187,7 @@ def main():
                 "--directory",
                 str(args.directory.resolve()),
                 "--worker",
+                *(["--follow-object"] if args.follow_object else []),
             ],
             timeout=600,
             env={
@@ -166,7 +197,7 @@ def main():
                 "OMP_NUM_THREADS": "1",
             },
         )
-    render(args.directory)
+    render(args.directory, follow_object=args.follow_object)
 
 
 if __name__ == "__main__":

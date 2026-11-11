@@ -163,6 +163,11 @@ can worsen the other. A nominal fixture pass must precede arm revalidation.
 Use `grasp_sensitivity` to replay a pinned passing controller under declared
 payload/friction changes before loaded arm integration. A nominal state mismatch
 stops the campaign; all controller settings, reference timing and gates stay fixed.
+An explicitly scoped nominal feasibility diagnostic can proceed from a passing
+nominal grasp and a dense two-arm audit while broader robustness remains unresolved.
+It does not admit the matrix or global control readiness. Archived-command transfer
+and live source finger-pressure feedback are separately labeled; see
+[arm integration](ARM_HAND_INTEGRATION.md).
 An opt-in supported-load pressure scheduler can adapt finger goals and bilateral
 load allocation while preserving common wrist commands. Validate its stationary
 and nominal reference conditions, then freeze the rule for sensitivity testing;

@@ -1,5 +1,17 @@
 # Testing the reusable modules
 
+`tests/test_arm_finger_feedback.py` checks native finger waypoint timing,
+reconstruction before feedback, and exclusive actuator ownership. Its optional
+MuJoCo test binds hands under actuated arms while preserving physical arm/object
+state and joint/force limits. `test_reference_extension.py` checks explicit longer
+holds without reference retiming. Regional contact tests check equal sampling,
+declared rigid frames, disjoint faces, empty-region rejection and fixed-budget
+COM sensitivity. Actual path/dynamics and observation admission remain separate.
+Arm-replay tests also verify exact physics-step/controller-period ratios and
+matching scheduled update times. Comparison tests require changed feedback
+periods to be visible even when the physics step stays fixed. A downstream
+default-path state-archive regression remains separate physical evidence.
+
 `tests/test_acquisition_compare.py` checks phase/gap-safe sliding integration,
 coherent-force versus preceding-servo observations, world-transform invariance,
 missing unloaded centroids, unchanged failed verdicts, explicit configuration

@@ -98,3 +98,26 @@ def test_contact_diagnostic_keeps_table_and_nonadjacent_arm_collisions():
     obj, hand, table = [model.geom(n).id for n in ("object_geom", "hand_geom", "table")]
     assert {obj, hand} not in pairs
     assert {obj, table} in pairs
+
+
+def test_control_clock_separates_feedback_period_from_physics_steps():
+    from real2sim2real.controller_actor_training.arm_replay_pilot import (
+        controller_clock,
+    )
+
+    schedules = []
+    for dt, stride in [(0.00025, 4), (0.000125, 8), (0.0001, 10)]:
+        period, steps = controller_clock(dt, 0.001)
+        assert period == 0.001 and steps == stride
+        schedules.append(
+            [
+                0.001 + i // steps * period
+                for i in range(round(0.01 / dt))
+                if i % steps == 0
+            ]
+        )
+    assert schedules[0] == schedules[1] == schedules[2]
+    assert controller_clock(0.00025) == (0.00025, 1)
+    for period in [True, float("nan"), 0.0001, 0.0011, 0.02]:
+        with pytest.raises(ValueError):
+            controller_clock(0.00025, period)

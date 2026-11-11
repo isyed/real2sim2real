@@ -278,3 +278,28 @@ with different bearing contacts. Integrate sliding only over loaded observations
 less accumulated slip during missing contact is not better retention. Keep
 post-step contact forces separate from preceding-step servo observations. See
 [acquisition diagnostics](ACQUISITION_DIAGNOSTICS.md).
+
+## Arm transfer needs both live command ownership and whole-path speed checks
+
+Archived pressure commands do not reproduce a feedback controller under new arm
+dynamics. Reconstruct its nominal finger schedule before adding live pressure
+corrections; otherwise saved corrections are applied twice. Keep motor, arm and
+object ownership separate and pin the source contact plan.
+
+A path can fit poses with clear geometry and generous joint-limit margins while
+crossing a wrist singularity. Check native-time joint speeds across the complete
+path. Compare continuous starting branches and explicit base placements without
+mid-path jumps, retiming or collision exclusions. A longer hold/reference horizon
+is a new cohort; retain narrow failures and check numerical sensitivity.
+
+Closer-to-COM contact hypotheses can improve point observation coverage yet
+still fail wrench balance. Upward-force capacity alone ignores lateral forces
+and moments. Test explicit COM uncertainty with the same physical budgets, keep
+normals/finite-patch/access uncertainty visible, and preserve rejected plans.
+
+Physics-step refinement also changes feedback frequency when a controller updates
+on every step. Record both clocks and hold the outer period fixed for an isolated
+integration study. Similar gains, video speed and target poses do not establish
+identical discrete control. Retain numerical failures rather than promoting a
+single passing setting. Including all capture object poses after an independent
+grasp is distinct from executing the original acquisition and release.

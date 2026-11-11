@@ -37,6 +37,24 @@ from .reference_extension import effective_parent
 from .simulation_health import step_rejection
 
 
+def controller_clock(physics_step_s, requested_period_s=None):
+    """Require an exact bounded number of physics steps per control update."""
+    period = physics_step_s if requested_period_s is None else requested_period_s
+    if (
+        isinstance(period, bool)
+        or not np.isfinite([physics_step_s, period]).all()
+        or physics_step_s <= 0
+        or not physics_step_s <= period <= 0.01
+        or not np.isclose(
+            period / physics_step_s, round(period / physics_step_s), atol=1e-9, rtol=0
+        )
+    ):
+        raise ValueError(
+            "Control period must be an integer physics-step multiple up to 10 ms"
+        )
+    return float(period), int(round(period / physics_step_s))
+
+
 def motor_command(target, position, velocity, bias, kp, kd, limits):
     """Finite, explicitly torque-bounded joint control, including feedforward."""
     values = [
@@ -80,6 +98,15 @@ def subtree_geoms(model, root):
 def run(config):
     import mujoco
 
+    finger_mode = config.get("finger_control_mode", "archived")
+    if finger_mode not in ("archived", "live_contact_force"):
+        raise ValueError(
+            "Explicit archived or live_contact_force finger control required"
+        )
+    if finger_mode == "live_contact_force" and config.get("finger_contact_trim"):
+        raise ValueError(
+            "Live pad feedback and separate finger trim cannot share ownership"
+        )
     simulation_case = validate_case(config)
     if config.get("precontact_support_alignment") and not config.get("object_feedback"):
         raise ValueError(
@@ -96,6 +123,9 @@ def run(config):
             "reference_extension.py",
             "simulation_health.py",
             "finger_contact_trim.py",
+            "arm_finger_feedback.py",
+            "contact_force_control.py",
+            "payload_pressure.py",
         )
     }
     audit_path = Path(config["audit"])
@@ -266,6 +296,15 @@ def run(config):
     if simulation_case is not None:
         apply_case(model, data, simulation_case)
         mujoco.mj_saveLastXML(str(scene), model)
+    live_fingers = None
+    if finger_mode == "live_contact_force":
+        from .arm_finger_feedback import ArmFingerFeedback
+
+        if condition != "loaded":
+            raise ValueError("Live contact feedback requires loaded contacts")
+        live_fingers = ArmFingerFeedback(
+            model, data, parent, roots, mesh, [dst for _, dst in finger_pairs]
+        )
     desired = mujoco.MjData(model)
     feedback = (
         ArmObjectFeedback(config["object_feedback"], list(roots))
@@ -311,189 +350,213 @@ def run(config):
         n for n in mujoco.mjtWarning.__members__ if n.startswith("mjWARN_")
     ]
     solver_warnings = dict.fromkeys(warning_names, 0)
+    control_period, control_stride = controller_clock(
+        model.opt.timestep, config.get("control_period_s")
+    )
+    control_start = float(data.time)
+    control_updates = 0
     while data.time < times[-1] - model.opt.timestep / 2:
-        i = min(np.searchsorted(times, data.time, side="right") - 1, len(times) - 2)
-        alpha = np.clip((data.time - times[i]) / (times[i + 1] - times[i]), 0, 1)
-        target = targets[i] * (1 - alpha) + targets[i + 1] * alpha
-        if feedback or height_alignment:
-            # Read the last solved contact forces before refreshing kinematics.
-            normal = dict.fromkeys(roots, 0.0)
-            opposed = {"thumb": 0.0, "fingers": 0.0}
-            upward = 0.0
-            for cid, contact in enumerate(data.contact):
-                pair = {int(contact.geom1), int(contact.geom2)}
-                if not pair & object_geoms:
-                    continue
-                for name, geoms in hands.items():
-                    if pair & geoms:
+        if steps % control_stride == 0:
+            control_time = (
+                control_start + control_updates * control_period
+                if config.get("control_period_s") is not None
+                else float(data.time)
+            )
+            control_updates += 1
+            i = min(
+                np.searchsorted(times, control_time, side="right") - 1, len(times) - 2
+            )
+            alpha = np.clip((control_time - times[i]) / (times[i + 1] - times[i]), 0, 1)
+            target = targets[i] * (1 - alpha) + targets[i + 1] * alpha
+            if feedback or height_alignment:
+                # Read the last solved contact forces before refreshing kinematics.
+                normal = dict.fromkeys(roots, 0.0)
+                opposed = {"thumb": 0.0, "fingers": 0.0}
+                upward = 0.0
+                for cid, contact in enumerate(data.contact):
+                    pair = {int(contact.geom1), int(contact.geom2)}
+                    if not pair & object_geoms:
+                        continue
+                    for name, geoms in hands.items():
+                        if pair & geoms:
+                            force = np.zeros(6)
+                            mujoco.mj_contactForce(model, data, cid, force)
+                            normal[name] += max(0, float(force[0]))
+                            if name == "left":
+                                upward += contact_wrench_on_body(model, data, cid, obj)[
+                                    0
+                                ][2]
+                            else:
+                                geom_name = (
+                                    model.geom(next(iter(pair & geoms))).name or ""
+                                )
+                                if "thumb" in geom_name:
+                                    opposed["thumb"] += max(0, float(force[0]))
+                                elif any(
+                                    g in geom_name
+                                    for g in ("index", "middle", "ring", "pinky")
+                                ):
+                                    opposed["fingers"] += max(0, float(force[0]))
+                mujoco.mj_kinematics(model, data)
+                desired.qpos[:] = data.qpos
+                desired.qpos[qids] = target
+                mujoco.mj_kinematics(model, desired)
+                mujoco.mj_comPos(model, desired)
+                actual_object = object_transform(model, data)
+                reference_object = reference_objects[i].copy()
+                reference_object[:3, 3] = (1 - alpha) * reference_objects[
+                    i, :3, 3
+                ] + alpha * reference_objects[i + 1, :3, 3]
+                delta = Rotation.from_matrix(
+                    reference_objects[i + 1, :3, :3] @ reference_objects[i, :3, :3].T
+                ).as_rotvec()
+                reference_object[:3, :3] = (
+                    Rotation.from_rotvec(alpha * delta).as_matrix()
+                    @ reference_objects[i, :3, :3]
+                )
+                phase = parent["records"][i]["phase"]
+                start = 0
+                for arm in arms:
+                    name = arm["name"]
+                    body = roots[name]
+                    width = len(arm["joints"])
+                    indices = slice(start, start + width)
+                    pose = np.eye(4)
+                    pose[:3, :3] = desired.xmat[body].reshape(3, 3)
+                    pose[:3, 3] = desired.xpos[body]
+                    if height_alignment:
+                        correction = np.zeros(6)
+                        if name == "left":
+                            correction[2] = height_alignment.update(
+                                phase,
+                                actual_object[:3, 3] - reference_object[:3, 3],
+                                min(opposed.values()),
+                                control_period,
+                            )
+                    else:
+                        correction = feedback.update(
+                            name,
+                            actual_object,
+                            reference_object,
+                            pose,
+                            control_period,
+                            contact_n=min(opposed.values())
+                            if name == "right"
+                            else support_contact_evidence(
+                                phase,
+                                normal[name],
+                                min(opposed.values()),
+                                allow_precontact=config.get(
+                                    "precontact_support_alignment", False
+                                ),
+                            ),
+                            active=phase
+                            in config.get("feedback_phases", {}).get(
+                                name,
+                                ("lift", "support_approach", "support_seat", "hold")
+                                if name == "right"
+                                else ("support_seat", "hold"),
+                            ),
+                            support=name == "left",
+                            upward_force_n=upward,
+                            weight_n=float(model.body_mass[obj] * 9.81),
+                        )
+                    jp, jr = np.zeros((3, model.nv)), np.zeros((3, model.nv))
+                    mujoco.mj_jacBody(model, desired, jp, jr, body)
+                    target[indices] += joint_offset(
+                        np.vstack([jp, jr])[:, vids[indices]], correction
+                    )
+                    start += width
+                margin = audit["config"]["criteria"]["joint_margin_rad"]
+                target = np.clip(target, ranges[:, 0] + margin, ranges[:, 1] - margin)
+                delta = speed_limits * control_period
+                bounded = np.clip(
+                    target, previous_command - delta, previous_command + delta
+                )
+                feedback_rate_limited_steps += int(
+                    not np.allclose(target, bounded, atol=1e-12, rtol=0)
+                )
+                target = bounded
+            previous_command = target.copy()
+            velocity = (
+                (targets[i + 1] - targets[i]) / (times[i + 1] - times[i])
+                if config.get("velocity_feedforward", False)
+                else 0.0
+            )
+            if tracking:
+                target, velocity = tracking.update(
+                    target,
+                    data.qpos[qids],
+                    (targets[i + 1] - targets[i]) / (times[i + 1] - times[i]),
+                    data.actuator_force[aids],
+                    limits,
+                    control_period,
+                    active=parent["records"][i]["phase"]
+                    in config.get("tracking_phases", ["hold"]),
+                )
+                margin = audit["config"]["criteria"]["joint_margin_rad"]
+                target = np.clip(target, ranges[:, 0] + margin, ranges[:, 1] - margin)
+            inertial_torque = 0.0
+            if inertia_control:
+                mujoco.mj_fullM(model, mass_matrix, data.qM)
+                acceleration = (1 - alpha) * accelerations[i] + alpha * accelerations[
+                    i + 1
+                ]
+                inertial_torque = inertia_control.update(
+                    mass_matrix[np.ix_(vids, vids)],
+                    acceleration,
+                    control_period,
+                    active=parent["records"][i]["phase"]
+                    in config.get("tracking_phases", ["hold"]),
+                )
+            data.ctrl[aids] = bias_compensated_target(
+                target,
+                data.qfrc_bias[vids] + inertial_torque,
+                config["kp_nm_per_rad"],
+                target_velocity=velocity,
+                kd=config["kd_nm_s_per_rad"],
+            )
+            if live_fingers:
+                live_fingers.command(model, data, control_time, control_period)
+            else:
+                for src, dst in finger_pairs:
+                    data.ctrl[dst] = (
+                        saved["ctrl"][i, src] * (1 - alpha)
+                        + saved["ctrl"][i + 1, src] * alpha
+                    )
+            if trim:
+                forces = {"thumb": 0.0, trim.settings["contact_group"]: 0.0}
+                for cid, contact in enumerate(data.contact):
+                    pair = {int(contact.geom1), int(contact.geom2)}
+                    if pair & object_geoms and pair & hands["right"]:
+                        geom_name = (
+                            model.geom(next(iter(pair & hands["right"]))).name or ""
+                        )
                         force = np.zeros(6)
                         mujoco.mj_contactForce(model, data, cid, force)
-                        normal[name] += max(0, float(force[0]))
-                        if name == "left":
-                            upward += contact_wrench_on_body(model, data, cid, obj)[0][
-                                2
-                            ]
-                        else:
-                            geom_name = model.geom(next(iter(pair & geoms))).name or ""
-                            if "thumb" in geom_name:
-                                opposed["thumb"] += max(0, float(force[0]))
-                            elif any(
-                                g in geom_name
-                                for g in ("index", "middle", "ring", "pinky")
-                            ):
-                                opposed["fingers"] += max(0, float(force[0]))
-            mujoco.mj_kinematics(model, data)
-            desired.qpos[:] = data.qpos
-            desired.qpos[qids] = target
-            mujoco.mj_kinematics(model, desired)
-            mujoco.mj_comPos(model, desired)
-            actual_object = object_transform(model, data)
-            reference_object = reference_objects[i].copy()
-            reference_object[:3, 3] = (1 - alpha) * reference_objects[
-                i, :3, 3
-            ] + alpha * reference_objects[i + 1, :3, 3]
-            delta = Rotation.from_matrix(
-                reference_objects[i + 1, :3, :3] @ reference_objects[i, :3, :3].T
-            ).as_rotvec()
-            reference_object[:3, :3] = (
-                Rotation.from_rotvec(alpha * delta).as_matrix()
-                @ reference_objects[i, :3, :3]
-            )
-            phase = parent["records"][i]["phase"]
-            start = 0
-            for arm in arms:
-                name = arm["name"]
-                body = roots[name]
-                width = len(arm["joints"])
-                indices = slice(start, start + width)
-                pose = np.eye(4)
-                pose[:3, :3] = desired.xmat[body].reshape(3, 3)
-                pose[:3, 3] = desired.xpos[body]
-                if height_alignment:
-                    correction = np.zeros(6)
-                    if name == "left":
-                        correction[2] = height_alignment.update(
-                            phase,
-                            actual_object[:3, 3] - reference_object[:3, 3],
-                            min(opposed.values()),
-                            model.opt.timestep,
-                        )
-                else:
-                    correction = feedback.update(
-                        name,
-                        actual_object,
-                        reference_object,
-                        pose,
-                        model.opt.timestep,
-                        contact_n=min(opposed.values())
-                        if name == "right"
-                        else support_contact_evidence(
-                            phase,
-                            normal[name],
-                            min(opposed.values()),
-                            allow_precontact=config.get(
-                                "precontact_support_alignment", False
-                            ),
-                        ),
-                        active=phase
-                        in config.get("feedback_phases", {}).get(
-                            name,
-                            ("lift", "support_approach", "support_seat", "hold")
-                            if name == "right"
-                            else ("support_seat", "hold"),
-                        ),
-                        support=name == "left",
-                        upward_force_n=upward,
-                        weight_n=float(model.body_mass[obj] * 9.81),
-                    )
-                jp, jr = np.zeros((3, model.nv)), np.zeros((3, model.nv))
-                mujoco.mj_jacBody(model, desired, jp, jr, body)
-                target[indices] += joint_offset(
-                    np.vstack([jp, jr])[:, vids[indices]], correction
+                        for group in forces:
+                            if group in geom_name:
+                                forces[group] += max(0, float(force[0]))
+                source, following = parent["records"][i : i + 2]
+                active = (
+                    source["phase"] == "hold"
+                    and "reference_position_m" in source
+                    and "reference_position_m" in following
                 )
-                start += width
-            margin = audit["config"]["criteria"]["joint_margin_rad"]
-            target = np.clip(target, ranges[:, 0] + margin, ranges[:, 1] - margin)
-            delta = speed_limits * model.opt.timestep
-            bounded = np.clip(
-                target, previous_command - delta, previous_command + delta
-            )
-            feedback_rate_limited_steps += int(
-                not np.allclose(target, bounded, atol=1e-12, rtol=0)
-            )
-            target = bounded
-        previous_command = target.copy()
-        velocity = (
-            (targets[i + 1] - targets[i]) / (times[i + 1] - times[i])
-            if config.get("velocity_feedforward", False)
-            else 0.0
-        )
-        if tracking:
-            target, velocity = tracking.update(
-                target,
-                data.qpos[qids],
-                (targets[i + 1] - targets[i]) / (times[i + 1] - times[i]),
-                data.actuator_force[aids],
-                limits,
-                model.opt.timestep,
-                active=parent["records"][i]["phase"]
-                in config.get("tracking_phases", ["hold"]),
-            )
-            margin = audit["config"]["criteria"]["joint_margin_rad"]
-            target = np.clip(target, ranges[:, 0] + margin, ranges[:, 1] - margin)
-        inertial_torque = 0.0
-        if inertia_control:
-            mujoco.mj_fullM(model, mass_matrix, data.qM)
-            acceleration = (1 - alpha) * accelerations[i] + alpha * accelerations[i + 1]
-            inertial_torque = inertia_control.update(
-                mass_matrix[np.ix_(vids, vids)],
-                acceleration,
-                model.opt.timestep,
-                active=parent["records"][i]["phase"]
-                in config.get("tracking_phases", ["hold"]),
-            )
-        data.ctrl[aids] = bias_compensated_target(
-            target,
-            data.qfrc_bias[vids] + inertial_torque,
-            config["kp_nm_per_rad"],
-            target_velocity=velocity,
-            kd=config["kd_nm_s_per_rad"],
-        )
-        for src, dst in finger_pairs:
-            data.ctrl[dst] = (
-                saved["ctrl"][i, src] * (1 - alpha) + saved["ctrl"][i + 1, src] * alpha
-            )
-        if trim:
-            forces = {"thumb": 0.0, trim.settings["contact_group"]: 0.0}
-            for cid, contact in enumerate(data.contact):
-                pair = {int(contact.geom1), int(contact.geom2)}
-                if pair & object_geoms and pair & hands["right"]:
-                    geom_name = model.geom(next(iter(pair & hands["right"]))).name or ""
-                    force = np.zeros(6)
-                    mujoco.mj_contactForce(model, data, cid, force)
-                    for group in forces:
-                        if group in geom_name:
-                            forces[group] += max(0, float(force[0]))
-            source, following = parent["records"][i : i + 2]
-            active = (
-                source["phase"] == "hold"
-                and "reference_position_m" in source
-                and "reference_position_m" in following
-            )
-            error = 0.0
-            if active:
-                goal = (1 - alpha) * np.asarray(
-                    source["reference_position_m"]
-                ) + alpha * np.asarray(following["reference_position_m"])
-                error = float(np.linalg.norm(data.xpos[obj] - goal))
-            data.ctrl[trim_ids] = trim.target(
-                data.ctrl[trim_ids],
-                force_n=forces[trim.settings["contact_group"]],
-                anchor_force_n=forces["thumb"],
-                reference_error_m=error,
-                active=active,
-                dt=model.opt.timestep,
-            )
+                error = 0.0
+                if active:
+                    goal = (1 - alpha) * np.asarray(
+                        source["reference_position_m"]
+                    ) + alpha * np.asarray(following["reference_position_m"])
+                    error = float(np.linalg.norm(data.xpos[obj] - goal))
+                data.ctrl[trim_ids] = trim.target(
+                    data.ctrl[trim_ids],
+                    force_n=forces[trim.settings["contact_group"]],
+                    anchor_force_n=forces["thumb"],
+                    reference_error_m=error,
+                    active=active,
+                    dt=control_period,
+                )
         before_step_time = float(data.time)
         mujoco.mj_step(model, data)
         steps += 1
@@ -616,6 +679,8 @@ def run(config):
                 record["tracking_compensation"] = tracking.diagnostics()
             if trim:
                 record["finger_contact_trim"] = trim.diagnostics()
+            if live_fingers:
+                record.update(live_fingers.diagnostics())
             if height_alignment:
                 record["support_height_alignment"] = height_alignment.diagnostics()
             if feedback:
@@ -676,6 +741,13 @@ def run(config):
     )
     report = dict(
         schema="real2sim2real.arm-replay-pilot/1",
+        finger_control_mode=finger_mode,
+        controller_period_s=control_period,
+        controller_updates=control_updates,
+        physics_timestep_s=float(model.opt.timestep),
+        fixed_controller_clock=config.get("control_period_s") is not None,
+        live_finger_source_hashes=live_fingers.source_hashes if live_fingers else None,
+        live_finger_feedback_final=live_fingers.diagnostics() if live_fingers else None,
         config=config,
         records=records,
         **metrics,

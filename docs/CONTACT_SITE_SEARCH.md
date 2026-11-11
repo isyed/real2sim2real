@@ -67,6 +67,29 @@ Tests cover repeatable sampling, face eligibility, separation of discovery from
 validation, opposite sheet faces, empty shortlists, upward-force signs, provenance,
 deduplication and exclusion of held-out failures from force screening.
 
+## Opposing body or handle-root regions
+
+`sampling_mode: regions` declares two to four disjoint `surface_regions`. Each
+gives a unique `name`, rigid `world_from_region`, local `minimum_m`/`maximum_m`
+box coordinates, unit local `normal_direction`, `minimum_normal_cosine` and
+`maximum_abs_vertical_normal` in the upright task world. Boxes span at most
+0.5 m per axis. These are explicit geometry hypotheses, not semantic detections
+or measured normals. A mesh-derived center of mass is also an assumption.
+
+Sampling allocates the declared count equally to regions, retaining face IDs and
+region labels. Overlapping regions, insufficient source faces or empty regions
+cannot silently fall back to other object surfaces. Discovery and separate-frame
+validation keep the original thresholds. Reports include regional face counts
+and which regions have supported points. Pair screening uses different regions;
+point support on both sides still does not validate finite pad area or access.
+
+`support_arrangement` optionally accepts `center_of_mass_offsets_m`: up to 27
+distinct metric hypotheses within 50 mm, starting at zero. It repeats the same
+gravity-wrench calculation with fixed mass, friction and site force ceilings.
+This is sensitivity of an assumed scene; it neither changes the source COM nor
+verifies geometry. A sufficient optimistic upward bound can coexist with failed
+joint force/torque balance. Such a failure does not justify fitting both hands.
+
 ## Opening-wall expansion alternatives
 
 `surface_support_search` also accepts `sampling_mode: inner_wall`. It requires a

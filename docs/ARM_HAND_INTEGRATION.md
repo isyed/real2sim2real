@@ -43,6 +43,52 @@ explicit so a change of embodiment remains reviewable.
   measurements as unavailable, and lists differing controller settings. Its HTML
   links to the individual videos where present; it never reruns physics.
 
+## Live finger pressure on assembled arms
+
+`arm_replay_pilot.finger_control_mode` defaults to `archived`, preserving saved
+finger-command transfer. Explicit `live_contact_force` binds the admitted
+simultaneous bilateral pad-pressure rule to assembled hands through
+`arm_finger_feedback`. Both modes use audited arm paths. Replay and live feedback
+are separate experiments, labeled in results and reviews.
+
+The live adapter reconstructs uncorrected pregrasp/open/closed finger waypoints
+on the original approach/closing clock. It does not add feedback on top of saved
+pressure corrections. Per-pad control responds to actual solved forces and
+supported-load estimates. Original support-hand bias compensation still acts
+through bounded position actuators. Only existing finger actuators are written;
+source plan/settling hashes are recorded. Arm/object states and native limits
+remain outside this adapter's ownership.
+
+The binding requires an unchanged admitted simultaneous pad plan and the source
+pressure settings. It rejects posture-transition controllers, unplanned closing
+variants and a separate finger-trim owner. These need their own adapters and
+admission. Simulator forces/acceleration remain privileged observations.
+
+A declared nominal feasibility experiment may transfer a passing nominal grasp
+to screened arms while broader payload robustness remains unresolved. Preserve
+that scope and all failed robustness cases. Nominal diagnostic success does not
+admit global control readiness, hardware execution or substantial policy training.
+Repeat the appropriate matrix after selecting an arm/controller setup.
+
+## Separate physics resolution from controller frequency
+
+By default the outer arm/finger controller updates on every physics step.
+Changing `timestep_s` changes both numerical integration and feedback frequency.
+Identical gains alone do not make this a pure integration study.
+
+Optional `control_period_s` holds the outer command between updates. It must be
+an exact integer multiple of the physics step and at most 10 ms. For example,
+1 ms control uses four 0.25 ms steps or eight 0.125 ms steps per update. A fixed
+controller clock uses the same scheduled reference times and passes the declared
+period to pressure filters, rate bounds and tracking compensators. MuJoCo's
+implicit motor/contact dynamics still integrate on each physics step.
+
+Results record both periods and update counts. Comparisons expose differences
+explicitly. An absent setting preserves the legacy path; verify its state archive
+after shared-runner changes. Test convergence using a fixed outer period, then
+evaluate controller frequency separately. Do not select only a numerical setting
+that happens to pass a narrow gate.
+
 ## Configuration boundaries
 
 `assembly.arms` declares the MJCF path, namespace, source hand root, removed fixture

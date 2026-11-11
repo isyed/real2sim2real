@@ -150,3 +150,103 @@ def inner_wall_faces(
         & (abs(normals[:, 2]) <= maximum_abs_vertical_normal)
         & (cosine >= minimum_inward_cosine)
     )
+
+
+def region_masks(mesh, world_from_object, regions):
+    """Disjoint bounded surface regions with explicit normal hypotheses.
+
+    Region boxes and normal directions are geometric proposals in declared rigid
+    frames. Neither their normals nor the model COM are camera measurements.
+    """
+    world = np.asarray(world_from_object, float)
+
+    def rigid(pose):
+        return (
+            pose.shape == (4, 4)
+            and np.isfinite(pose).all()
+            and np.allclose(pose[3], [0, 0, 0, 1])
+            and np.allclose(pose[:3, :3].T @ pose[:3, :3], np.eye(3), atol=1e-6)
+            and np.isclose(np.linalg.det(pose[:3, :3]), 1)
+        )
+
+    if not rigid(world) or not 2 <= len(regions) <= 4:
+        raise ValueError("Two to four regions in a rigid metric world required")
+    points = mesh.triangles_center @ world[:3, :3].T + world[:3, 3]
+    normals = mesh.face_normals @ world[:3, :3].T
+    masks = {}
+    for region in regions:
+        if set(region) != {
+            "name",
+            "world_from_region",
+            "minimum_m",
+            "maximum_m",
+            "normal_direction",
+            "minimum_normal_cosine",
+            "maximum_abs_vertical_normal",
+        }:
+            raise ValueError(
+                "Explicit region frame, bounds and normal hypotheses required"
+            )
+        pose = np.asarray(region["world_from_region"], float)
+        lo, hi, direction = [
+            np.asarray(region[k], float)
+            for k in ("minimum_m", "maximum_m", "normal_direction")
+        ]
+        cosine, vertical = (
+            region["minimum_normal_cosine"],
+            region["maximum_abs_vertical_normal"],
+        )
+        name = region["name"]
+        if (
+            not isinstance(name, str)
+            or not name
+            or name in masks
+            or not rigid(pose)
+            or any(
+                v.shape != (3,) or not np.isfinite(v).all() for v in (lo, hi, direction)
+            )
+            or np.any(lo >= hi)
+            or np.max(hi - lo) > 0.5
+            or not np.isclose(np.linalg.norm(direction), 1)
+            or not np.isfinite([cosine, vertical]).all()
+            or not 0 < cosine <= 1
+            or not 0 <= vertical < 1
+        ):
+            raise ValueError(
+                "Distinct bounded region boxes and unit normal directions required"
+            )
+        local = (points - pose[:3, 3]) @ pose[:3, :3]
+        local_normals = normals @ pose[:3, :3]
+        mask = (
+            np.all((local >= lo) & (local <= hi), axis=1)
+            & (local_normals @ direction >= cosine)
+            & (abs(normals[:, 2]) <= vertical)
+        )
+        if any(np.any(mask & previous) for previous in masks.values()):
+            raise ValueError("Surface region hypotheses must be disjoint")
+        masks[name] = mask
+    return masks
+
+
+def sample_regions(
+    mesh, world_from_object, regions, *, count=192, normal_distance_m=0.01
+):
+    masks = region_masks(mesh, world_from_object, regions)
+    if (
+        type(count) is not int
+        or not 2 * len(regions) <= count <= 512
+        or count % len(regions)
+    ):
+        raise ValueError("Equal bounded sample allocation per region required")
+    sites = []
+    for name, mask in masks.items():
+        selected = sample_sites(
+            mesh,
+            count=count // len(regions),
+            normal_distance_m=normal_distance_m,
+            eligible_faces=mask,
+        )
+        for site in selected:
+            site.update(site_id=len(sites), region=name)
+            sites.append(site)
+    return sites

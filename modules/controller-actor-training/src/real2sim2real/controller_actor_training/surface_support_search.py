@@ -88,7 +88,7 @@ def search(config):
     world_from_object = np.asarray(plan["settling"]["settled_world_from_object"])
     physics = plan["candidates"][0]["pad_plan"]["point_wrench_baseline"]
     mode = config.get("sampling_mode", "whole_surface")
-    if mode not in ["whole_surface", "upward_force", "inner_wall"]:
+    if mode not in ["whole_surface", "upward_force", "inner_wall", "regions"]:
         raise ValueError("Unknown surface sampling mode")
     capacity = contact_site_search.upward_force_capacity(
         mesh.face_normals @ world_from_object[:3, :3].T, physics["friction"]
@@ -112,9 +112,19 @@ def search(config):
             opening["openings"][index]["center_xy_m"],
             **region["parameters"],
         )
-    sites = contact_site_search.sample_sites(
-        mesh, eligible_faces=eligible, **config["sampling"]
-    )
+    region_counts = None
+    if mode == "regions":
+        region_masks = contact_site_search.region_masks(
+            mesh, world_from_object, config["surface_regions"]
+        )
+        region_counts = {name: int(mask.sum()) for name, mask in region_masks.items()}
+        sites = contact_site_search.sample_regions(
+            mesh, world_from_object, config["surface_regions"], **config["sampling"]
+        )
+    else:
+        sites = contact_site_search.sample_sites(
+            mesh, eligible_faces=eligible, **config["sampling"]
+        )
     points = np.array([s["point_object_m"] for s in sites])
     normals = np.array([s["normal_object"] for s in sites])
     out = Path(config["output"])
@@ -285,6 +295,8 @@ def search(config):
         raise ValueError("Plan assumptions differ across candidates")
     pairs = []
     for a, b in combinations(supported, 2):
+        if mode == "regions" and sites[a]["region"] == sites[b]["region"]:
+            continue
         if np.linalg.norm(wp[a] - wp[b]) < config["shortlist"]["minimum_spacing_m"]:
             continue
         pairs.append(
@@ -318,6 +330,16 @@ def search(config):
         config=config,
         sites=records,
         supported_site_ids=supported,
+        region_face_counts=region_counts,
+        supported_regions=sorted({sites[i]["region"] for i in supported})
+        if mode == "regions"
+        else None,
+        all_declared_regions_supported=(
+            len({sites[i]["region"] for i in supported})
+            == len(config["surface_regions"])
+        )
+        if mode == "regions"
+        else None,
         pairs=pairs,
         shortlist_sha256=digest(out / "shortlist.json"),
         source_hashes=hashes,

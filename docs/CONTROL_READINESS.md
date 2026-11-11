@@ -36,7 +36,7 @@ The useful dependency graph is:
 
 ```mermaid
 flowchart TD
-    A[Evidence-supported hand fit] --> B[Full-hand insertion and closure checks]
+    A[Hand fit and explicit contact-evidence assessment] --> B[Full-hand insertion and closure checks]
     B --> C[Fixture acquisition and stationary hold]
     B --> D[Arm assembly and complete coordinated IK/path audit]
     C --> E[Arm-mounted acquisition and stationary hold]
@@ -49,6 +49,13 @@ flowchart TD
 C and D can be ordered to control experiment cost. A fixture study may omit D
 while diagnosing contact mechanics, but it cannot claim arm feasibility. A new
 arm-mounted candidate requires D even if an earlier grasp had reachable arms.
+
+Evidence assessment must distinguish observed agreement, observed disagreement
+and unavailable visibility. Hidden contacts do not become verified because a
+mesh is watertight or a simulated hold passes. They also do not automatically
+prohibit a bounded, explicitly hypothesis-based simulator diagnostic. Such a
+diagnostic cannot establish physical geometry or hardware readiness. Preserve
+the uncertainty and test sensitivity before drawing broader conclusions.
 
 ## What a hold must measure
 
@@ -74,6 +81,8 @@ criteria in the continuous test.
 | --- | --- | --- |
 | Hand/contact fitting | `bilateral_grasp`, `pad_contacts`, `bearing_support_plan` | Native joints, real collision pads; reconstructed surfaces do not certify observations |
 | Insertion/closure | `pad_grasp_planning.path_audit`, `arm_finger_plan.path_screen` | Sampled complete-hand and assembled-arm checks, not continuous collision certification |
+| Replacement support acquisition | `paired_acquisition_audit` | Pinned retained primary plus replacement support, both moving; native ownership, setup-state preservation, paired path and finite-patch balance |
+| Saved contact evidence | `paired_contact_review` | Calibrated RGB/mask/depth and mesh self-occlusion review; contact centres, not independent finite-patch validation |
 | Fixture hold | `object_grasp_pilot`, `bilateral_evaluate` | Free-object dynamics; force-control promotion pins a complete passing stationary fixture trial |
 | Full arm fitting | `arm_hand_assembly`, `arm_path_audit` | Source/mount identity, FK, sampled speed, joint margin and collision checks |
 | Arm-mounted hold | `arm_replay_pilot` with `stationary_hold` | Actual simulated arm response, complete acquisition and declared hold |
@@ -113,3 +122,30 @@ uses the preserving mode and asserts primary/object state before fitting.
 Stage snapshots and source hashes identify which behavior produced an artifact.
 A rejected preflight produced with an incorrect state transfer is superseded by
 a corrected repeat, not silently relabeled as a successful controller.
+
+## Avoid losing or misapplying earlier progress
+
+Keep a scoped evidence ledger containing result and state hashes, contact plan,
+embodiment, acquisition clock, retention anchor, physics/controller periods and
+reference horizon. Preserve partial successes explicitly: a release pass remains
+a release pass even if retention fails; a passing short motion is not a passing
+full episode. Changing the protocol does not retrospectively invalidate a result
+under its original protocol, but does require a new matched test.
+
+Before a replacement support proceeds, test both hands moving together. A clear
+support path against an already closed primary can miss a collision during
+simultaneous approach. `paired_acquisition_audit` checks the native joint-linear
+pregrasp/open/closed path without refitting either hand or changing the object.
+It does not certify a different thumb-first schedule, actuator tracking or a
+continuous collision-free path. Any later rebasing or timing-dependent finger
+schedule needs its own actual command-path check.
+
+After that check, a new fixture hold is a targeted comparison for the changed
+contacts, not a restart of all prior experiments. Bind the admitted geometry to
+the intended acquisition commands and retain declared drift anchors, duration,
+physical assumptions and limits. A legacy staged fixture test must not silently
+stand in for continuous capture timing. Perform fresh arm-path admission and an
+arm-mounted hold before promoting the new grasp to continuous motion. Keep the
+final reference free of diagnostic pauses and revalidate return/release when
+contacts or wrist orientation change. Do not repeat an entire old robustness
+matrix until the new nominal candidate merits it.

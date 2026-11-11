@@ -129,6 +129,7 @@ def validate_settings(settings):
         "posture_transition",
         "contact_anchor",
         "loaded_tangent_gap_m",
+        "unloaded_acquisition",
     }
     if (set(settings) - optional) != required or set(settings["target_force_n"]) != {
         "thumb",
@@ -162,6 +163,10 @@ def validate_settings(settings):
         from .payload_pressure import validate_settings as validate_payload
 
         validate_payload(settings["payload_adaptation"])
+    if "unloaded_acquisition" in settings:
+        from .finger_acquisition import validate
+
+        validate(settings["unloaded_acquisition"], settings["close_activation_fraction"])
     if "posture_transition" in settings:
         from .payload_posture import validate_settings as validate_posture
 
@@ -432,7 +437,7 @@ class BilateralContactForce:
             )
 
     def target(self, model, data, nominal, *, active, dt, retention_active=False,
-               pressure_offsets=None):
+               pressure_offsets=None, acquisition_active=False):
         import mujoco
 
         if pressure_offsets is not None:
@@ -451,6 +456,8 @@ class BilateralContactForce:
         observations = object_pad_observations(
             model, data, self.object_id, [p["gid"] for p in self.pads]
         )
+        if acquisition_active and "unloaded_acquisition" not in self.settings:
+            raise ValueError("Earlier pad activation requires explicit acquisition settings")
         if self.payload:
             from .support_control import contact_wrench_on_body
 
@@ -510,6 +517,16 @@ class BilateralContactForce:
             normal_gap = float(error @ normal)
             tangent_gap = float(np.linalg.norm(error - normal_gap * normal))
             observation = observations[pad["gid"]]
+            seek = False
+            if "unloaded_acquisition" in self.settings:
+                from .finger_acquisition import seeking
+
+                seek = seeking(
+                    pad, observation["force_n"],
+                    active=acquisition_active,
+                    threshold_n=self.settings.get("minimum_observed_force_n", 0.1),
+                )
+                pad["acquisition_seeking"] = seek
             pad.update(
                 force=observation["force_n"],
                 normal_gap=normal_gap,
@@ -537,7 +554,8 @@ class BilateralContactForce:
             if observed:
                 p = observation["point_world_m"]
                 normal = observation["outward_normal_world"]
-            valid = active and (
+            pad_active = active or (acquisition_active and pad["group"] != "thumb")
+            valid = pad_active and (
                 observed
                 or contact_geometry_allowed(
                     normal_gap, tangent_gap, pad["force"], self.settings
@@ -585,6 +603,12 @@ class BilateralContactForce:
                             self.settings["max_tangent_speed_m_s"],
                         ),
                     )
+                rates = self.settings
+                if seek:
+                    rates = dict(self.settings, **{
+                        k: self.settings["unloaded_acquisition"][k]
+                        for k in ("gain_m_per_n_s", "max_normal_speed_m_s")
+                    })
                 command, offset = normal_force_step(
                     q,
                     pad["offset"],
@@ -593,13 +617,13 @@ class BilateralContactForce:
                     goal_n,
                     dt,
                     pad["limits"],
-                    self.settings,
+                    rates,
                     **tangent,
                 )
                 output[ids] = command
                 pad["offset"] = offset
                 pad["updated"] += 1
-            elif active:
+            elif pad_active:
                 output[ids] = np.clip(q + pad["offset"], *pad["limits"].T)
                 pad["offset"] = output[ids] - q
                 pad["frozen"] += 1
@@ -630,6 +654,10 @@ class BilateralContactForce:
                     updated_steps=p["updated"],
                     frozen_steps=p["frozen"],
                     loaded_continuation_steps=p["loaded_continuation"],
+                    **(dict(
+                        acquisition_contact_seen=p.get("acquisition_contact_seen", False),
+                        acquisition_seeking=p.get("acquisition_seeking", False),
+                    ) if "unloaded_acquisition" in self.settings else {}),
                 )
                 for p in self.pads
             },

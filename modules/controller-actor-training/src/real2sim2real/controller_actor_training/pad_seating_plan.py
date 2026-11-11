@@ -14,6 +14,53 @@ import numpy as np
 from real2sim2real.artifacts import digest, write_json
 
 
+def nonpad_chain_geoms(model, pad):
+    """Collidable geoms on this finger's controlled joint bodies, excluding its pad."""
+    bodies = set(int(model.jnt_bodyid[int(model.dof_jntid[d])]) for d in pad["dofs"])
+    return [
+        g
+        for g in range(model.ngeom)
+        if int(model.geom_bodyid[g]) in bodies
+        and g != pad["gid"]
+        and (model.geom_contype[g] or model.geom_conaffinity[g])
+    ]
+
+
+def nonpad_clearance_passes(rows, clearance):
+    return bool(rows) and all(
+        np.isfinite(r["gap_m"])
+        and r["gap_m"] >= clearance - 0.0001
+        and (
+            r.get("distance_is_lower_bound", False)
+            or (
+                np.isfinite(r["witness_distance_error_m"])
+                and r["witness_distance_error_m"] <= 0.00001
+            )
+        )
+        for r in rows
+    )
+
+
+def contact_witness(data, geom, objects, cutoff):
+    """Signed near-contact witness, pad first, from a position-only margin query.
+
+    No pair within the declared margin means a censored lower bound, not a
+    measured zero distance. Query margins must cover the requested cutoff.
+    """
+    choices = []
+    for c in data.contact:
+        if c.geom1 == geom and c.geom2 in objects:
+            sign = 1
+        elif c.geom2 == geom and c.geom1 in objects:
+            sign = -1
+        else:
+            continue
+        normal = sign * np.asarray(c.frame).reshape(3, 3)[0]
+        delta = 0.5 * float(c.dist) * normal
+        choices.append((float(c.dist), np.r_[c.pos - delta, c.pos + delta]))
+    return min(choices, key=lambda v: v[0]) if choices else (cutoff, np.zeros(6))
+
+
 def bind(live, model, spec):
     if set(spec) - {"close_fraction"} != {"path", "sha256"}:
         raise ValueError("Pinned seating proposal required")
@@ -108,6 +155,13 @@ def run(config):
         and 1 <= config["maximum_evaluations"] <= 150
     ):
         raise ValueError("Seating is bounded to 0.35 rad and <=0.5 mm compression")
+    nonpad_clearance = config.get("nonpad_clearance_m")
+    if nonpad_clearance is not None and (
+        isinstance(nonpad_clearance, bool)
+        or not np.isfinite(nonpad_clearance)
+        or not 0.0005 <= nonpad_clearance <= 0.003
+    ):
+        raise ValueError("Non-pad finger clearance must be 0.5–3 mm")
     audit_path = Path(source["config"]["audit"])
     if digest(audit_path) != source["config"]["audit_sha256"]:
         raise ValueError("Pinned arm audit changed")
@@ -150,6 +204,14 @@ def run(config):
     transform[:3, 3] = position
     world_mesh.apply_transform(transform)
     selected = [p for p in live.servo.pads if p["group"] != "thumb"]
+    if nonpad_clearance is not None:
+        query_geoms = set().union(
+            *(set(nonpad_chain_geoms(model, p)) | {p["gid"]} for p in selected)
+        )
+        # Position-only query model; never saved or exported into dynamics.
+        model.geom_margin[list(query_geoms)] = np.maximum(
+            model.geom_margin[list(query_geoms)], 0.03
+        )
     reports = []
     for pad in selected:
         ids = pad["qids"]
@@ -157,22 +219,38 @@ def run(config):
         seed = data.qpos[ids].copy()
         lo = np.maximum(limits[:, 0], seed - config["maximum_joint_change_rad"])
         hi = np.minimum(limits[:, 1], seed + config["maximum_joint_change_rad"])
+        nonpads = nonpad_chain_geoms(model, pad) if nonpad_clearance is not None else []
 
-        def witness(q):
-            data.qpos[ids] = q
-            mujoco.mj_kinematics(model, data)
+        def object_distance(gid):
+            if nonpad_clearance is not None:
+                return contact_witness(data, gid, set(object_geoms), 0.03)
             choices = []
             for g in object_geoms:
                 segment = np.zeros(6)
-                distance = mujoco.mj_geomDistance(
-                    model, data, pad["gid"], g, 0.03, segment
-                )
+                distance = mujoco.mj_geomDistance(model, data, gid, g, 0.03, segment)
                 choices.append((float(distance), segment.copy()))
             return min(choices, key=lambda v: v[0])
 
+        def witness(q):
+            data.qpos[ids] = q
+            if nonpad_clearance is not None:
+                mujoco.mj_fwdPosition(model, data)
+            else:
+                mujoco.mj_kinematics(model, data)
+            return object_distance(pad["gid"])
+
         def residual(q):
             distance, _ = witness(q)
-            return np.r_[distance - config["target_gap_m"], 0.0002 * (q - seed)]
+            base = np.r_[distance - config["target_gap_m"], 0.0002 * (q - seed)]
+            if nonpad_clearance is not None:
+                return np.r_[
+                    base,
+                    [
+                        10 * max(0, nonpad_clearance - object_distance(g)[0])
+                        for g in nonpads
+                    ],
+                ]
+            return base
 
         before, _ = witness(seed)
         fit = least_squares(
@@ -186,6 +264,22 @@ def run(config):
             gtol=1e-10,
         )
         after, segment = witness(fit.x)
+        nonpad_rows = []
+        for g in nonpads:
+            gap, points = object_distance(g)
+            censored = bool(gap == 0.03 and not np.any(points))
+            nonpad_rows.append(
+                dict(
+                    geom_id=g,
+                    geom=model.geom(g).name,
+                    body=model.body(int(model.geom_bodyid[g])).name,
+                    gap_m=gap,
+                    distance_is_lower_bound=censored,
+                    witness_distance_error_m=None
+                    if censored
+                    else abs(abs(gap) - float(np.linalg.norm(points[:3] - points[3:]))),
+                )
+            )
         near, gap, faces = trimesh.proximity.closest_point(world_mesh, [segment[3:]])
         body_rotation = data.xmat[pad["body"]].reshape(3, 3)
         reports.append(
@@ -209,6 +303,16 @@ def run(config):
                 point_object_m=(rotation.T @ (near[0] - position)).tolist(),
                 normal_object=(rotation.T @ world_mesh.face_normals[faces[0]]).tolist(),
                 evaluations=int(fit.nfev),
+                **(
+                    dict(
+                        nonpad_geoms=nonpad_rows,
+                        nonpad_clearance_accepted=nonpad_clearance_passes(
+                            nonpad_rows, nonpad_clearance
+                        ),
+                    )
+                    if nonpad_clearance is not None
+                    else {}
+                ),
             )
         )
     mujoco.mj_fwdPosition(model, data)
@@ -231,6 +335,7 @@ def run(config):
             abs(p["gap_after_m"] - config["target_gap_m"]) <= 0.001
             and p["source_mesh_projection_m"] <= 0.003
             and p["witness_distance_error_m"] <= 0.00001
+            and p.get("nonpad_clearance_accepted", True)
             for p in reports
         )
         and penetration <= 0.003
@@ -251,6 +356,14 @@ def run(config):
         wrists_and_thumbs_frozen=True,
         physical_retention_validated=False,
         independent_contact_observations=False,
+        **(
+            dict(
+                geometry_queries="position-only contact-margin queries; margins are not exported to dynamics",
+                query_margin_m=0.03,
+            )
+            if nonpad_clearance is not None
+            else {}
+        ),
         implementation_sha256=digest(out / "pad_seating_plan.py"),
     )
     write_json(out / "plan.json", report)

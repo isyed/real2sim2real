@@ -395,6 +395,22 @@ normal gaps before lift, or wrist tracking active only after lift can explain la
 drift. Compare coherent contact force with requested pressure and preserve existing
 force, joint and collision budgets when changing approach/closure response rates.
 
+Separate unloaded opposing-pad acquisition from loaded pressure regulation. A
+brief first touch can disappear before lift; an acquisition latch is not a stable
+contact certificate. Faster finger seeking can load pads earlier while increasing
+force on proximal links, so retain per-pad and other-link contact diagnostics and
+require the complete stationary gates before motion. When endpoint pad fitting
+does not survive compliance, include non-pad finger clearance in the geometric
+proposal, then test the resulting commands in actual dynamics.
+
+Audit saved position-motor effort, including damping and native clipping, before
+attributing posture lag to torque saturation. Tracking error under compliant low
+stiffness can occur far below the force ceiling. Preserve the original actuator
+parameters; a diagnostic should not silently stiffen the hand. Mesh distance
+queries with inconsistent witnesses must not enter contact admission. Near-contact
+margin queries are a separate planning model, and missing pairs are distance lower
+bounds rather than exact zero-distance observations.
+
 Measure correction authority with small signed pressure changes and thumb/finger
 redistribution before training an actor. Higher force targets can change object
 rotation, rolling and the other hand's load; they do not guarantee less grasp

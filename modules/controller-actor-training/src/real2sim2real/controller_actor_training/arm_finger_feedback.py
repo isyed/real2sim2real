@@ -23,6 +23,7 @@ def feedback_settings(original, overrides=None):
         "close_activation_fraction",
         "gain_m_per_n_s",
         "max_normal_speed_m_s",
+        "unloaded_acquisition",
     }:
         raise ValueError(
             "Arm feedback overrides may change observations, seating rate or retention rules only"
@@ -221,6 +222,12 @@ class ArmFingerFeedback:
             + self.settings["close_activation_fraction"] * self.rollout["close_s"]
         )
         extra = {}
+        if "unloaded_acquisition" in self.settings:
+            from .finger_acquisition import active
+
+            extra["acquisition_active"] = active(
+                time, self.rollout, self.settings["unloaded_acquisition"]
+            )
         if pressure_offsets is not None:
             extra["pressure_offsets"] = pressure_offsets
         if self.settings.get("contact_anchor"):
@@ -245,6 +252,8 @@ class ArmFingerFeedback:
                 data.qpos[self.qids],
                 **table_observation,
             )
+        if opening is not None and "acquisition_active" in extra:
+            extra["acquisition_active"] = False
         target = self.servo.target(
             model,
             data,

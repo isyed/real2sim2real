@@ -157,6 +157,9 @@ def compare(paths, output):
         "precontact_support_alignment",
         "support_height_alignment",
         "tracking_phases",
+        "object_feedback",
+        "feedback_phases",
+        "finger_feedback_override",
         *defaults,
     )
     differing = [

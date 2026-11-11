@@ -303,3 +303,22 @@ integration study. Similar gains, video speed and target poses do not establish
 identical discrete control. Retain numerical failures rather than promoting a
 single passing setting. Including all capture object poses after an independent
 grasp is distinct from executing the original acquisition and release.
+
+
+### Contact retention and finite surface evidence
+
+Keep outer feedback frequency fixed when comparing contact integration settings.
+Record coherent contact motion on separate simulator data so instrumentation does
+not perturb the controller. A pad may retain contact while sliding; a controller
+may freeze because its planned material point differs from that solved contact.
+Check both before raising pressure. Observed-normal or tangential-anchor changes
+can worsen retention and object rotation; evaluate them separately and preserve
+rejections. A loaded-pad continuation guard must retain normal distance and
+native force/joint bounds, and must not chase an unloaded pad.
+
+Stereo support at isolated contact points does not verify finite pad coverage or
+surface normals. Test local observed metric neighborhoods and repeated-view
+consistency. Reject noisy/partial patches without replacing the input geometry.
+Original reconstructed point height, a settled model height and verified insertion
+clearance are different quantities. Additional views or measurements are justified
+when the existing calibrated streams cannot resolve thickness or a bearing patch.

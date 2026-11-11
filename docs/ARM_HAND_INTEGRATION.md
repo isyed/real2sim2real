@@ -312,3 +312,54 @@ support approach against the finite table and the observed pose range. If access
 is insufficient, revisit the preparatory grasp/lift sequence and re-audit its
 reference anchoring. Do not treat small online offsets as a substitute for a
 collision-checked insertion path or relax contact gates to accept pose tracking.
+
+
+## Diagnose retained contacts at a declared feedback rate
+
+Optional `contact_patch_motion` adds named pad-force, tangential material-velocity,
+rolling-compatible angular-motion and patch-centroid telemetry to live arm runs.
+The runner copies saved qpos/qvel/ctrl/act and the solver warmstart into a separate
+MuJoCo data object and calls forward dynamics there. Re-solved contacts never
+feed the live controller or its warmstart. Saved qvel is included only when this
+instrumentation is requested. Verify qpos/ctrl/timestamps against a pinned run;
+a different telemetry archive hash alone does not imply changed physics.
+
+The sampled telemetry is not a continuous slip trace. `arm_retention_audit` reuses
+acquisition diagnostics, separates early/late hold windows and plots actual object
+motion in each measured wrist frame. It retains source verdicts and their original
+acceptance anchors. Coherent sampled forces and the preceding outer controller's
+force observations remain separately labeled. Centroid migration can include
+contact switching or rolling and must not be called material slip.
+
+```bash
+python -m real2sim2real.controller_actor_training.arm_retention_audit --results /private/run/result.json --output /private/retention-audit
+```
+
+Explicit `finger_feedback_override` admits only normal observation/threshold,
+`contact_anchor` and `loaded_tangent_gap_m` changes. It cannot raise force targets,
+joint offsets, native actuator limits or acceptance thresholds. Resolved settings
+and source plan hashes are recorded. These are experimental controllers, not
+promotions of the source controller.
+
+`contact_anchor` specifies `gain_s_inv`, `max_speed_m_s`, `minimum_force_n` and
+`maximum_error_m`. After lift, each sufficiently loaded pad can latch one observed
+contact point into its body and object frames. A bounded tangential task is solved
+jointly with the original pressure task using existing owned finger actuators.
+Anchors never relatch to hide slip; missing contact or excess anchor error freezes
+the tangent task. Wrist/object state and the demonstrated reference remain outside
+its ownership. Planned-normal and solved-normal ablations must be compared
+separately: changing both at once cannot isolate an anchor's benefit.
+
+Optional `loaded_tangent_gap_m` continues the original planned-normal pressure
+rule past its default tangent guard only while that pad has measured object
+contact above `minimum_observed_force_n` (default 0.1 N). The original normal-gap
+guard still applies. Unloaded pads retain the source tangent guard. The explicit
+loaded guard must be wider than the source guard and at most 30 mm; per-pad
+continuation counters show whether it engaged. This is a change to controller
+observation gating, not a relaxation of geometry or physical success criteria.
+It requires its own matched retention and numerical study.
+
+Keep a failed correction in the record. Neither contact existence, reduced wrist
+tracking error nor a smaller numerical timestep by itself admits a grasp. A
+candidate must complete the intended reference and terminal hold at a declared
+outer update period before a frozen payload/friction matrix or actor training.

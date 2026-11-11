@@ -437,3 +437,13 @@ An explicit `allow_prepend` can include earlier capture frames while verifying
 that admitted capture poses/timestamps remain intact. It records a changed
 reference origin and cannot claim the old control prefix or original capture-start
 pose was reproduced. Robot acquisition remains an explicit stage.
+
+
+Arm-mounted retention experiments can record read-only coherent pad motion with
+`arm_replay_pilot.contact_patch_motion` and inspect acquisition/hold drift through
+`arm_retention_audit`. Optional normal, contact-anchor and loaded-continuation
+ablations retain force/joint limits and require fresh physical admission; they are
+not automatically promoted controllers. See [arm integration](../../docs/ARM_HAND_INTEGRATION.md).
+Use `stereo_patch_audit` to distinguish isolated supported surface points from
+observed finite patch geometry before fitting hands. See
+[contact-site search](../../docs/CONTACT_SITE_SEARCH.md).

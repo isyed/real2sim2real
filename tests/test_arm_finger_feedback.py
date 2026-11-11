@@ -6,6 +6,7 @@ import pytest
 from real2sim2real.controller_actor_training.arm_finger_feedback import (
     ArmFingerFeedback,
     finger_waypoint,
+    feedback_settings,
 )
 
 
@@ -27,6 +28,21 @@ def test_nominal_finger_schedule_preserves_waypoints_and_native_clock():
         np.testing.assert_array_equal(before, after)
     with pytest.raises(ValueError):
         finger_waypoint(-1, pre, opened, closed, rollout)
+
+
+def test_live_binding_cannot_override_force_budgets_or_mutate_source_settings():
+    from test_contact_force_control import settings
+
+    original = settings()
+    updated = feedback_settings(original, dict(normal_observation="solved_contact"))
+    assert updated["normal_observation"] == "solved_contact"
+    assert "normal_observation" not in original
+    updated["target_force_n"]["thumb"] = 10
+    assert original["target_force_n"]["thumb"] == 3
+    with pytest.raises(ValueError, match="overrides"):
+        feedback_settings(original, dict(max_joint_offset_rad=0.3))
+    with pytest.raises(ValueError):
+        feedback_settings(original, dict(normal_observation="unknown"))
 
 
 def test_live_command_rebuilds_nominal_fingers_and_only_writes_owned_actuators():

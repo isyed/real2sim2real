@@ -7,6 +7,22 @@ use existing position actuators; no object state, wrench or joint limit is chang
 import numpy as np
 
 
+def contact_geometry_allowed(normal_gap_m, tangent_gap_m, force_n, settings):
+    if (
+        not np.isfinite([normal_gap_m, tangent_gap_m, force_n]).all()
+        or tangent_gap_m < 0
+        or force_n < 0
+    ):
+        raise ValueError("Finite contact gaps and nonnegative force required")
+    tangent_limit = settings["maximum_tangent_gap_m"]
+    if force_n >= settings.get("minimum_observed_force_n", 0.1):
+        tangent_limit = settings.get("loaded_tangent_gap_m", tangent_limit)
+    return (
+        abs(normal_gap_m) <= settings["maximum_normal_gap_m"]
+        and tangent_gap_m <= tangent_limit
+    )
+
+
 def normal_force_step(
     nominal,
     offset,
@@ -111,6 +127,8 @@ def validate_settings(settings):
         "max_tangent_speed_m_s",
         "payload_adaptation",
         "posture_transition",
+        "contact_anchor",
+        "loaded_tangent_gap_m",
     }
     if (set(settings) - optional) != required or set(settings["target_force_n"]) != {
         "thumb",
@@ -129,6 +147,17 @@ def validate_settings(settings):
         raise ValueError("Unknown force-normal observation mode")
     if not 0 < settings.get("minimum_observed_force_n", 0.1) <= 1:
         raise ValueError("Finite positive observed-contact threshold required")
+    if "loaded_tangent_gap_m" in settings:
+        if (
+            not np.isfinite(settings["loaded_tangent_gap_m"])
+            or not settings["maximum_tangent_gap_m"]
+            < settings["loaded_tangent_gap_m"]
+            <= 0.03
+            or settings.get("normal_observation", "planned") != "planned"
+        ):
+            raise ValueError(
+                "Loaded continuation needs a bounded wider tangent guard and planned normal"
+            )
     if "payload_adaptation" in settings:
         from .payload_pressure import validate_settings as validate_payload
 
@@ -139,6 +168,12 @@ def validate_settings(settings):
         if "payload_adaptation" not in settings:
             raise ValueError("Posture transitions require supported-load observations")
         validate_posture(settings["posture_transition"])
+    if "contact_anchor" in settings:
+        from .contact_anchor import validate_settings as validate_anchor
+
+        validate_anchor(settings["contact_anchor"])
+        if "tangent_gain_s_inv" in settings or "posture_transition" in settings:
+            raise ValueError("Contact anchors require exclusive tangent ownership")
     if "tangent_gain_s_inv" in settings or "max_tangent_speed_m_s" in settings:
         if (
             not 0 < settings.get("tangent_gain_s_inv", 0) <= 5
@@ -233,6 +268,11 @@ class BilateralContactForce:
 
         validate_settings(settings)
         self.settings = settings
+        self.anchors = None
+        if "contact_anchor" in settings:
+            from .contact_anchor import ContactAnchors
+
+            self.anchors = ContactAnchors(settings["contact_anchor"])
         self.object_id = model.body("task_object").id
         self.pads = []
         self.role_geoms = {}
@@ -368,6 +408,7 @@ class BilateralContactForce:
                         offset=np.zeros(len(joints)),
                         updated=0,
                         frozen=0,
+                        loaded_continuation=0,
                         force=0.0,
                         normal_gap=0.0,
                         tangent_gap=0.0,
@@ -390,7 +431,7 @@ class BilateralContactForce:
                 allowed_penetration_m=allowed_penetration_m,
             )
 
-    def target(self, model, data, nominal, *, active, dt):
+    def target(self, model, data, nominal, *, active, dt, retention_active=False):
         import mujoco
 
         output = np.asarray(nominal, float).copy()
@@ -485,15 +526,41 @@ class BilateralContactForce:
                 normal = observation["outward_normal_world"]
             valid = active and (
                 observed
-                or (
-                    abs(normal_gap) <= self.settings["maximum_normal_gap_m"]
-                    and tangent_gap <= self.settings["maximum_tangent_gap_m"]
+                or contact_geometry_allowed(
+                    normal_gap, tangent_gap, pad["force"], self.settings
                 )
             )
             if valid:
+                pad["loaded_continuation"] += int(
+                    not observed
+                    and tangent_gap > self.settings["maximum_tangent_gap_m"]
+                )
                 jac = np.zeros((3, model.nv))
-                mujoco.mj_jac(model, data, jac, None, p, pad["body"])
                 tangent = {}
+                if self.anchors:
+                    body_pose, object_pose = np.eye(4), np.eye(4)
+                    body_pose[:3, :3] = data.xmat[pad["body"]].reshape(3, 3)
+                    body_pose[:3, 3] = data.xpos[pad["body"]]
+                    object_pose[:3, :3] = rotation
+                    object_pose[:3, 3] = position
+                    task = self.anchors.task(
+                        pad["role"] + ":" + pad["group"],
+                        body_pose,
+                        object_pose,
+                        observation["point_world_m"],
+                        normal,
+                        pad["force"],
+                        active=bool(retention_active),
+                    )
+                    if task is not None:
+                        p, projection, velocity = task
+                        mujoco.mj_jac(model, data, jac, None, p, pad["body"])
+                        tangent = dict(
+                            tangent_jacobian=projection @ jac[:, pad["dofs"]],
+                            tangent_velocity=velocity,
+                        )
+                if not tangent:
+                    mujoco.mj_jac(model, data, jac, None, p, pad["body"])
                 if "tangent_gain_s_inv" in self.settings:
                     from .wrist_coordination import bounded_vector
 
@@ -528,6 +595,7 @@ class BilateralContactForce:
 
     def diagnostics(self):
         return dict(
+            **(dict(contact_anchor=self.anchors.diagnostics()) if self.anchors else {}),
             **(
                 dict(payload_posture=self.posture.diagnostics()) if self.posture else {}
             ),
@@ -548,6 +616,7 @@ class BilateralContactForce:
                     tangent_gap_m=p["tangent_gap"],
                     updated_steps=p["updated"],
                     frozen_steps=p["frozen"],
+                    loaded_continuation_steps=p["loaded_continuation"],
                 )
                 for p in self.pads
             },

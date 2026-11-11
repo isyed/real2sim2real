@@ -254,3 +254,28 @@ def test_mounted_arm_binding_preserves_arm_object_and_native_limits(
     assert np.isfinite(packet["observation"]).all()
     for name in fields:
         np.testing.assert_array_equal(getattr(data, name), original[name])
+
+    # Release owns fingers only, removes pressure and does not write object state.
+    from real2sim2real.controller_actor_training.finger_release import FingerRelease
+
+    c.release = FingerRelease(
+        dict(
+            start_s=3.0,
+            duration_s=0.8,
+            settle_s=0.8,
+            support_dwell_s=0.1,
+            maximum_clearance_m=0.005,
+            maximum_speed_m_s=0.02,
+        )
+    )
+    obs = dict(
+        table_contacts=1, clearance_m=0.0, speed_m_s=0.0, table_load_fraction=1.0
+    )
+    for t in np.arange(3.0, 3.2, 0.001):
+        c.command(model, data, t, 0.001, table_observation=obs)
+    c.command(model, data, 4.2, 0.001, table_observation=obs)
+    assert c.diagnostics()["finger_release"]["fraction"] == 1.0
+    assert all(p["target_n"] == 0 and not np.any(p["offset"]) for p in c.servo.pads)
+    for name in ("qpos", "qvel"):
+        np.testing.assert_array_equal(getattr(data, name), original[name])
+    assert all(data.ctrl[a] == 0.123 for a in range(model.nu) if a not in fingers)

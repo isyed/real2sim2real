@@ -355,6 +355,23 @@ must be explicit; post-lift drift and continuous drift are different cohorts.
 Bounded table-aware command projection must leave the raw scored reference intact.
 See [continuous object-reference control](CONTINUOUS_OBJECT_REFERENCE.md).
 
+Returning an object while still squeezing it does not demonstrate release. Add
+an explicit table-supported opening phase and check actual open posture, residual
+hand contact and object stability afterward. End retention at the declared release
+start without changing its acquisition anchor. A stationary diagnostic must disable
+release instead of opening the hands while the object is suspended.
+
+An open acquisition posture is not necessarily collision-free at the returned
+wrist poses. Even a newly optimized opening endpoint with positive geometric
+clearance can retain thumb contact in dynamics. Verify the opening path, actual
+joint response and residual contact through the full settling window. Longer
+opening does not substitute for a table-clear unhooking/withdrawal path.
+
+Inspect seating before increasing pressure: unloaded pads at closure, millimetre
+normal gaps before lift, or wrist tracking active only after lift can explain later
+drift. Compare coherent contact force with requested pressure and preserve existing
+force, joint and collision budgets when changing approach/closure response rates.
+
 Measure correction authority with small signed pressure changes and thumb/finger
 redistribution before training an actor. Higher force targets can change object
 rotation, rolling and the other hand's load; they do not guarantee less grasp

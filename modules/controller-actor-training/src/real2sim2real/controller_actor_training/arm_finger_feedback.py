@@ -20,16 +20,19 @@ def feedback_settings(original, overrides=None):
         "minimum_observed_force_n",
         "contact_anchor",
         "loaded_tangent_gap_m",
+        "close_activation_fraction",
+        "gain_m_per_n_s",
+        "max_normal_speed_m_s",
     }:
         raise ValueError(
-            "Arm feedback overrides may change normal observations or retention rules only"
+            "Arm feedback overrides may change observations, seating rate or retention rules only"
         )
     result = {**deepcopy(original), **deepcopy(overrides or {})}
     validate_settings(result)
     return result
 
 
-def finger_waypoint(time, pre, opened, closed, rollout):
+def finger_waypoint(time, pre, opened, closed, rollout, *, release_open=None):
     from .object_grasp_pilot import smoothstep
 
     values = [np.asarray(v, float) for v in (pre, opened, closed)]
@@ -50,6 +53,16 @@ def finger_waypoint(time, pre, opened, closed, rollout):
     if time < approach + close:
         a = smoothstep((time - approach) / close)
         return (1 - a) * values[1] + a * values[2]
+    if rollout.get("finger_release"):
+        from .finger_release import release_fraction
+
+        a = release_fraction(time, rollout["finger_release"])
+        released = (
+            values[1] if release_open is None else np.asarray(release_open, float)
+        )
+        if released.shape != values[1].shape or not np.isfinite(released).all():
+            raise ValueError("Finite matching release posture required")
+        return (1 - a) * values[2] + a * released
     return values[2].copy()
 
 
@@ -86,6 +99,14 @@ class ArmFingerFeedback:
                 "Live finger controller must use the unchanged admitted candidate"
             )
         self.rollout = config["rollout"]
+        from .finger_release import FingerRelease
+
+        self.release = (
+            FingerRelease(self.rollout["finger_release"])
+            if self.rollout.get("finger_release")
+            else None
+        )
+        self.last_target = None
         self.settings = force
         candidate = deepcopy(parent["candidate"])
         candidate["root_body"] = model.body(roots["right"]).name
@@ -150,14 +171,15 @@ class ArmFingerFeedback:
             ),
         }
 
-    def command(self, model, data, time, dt, *, pressure_offsets=None):
+    def command(
+        self, model, data, time, dt, *, pressure_offsets=None, table_observation=None
+    ):
         from .support_control import bias_compensated_target
 
         nominal = data.qpos.copy()
+        schedule = {k: v for k, v in self.rollout.items() if k != "finger_release"}
         for hand in self.hands:
-            nominal[hand["qids"]] = finger_waypoint(
-                time, *hand["waypoints"], self.rollout
-            )
+            nominal[hand["qids"]] = finger_waypoint(time, *hand["waypoints"], schedule)
         activation = (
             self.rollout["approach_s"]
             + self.settings["close_activation_fraction"] * self.rollout["close_s"]
@@ -172,12 +194,41 @@ class ArmFingerFeedback:
                 + self.rollout["close_s"]
                 + self.rollout["lift_s"]
             )
+        release = getattr(self, "release", None)
+        opening = None
+        if release and table_observation is not None:
+            opened = nominal.copy()
+            for hand in self.hands:
+                opened[hand["qids"]] = hand.get("release_open", hand["waypoints"][1])
+            held = self.last_target if self.last_target is not None else nominal
+            opening = release.command(
+                time,
+                dt,
+                held[self.qids],
+                opened[self.qids],
+                data.qpos[self.qids],
+                **table_observation,
+            )
         target = self.servo.target(
-            model, data, nominal, active=time >= activation, dt=dt, **extra
+            model,
+            data,
+            nominal,
+            active=time >= activation and opening is None,
+            dt=dt,
+            **extra,
         )
+        if opening is not None:
+            target[self.qids] = opening
+            for pad in self.servo.pads:
+                pad["target_n"] = 0.0
+                pad["offset"][:] = 0.0
+        self.last_target = target.copy()
         if self.support_bias:
             target = bias_compensated_target(model, data, target, self.support_indices)
         data.ctrl[self.actuators] = target[self.qids]
 
     def diagnostics(self):
-        return self.servo.diagnostics()
+        result = self.servo.diagnostics()
+        if self.release:
+            result["finger_release"] = self.release.diagnostics()
+        return result

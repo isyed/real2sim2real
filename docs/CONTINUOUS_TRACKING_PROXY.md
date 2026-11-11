@@ -53,12 +53,12 @@ different experiment. Its success cannot stand in for full demonstrated motion.
 
 ## Residual learning
 
-The current `ArmResidualEnv` supports staged replay and explicitly rejects the
-continuous protocol. Before extending it, preserve a named full-motion comparator
-and an independent stationary development baseline. Implement phase-aware
-observations/rewards and verify complete zero-action equality, including return,
-release and physical verdicts. Do not silently reuse a staged hold target for
-continuous rewards.
+`ArmResidualEnv` supports staged replay and continuous motion with supported
+release. Preserve a named full-motion comparator and an independent stationary
+development baseline. Verify complete zero-action equality for each frozen
+controller, including return, release and physical verdicts. Continuous rewards
+use actual release state and the acquisition anchor; staged hold targets are not
+silently reused. See [adapter details](ARM_RESIDUAL_ADAPTER.md).
 
 A bounded residual pilot can investigate recovery from a rejected baseline; a
 baseline pass is not a mathematical prerequisite for residual RL. First establish

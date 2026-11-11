@@ -61,9 +61,11 @@ class PressureResidual:
             not isinstance(phases, list)
             or not phases
             or len(set(phases)) != len(phases)
-            or set(phases) - {"close", "lift", "hold"}
+            or set(phases) - {"close", "lift", "hold", "return"}
         ):
-            raise ValueError("Explicit close/lift/hold phases required")
+            raise ValueError(
+                "Explicit close/lift/hold/return phases required; release is owned by the baseline"
+            )
         self.settings = dict(settings, active_phases=list(phases))
         self.requested = np.zeros(4)
         self.offset = np.zeros(4)

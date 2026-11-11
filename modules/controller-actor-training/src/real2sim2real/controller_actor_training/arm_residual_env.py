@@ -34,7 +34,6 @@ def frozen_source(config):
     result = json.loads(path.read_text())
     if (
         result.get("schema") != "real2sim2real.arm-replay-pilot/1"
-        or result.get("continuous_protocol") is not None
         or result.get("residual_adapter") is not None
         or result.get("finger_control_mode") != "live_contact_force"
         or result.get("physics_run") is not True
@@ -42,8 +41,12 @@ def frozen_source(config):
         or not result.get("fixed_controller_clock")
     ):
         raise ValueError(
-            "Complete staged fixed-clock live-finger frozen replay required; continuous phase rewards and residual stacking are not supported"
+            "Complete fixed-clock live-finger frozen replay required; residual stacking is not supported"
         )
+    if result.get("continuous_protocol") is not None:
+        from .continuous_residual import validate_baseline
+
+        validate_baseline(result)
     for filename, field in (
         ("scene.xml", "scene_sha256"),
         ("states.npz", "states_sha256"),
@@ -66,6 +69,7 @@ class PressureBridge(PressureResidual):
                 "arm_residual_env.py",
                 "arm_residual_observation.py",
                 "residual_pressure.py",
+                "continuous_residual.py",
             )
         }
 
@@ -139,6 +143,8 @@ class PressureBridge(PressureResidual):
             observation_source="privileged separate-data simulator forward solve; previous commands and filter state",
             observation_schema=self.observer.schema,
             phase_order=self.observer.phases,
+            task_stage_order=getattr(self.observer, "stages", []),
+            release_owner="frozen table-supported finger release; pressure actor cannot override opening",
             joint_order=[
                 self.observer.model.joint(j).name for j in self.observer.joints
             ],
@@ -214,6 +220,7 @@ class ArmResidualEnv:
     def info(self):
         return dict(
             phase=self.packet["phase"],
+            task_stage=self.packet.get("task_stage"),
             time_s=self.packet["time_s"],
             observation_schema=deepcopy(self.bridge.observer.schema),
             privileged_observations=True,

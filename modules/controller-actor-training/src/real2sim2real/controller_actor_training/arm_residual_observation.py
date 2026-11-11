@@ -16,6 +16,27 @@ class ArmResidualObservation:
         self.scratch = mujoco.MjData(model)
         self.fingers, self.roots = fingers, roots
         self.parent, self.times = parent, times
+        self.protocol = parent.get("continuous_protocol")
+        self.stages = []
+        if self.protocol:
+            import json
+            from pathlib import Path
+            import trimesh
+            from .continuous_residual import STAGES
+
+            task_path = Path(parent["configuration"]["task"])
+            task = json.loads(task_path.read_text())
+            self.object_vertices = np.asarray(
+                trimesh.load(
+                    task_path.parent / task["object"]["mesh"],
+                    force="mesh",
+                    process=False,
+                ).vertices
+            )
+            self.table_z = task["table"]["top_z_m"]
+            self.minimum_clearance = task["goal"]["minimum_clearance_m"]
+            self.table_id = model.geom("table").id
+            self.stages = list(STAGES)
         self.object_id = model.body("task_object").id
         self.anchors = None
         self.phases = list(dict.fromkeys(r["phase"] for r in parent["records"]))
@@ -30,7 +51,13 @@ class ArmResidualObservation:
 
     def record(self, record):
         # Identical hold-entry samples to the independent frozen evaluator.
-        if self.anchors is None and record["phase"] == "hold":
+        protocol = getattr(self, "protocol", None)
+        anchor_sample = (
+            record["time_s"] >= protocol["acquisition_end_s"]
+            if protocol
+            else record["phase"] == "hold"
+        )
+        if self.anchors is None and anchor_sample:
             self.anchors = [
                 relative_position(
                     record["object_position_m"],
@@ -82,13 +109,22 @@ class ArmResidualObservation:
         observed = object_pad_observations(m, d, obj, [p["gid"] for p in pads])
         force = np.array([observed[p["gid"]]["force_n"] for p in pads])
         upward = np.zeros(2)
+        table_force, table_contacts, hand_force = 0.0, 0, 0.0
         for cid, contact in enumerate(d.contact):
             pair = {int(contact.geom1), int(contact.geom2)}
             if not any(m.geom_bodyid[g] == obj for g in pair):
                 continue
+            if self.protocol and self.table_id in pair:
+                wrench = np.zeros(6)
+                mujoco.mj_contactForce(m, d, cid, wrench)
+                table_force += max(0.0, float(wrench[0]))
+                table_contacts += 1
             for k, role in enumerate(("primary", "secondary")):
                 if pair & self.fingers.servo.role_geoms[role]:
                     upward[k] += contact_wrench_on_body(m, d, cid, obj)[0][2]
+                    wrench = np.zeros(6)
+                    mujoco.mj_contactForce(m, d, cid, wrench)
+                    hand_force += max(0.0, float(wrench[0]))
         payload = self.fingers.servo.payload
         payload_state = (
             np.r_[
@@ -124,6 +160,40 @@ class ArmResidualObservation:
             "previous_requested_action": residual.requested,
             "applied_pressure_offset_n": residual.offset,
         }
+        stage = None
+        if self.protocol:
+            from .continuous_residual import stage_at
+
+            release = self.fingers.release
+            stage = stage_at(
+                time,
+                source["phase"],
+                self.protocol,
+                release.started_s,
+                release.fraction,
+            )
+            clearance = float(
+                (self.object_vertices @ rotation.T + position)[:, 2].min()
+                - self.table_z
+            )
+            load = table_force / (float(m.body_mass[obj]) * 9.81)
+            dof = m.joint("task_object_free").dofadr[0]
+            parts.update(
+                task_stage_one_hot=[float(stage == s) for s in self.stages],
+                table_state=[
+                    table_contacts,
+                    load,
+                    clearance,
+                    np.linalg.norm(d.qvel[dof : dof + 3]),
+                ],
+                release_state=[
+                    float(release.started_s is not None),
+                    release.fraction,
+                    release.support_s,
+                    release.open_error or 0.0,
+                ],
+                total_hand_normal_force_n=[hand_force],
+            )
         schema, offset = {}, 0
         for name, values in parts.items():
             schema[name] = [offset, offset + len(values)]
@@ -162,11 +232,32 @@ class ArmResidualObservation:
                 np.mean((residual.offset / residual.settings["max_offset_n"]) ** 2)
             ),
         )
+        if self.protocol:
+            from .continuous_residual import phase_costs
+
+            costs = phase_costs(
+                costs,
+                stage=stage,
+                scheduled_phase=source["phase"],
+                position_error=position_error,
+                rotation_error=rotation_error,
+                drift=drift,
+                anchor_valid=self.anchors is not None,
+                reference_valid=valid_reference,
+                contact_cost=contact_cost,
+                clearance_m=clearance,
+                minimum_clearance_m=self.minimum_clearance,
+                table_load_fraction=load,
+                hand_force_n=hand_force,
+                release_fraction=release.fraction,
+                open_error_rad=release.open_error,
+            )
         return dict(
             observation=vector,
             time_s=float(live.time),
             costs=costs,
             phase=source["phase"],
+            task_stage=stage,
         )
 
 
@@ -180,6 +271,8 @@ def transition_reward(previous, current, *, horizon_s, success=None, failure=Fal
     weights = dict(
         position=4, rotation=2, grasp=6, contact=2, excess_force=1, residual=0.1
     )
+    if current.get("task_stage") is not None:
+        weights.update(clearance=4, placement=4, release=2, table_penetration=4)
     cost = sum(weights[k] * current["costs"][k] for k in weights)
     if not np.isfinite(cost) or cost < 0:
         raise ValueError("Finite nonnegative learning costs required")

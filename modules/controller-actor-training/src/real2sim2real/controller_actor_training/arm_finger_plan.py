@@ -135,7 +135,14 @@ def bind(parent, spec, output):
 
 
 def validate_stationary(config):
-    spec = config.get("validated_stationary")
+    diagnostic = bool(config.get("diagnostic_stationary"))
+    if diagnostic and config.get("validated_stationary"):
+        raise ValueError("Choose diagnostic replay or stationary promotion, not both")
+    spec = (
+        config.get("diagnostic_stationary")
+        if diagnostic
+        else config.get("validated_stationary")
+    )
     if not spec:
         raise ValueError(
             "New finger-plan motion requires a complete passing stationary arm hold"
@@ -150,7 +157,14 @@ def validate_stationary(config):
         )
     if (
         report.get("schema") != "real2sim2real.arm-replay-pilot/1"
-        or report["success"] is not True
+        or (not diagnostic and report["success"] is not True)
+        or (
+            diagnostic
+            and (
+                not report.get("physics_run")
+                or "incomplete_pilot" in report.get("rejected_for", [])
+            )
+        )
         or report.get("motion_condition") != "stationary_hold"
         or digest(path.with_name("states.npz")) != report["states_sha256"]
         or digest(path.with_name("scene.xml")) != report["scene_sha256"]
@@ -162,6 +176,7 @@ def validate_stationary(config):
         "purpose",
         "motion_condition",
         "validated_stationary",
+        "diagnostic_stationary",
     }
     strip = lambda x: {k: v for k, v in x.items() if k not in allowed}
     if strip(config) != strip(report["config"]):
@@ -191,7 +206,20 @@ def validate_stationary(config):
         raise ValueError(
             "Stationary promotion must preserve the complete declared command clock"
         )
-    return dict(result=str(path), sha256=digest(path))
+    return dict(
+        result=str(path),
+        sha256=digest(path),
+        **(
+            dict(
+                diagnostic_only=True,
+                promotion_eligible=False,
+                stationary_success=report["success"],
+                stationary_rejected_for=report["rejected_for"],
+            )
+            if diagnostic
+            else {}
+        ),
+    )
 
 
 def path_screen(

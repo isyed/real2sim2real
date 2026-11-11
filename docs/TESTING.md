@@ -1,5 +1,12 @@
 # Testing the reusable modules
 
+`test_continuous_residual.py` checks actual supported-release stage transitions,
+carry retention versus release unloading costs, the fixed acquisition anchor,
+complete native-clock admission and pressure decay after carrying. Finger-plan
+tests cover diagnostic-only pinned failed holds without weakening normal promotion.
+Full staged and continuous zero-action saved-state equality remains a separate
+downstream simulation check, including protocol, return and release diagnostics.
+
 `test_continuous_tracking_proxy.py` checks known translation/rotation metric values,
 surface-ADD invariance under body-origin changes, input immutability, timestamp
 interpolation and rejection of missing coverage. Downstream equality against the

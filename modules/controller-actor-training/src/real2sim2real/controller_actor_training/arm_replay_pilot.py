@@ -134,6 +134,7 @@ def rollout(config, interaction=None):
         or config.get("finger_seating_plan")
         or config.get("finger_feedback_override", {}).get("unloaded_acquisition")
         or config.get("validated_stationary")
+        or config.get("diagnostic_stationary")
     ):
         from .arm_finger_plan import validate_stationary
 
@@ -998,6 +999,8 @@ def rollout(config, interaction=None):
     )
     failures.extend(support_rejections(metrics))
     failures.extend(continuous_failures)
+    if stationary_admission and stationary_admission.get("diagnostic_only"):
+        failures.append("diagnostic_motion_without_stationary_promotion")
     if condition != "loaded":
         failures.append("diagnostic_contact_condition")
     reference = [

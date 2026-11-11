@@ -60,3 +60,8 @@ observations. A hardware policy needs equivalent estimated/sensed inputs and
 delay/noise tests. Existing FlashSAC infrastructure does not by itself supply a
 UR/Sharpa training environment or a compatible action/observation interface;
 those adapters need implementation and validation before checkpoint reuse.
+
+For a proposed supervised warm start followed by residual RL, see
+[demonstration and reward design](DEMONSTRATION_RESIDUAL_CONTROL.md). That protocol
+defines correction labels, data splits, observable inputs and phase-aware rewards;
+it does not claim that a new embodiment's training adapter is implemented.

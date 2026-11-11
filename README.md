@@ -90,6 +90,8 @@ not certify a grasp or a policy. See [validation](docs/VALIDATION.md).
 - [Architecture and future modules](docs/ARCHITECTURE.md)
 - [Reproducibility and migration](docs/REPRODUCIBILITY.md)
 - [CPU tests and optional runtime validation](docs/TESTING.md)
+- [Demonstration warm start and residual reward design](docs/DEMONSTRATION_RESIDUAL_CONTROL.md)
+- [Contributing and owner approval](CONTRIBUTING.md)
 - [Partial repair and locked-anchor diagnostics](docs/REPAIR_WINDOW_DIAGNOSTICS.md)
 - [Complete diagnostic translation candidates](docs/DIAGNOSTIC_CANDIDATES.md)
 - [Upstream provenance and licenses](docs/THIRD_PARTY.md)

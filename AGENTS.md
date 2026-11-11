@@ -22,3 +22,10 @@ Do not claim physical execution or complete model validation from CPU tests.
 Keep related iterations on one feature branch and reuse its existing pull
 request. Create new pull requests only as part of a user-requested local/remote
 sync. Local implementation and validation do not require opening another PR.
+
+After the owner-approval policy is enabled, every main-branch merge requires
+`@isyed`'s GitHub code-owner approval, including changes made by administrators.
+Do not submit an approval on the owner's behalf or disable the protection to
+complete a sync. GitHub disallows self-approval: use a separately authorized PR
+author identity, or leave the PR pending and report that limitation. See
+`CONTRIBUTING.md` for the review and branch-cleanup workflow.

@@ -424,3 +424,16 @@ for configuration, observations and frozen-matrix admission.
 sample times. It separates acquisition/hold pressure, pad coverage, material
 sliding, other-link forces and actual wrist-relative object poses, with an
 interactive saved-data review. See [acquisition diagnostics](../../docs/ACQUISITION_DIAGNOSTICS.md).
+
+`arm_finger_feedback` optionally binds the source bilateral pressure/load rule
+to assembled arms. It reconstructs nominal finger waypoints before feedback,
+preserves actuator ownership/native limits and labels live control separately
+from archived command transfer. See [arm integration](../../docs/ARM_HAND_INTEGRATION.md).
+
+`reference_extension` accepts an explicit longer `hold_s` to cover native-time
+motion plus at least one second. It preserves the admitted reference prefix;
+longer horizons are new evaluation cohorts, with unchanged physical gates.
+An explicit `allow_prepend` can include earlier capture frames while verifying
+that admitted capture poses/timestamps remain intact. It records a changed
+reference origin and cannot claim the old control prefix or original capture-start
+pose was reproduced. Robot acquisition remains an explicit stage.

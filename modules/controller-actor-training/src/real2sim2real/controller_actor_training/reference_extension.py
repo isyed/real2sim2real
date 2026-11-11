@@ -10,6 +10,50 @@ from real2sim2real.artifacts import digest, write_json
 from .guided_motion import select_interval, load_reference
 
 
+def declared_hold(original_hold_s, reference_duration_s, requested_hold_s=None):
+    """Extend the command duration explicitly, retaining native reference time."""
+    hold = original_hold_s if requested_hold_s is None else requested_hold_s
+    if (
+        isinstance(hold, bool)
+        or not np.isfinite([original_hold_s, reference_duration_s, hold]).all()
+        or original_hold_s <= 0
+        or reference_duration_s <= 0
+        or not original_hold_s <= hold <= 25
+        or hold < reference_duration_s + 1
+    ):
+        raise ValueError(
+            "Explicit non-shortened hold must cover native motion plus one second, within 25 seconds"
+        )
+    return float(hold)
+
+
+def match_window(old, new, *, allow_prepend=False):
+    """Keep captured poses/timestamps intact; an earlier origin is explicit."""
+    if type(allow_prepend) is not bool:
+        raise ValueError("Reference prepend must be an explicit Boolean")
+    indices = np.flatnonzero(new.frame_ids == old.frame_ids[0])
+    start = int(indices[0]) if len(indices) == 1 else -1
+    n = len(old.times)
+    if (
+        len(new.times) <= n
+        or start < 0
+        or start + n > len(new.times)
+        or (start != 0 and not allow_prepend)
+        or not np.array_equal(new.frame_ids[start : start + n], old.frame_ids)
+        or not np.allclose(new.times[start : start + n], old.times, atol=1e-8, rtol=0)
+        or not np.allclose(new.poses[start : start + n], old.poses, atol=1e-8, rtol=0)
+    ):
+        raise ValueError(
+            "New window must preserve admitted capture poses and native timestamps"
+        )
+    return dict(
+        prefix_preserved=start == 0,
+        reference_origin_changed=start != 0,
+        capture_origin_shift_s=float(old.times[0] - new.times[0]),
+        original_capture_start_pose_reproduced=False,
+    )
+
+
 def reference_transforms(parent, settings):
     """Kinematic retargeting only: replace object increments, retain relative grasp."""
     old = load_reference(parent["configuration"]["reference_guidance"])
@@ -100,13 +144,7 @@ def run(config):
     old = load_reference(parent["configuration"]["reference_guidance"])
     with np.load(config["object_reference"], allow_pickle=False) as archive:
         ref = select_interval(archive, config["first_frame"], config["last_frame"])
-    if (
-        len(ref.times) <= len(old.times)
-        or not np.array_equal(ref.frame_ids[: len(old.times)], old.frame_ids)
-        or not np.allclose(ref.times[: len(old.times)], old.times, atol=1e-8, rtol=0)
-        or not np.allclose(ref.poses[: len(old.times)], old.poses, atol=1e-8, rtol=0)
-    ):
-        raise ValueError("Extension must preserve the entire admitted reference prefix")
+    window = match_window(old, ref, allow_prepend=config.get("allow_prepend", False))
     out = Path(config["output"])
     out.mkdir(parents=True, exist_ok=False)
     np.savez_compressed(
@@ -122,18 +160,22 @@ def run(config):
         limits=config["motion_limits"],
     )
     load_reference(settings["reference_guidance"])
-    if settings["rollout"]["hold_s"] < ref.elapsed[-1] + 1:
-        raise ValueError(
-            "Original hold does not cover extension plus one second; declare a separate longer-hold experiment"
-        )
+    settings["rollout"]["hold_s"] = declared_hold(
+        parent["configuration"]["rollout"]["hold_s"],
+        float(ref.elapsed[-1]),
+        config.get("hold_s"),
+    )
     write_json(
         out / "protocol.json",
         dict(
             config=config,
-            prefix_preserved=True,
+            **window,
             bounds=ref.bounds(),
             role="Cartesian fixture command-generation trial; requires a new arm audit and actuator-driven replay",
             physical_acceptance_criteria_changed=False,
+            original_hold_s=parent["configuration"]["rollout"]["hold_s"],
+            declared_hold_s=settings["rollout"]["hold_s"],
+            reference_retimed=False,
             implementation_sha256=digest(Path(__file__)),
         ),
     )

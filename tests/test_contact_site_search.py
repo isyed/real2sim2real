@@ -154,3 +154,75 @@ def test_inner_wall_sampling_excludes_outer_wall_and_top_and_is_world_consistent
         inner_wall_faces(ring, pose, [0.2, -0.1])
     with pytest.raises(ValueError):
         inner_wall_faces(ring, np.eye(4), [float("nan"), 0])
+
+
+def test_regional_sampling_is_balanced_and_rigid_frame_invariant():
+    from copy import deepcopy
+    from scipy.spatial.transform import Rotation
+    from real2sim2real.retargeting.contact_site_search import (
+        sample_regions,
+        region_masks,
+    )
+
+    mesh = trimesh.creation.box(extents=[0.2, 0.2, 0.02])
+    regions = [
+        dict(
+            name=name,
+            world_from_region=np.eye(4).tolist(),
+            minimum_m=[lo, -0.2, -0.02],
+            maximum_m=[hi, 0.2, 0.02],
+            normal_direction=[sign, 0, 0],
+            minimum_normal_cosine=0.9,
+            maximum_abs_vertical_normal=0.1,
+        )
+        for name, lo, hi, sign in [("left", -0.2, -0.01, -1), ("right", 0.01, 0.2, 1)]
+    ]
+    a = sample_regions(mesh, np.eye(4), regions, count=4)
+    assert [s["region"] for s in a] == ["left", "left", "right", "right"]
+    shift = np.eye(4)
+    shift[:3, :3] = Rotation.from_euler("z", 0.7).as_matrix()
+    shift[:3, 3] = [0.3, -0.2, 0.1]
+    moved = deepcopy(regions)
+    for r in moved:
+        r["world_from_region"] = shift.tolist()
+    assert sample_regions(mesh, shift, moved, count=4) == a
+    overlapping = deepcopy(regions)
+    overlapping[1] = dict(overlapping[0], name="duplicate")
+    with pytest.raises(ValueError, match="disjoint"):
+        region_masks(mesh, np.eye(4), overlapping)
+    with pytest.raises(ValueError, match="Equal bounded"):
+        sample_regions(mesh, np.eye(4), regions, count=5)
+    # Empty/unsupported regions cannot fall back to other object faces.
+    empty = deepcopy(regions)
+    empty[0]["minimum_m"][0] = -0.19
+    empty[0]["maximum_m"][0] = -0.18
+    with pytest.raises(ValueError, match="Enough finite"):
+        sample_regions(mesh, np.eye(4), empty, count=4)
+
+
+def test_com_sensitivity_is_explicit_bounded_and_keeps_physical_budgets():
+    from real2sim2real.controller_actor_training.support_arrangement import (
+        com_sensitivity,
+    )
+
+    physics = dict(mass_kg=0.2, friction=0.8, max_normal_force_n=1.5)
+    before = physics.copy()
+    rows = com_sensitivity(
+        [[-0.02, 0, 0], [0.02, 0, 0]],
+        [[-1, 0, 0], [1, 0, 0]],
+        [0, 0, 0],
+        [[0, 0, 0], [0.01, 0, 0]],
+        physics,
+    )
+    assert rows[0]["gravity_wrench"]["feasible"] is True
+    assert rows[1]["gravity_wrench"]["feasible"] is False
+    assert physics == before
+    for offsets in ([[0.01, 0, 0]], [[0, 0, 0], [0.06, 0, 0]], [[0, 0, 0], [0, 0, 0]]):
+        with pytest.raises(ValueError):
+            com_sensitivity(
+                [[-0.02, 0, 0], [0.02, 0, 0]],
+                [[-1, 0, 0], [1, 0, 0]],
+                [0, 0, 0],
+                offsets,
+                physics,
+            )

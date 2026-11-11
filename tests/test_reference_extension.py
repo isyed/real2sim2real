@@ -104,3 +104,44 @@ def test_extension_preserves_prefix_clock_relative_grasp_and_input(tmp_path):
     short["records"][-1]["reference_elapsed_s"] = 0.3
     with pytest.raises(ValueError, match="clock"):
         reference_transforms(short, new)
+
+
+def test_longer_hold_is_explicit_and_does_not_retime_reference():
+    from real2sim2real.controller_actor_training.reference_extension import (
+        declared_hold,
+    )
+
+    assert declared_hold(10, 10.27, 12) == 12
+    assert declared_hold(10, 2.2) == 10
+    for hold in (None, 9, 10, True, float("nan"), 26):
+        with pytest.raises(ValueError):
+            declared_hold(10, 10.27, hold)
+
+
+def test_prepending_capture_frames_is_a_declared_new_origin_not_a_prefix_claim():
+    from real2sim2real.controller_actor_training.guided_motion import MotionReference
+    from real2sim2real.controller_actor_training.reference_extension import match_window
+
+    old = archive(3)
+    new = archive(7)
+    new["frame_ids"] -= 2
+    new["timestamps_s"] -= 0.1
+    new["world_from_object"][:, 0, 3] -= 0.02
+
+    def ref(a):
+        return MotionReference(
+            a["timestamps_s"], a["world_from_object"], a["frame_ids"]
+        )
+
+    with pytest.raises(ValueError):
+        match_window(ref(old), ref(new))
+    result = match_window(ref(old), ref(new), allow_prepend=True)
+    assert (
+        result["prefix_preserved"] is False
+        and result["reference_origin_changed"] is True
+    )
+    assert result["capture_origin_shift_s"] == pytest.approx(0.1)
+    assert result["original_capture_start_pose_reproduced"] is False
+    new["world_from_object"][3, 0, 3] += 0.001
+    with pytest.raises(ValueError):
+        match_window(ref(old), ref(new), allow_prepend=True)

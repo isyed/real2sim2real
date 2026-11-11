@@ -77,3 +77,37 @@ def test_phase_deviation_reveals_insertion_error_and_never_time_aligns():
     assert not phase_object_deviation(a, b[:-1])["available"]
     b[1]["time_s"] += 0.01
     assert not phase_object_deviation(a, b)["available"]
+
+
+def test_comparison_exposes_feedback_rate_changes_at_same_physics_step(tmp_path):
+    import json
+    from real2sim2real.artifacts import digest
+    from real2sim2real.controller_actor_training.arm_replay_comparison import compare
+
+    paths = []
+    for name, period in [("legacy", None), ("fixed", 0.001)]:
+        folder = tmp_path / name
+        folder.mkdir()
+        (folder / "scene.xml").write_text(
+            '<mujoco><option timestep="0.00025"/></mujoco>'
+        )
+        (folder / "states.npz").write_bytes(b"preserved states")
+        r = report()
+        r.update(
+            schema="real2sim2real.arm-replay-pilot/1",
+            config=dict(audit_sha256="same"),
+            scene_sha256=digest(folder / "scene.xml"),
+            states_sha256=digest(folder / "states.npz"),
+        )
+        if period is not None:
+            r["controller_period_s"] = period
+            r["config"]["control_period_s"] = period
+        path = folder / "result.json"
+        path.write_text(json.dumps(r))
+        paths.append(path)
+    out = tmp_path / "comparison"
+    r = compare(paths, out)
+    assert r["differing_base_control_settings"] == ["control_period_s"]
+    assert [row["controller_period_s"] for row in r["rows"]] == [0.00025, 0.001]
+    text = (out / "review.html").read_text()
+    assert "0.250 / 0.250" in text and "0.250 / 1.000" in text

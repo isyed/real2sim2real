@@ -11,6 +11,37 @@ from real2sim2real.retargeting.pad_contacts import gravity_wrench_screen
 from real2sim2real.retargeting.contact_site_search import upward_force_capacity
 
 
+def com_sensitivity(points, normals, center, offsets, physics):
+    """Static checks at declared COM hypotheses without changing source geometry."""
+    offsets = np.asarray(offsets, float)
+    if (
+        offsets.ndim != 2
+        or offsets.shape[1] != 3
+        or not 1 <= len(offsets) <= 27
+        or not np.isfinite(offsets).all()
+        or not np.array_equal(offsets[0], np.zeros(3))
+        or np.max(np.linalg.norm(offsets, axis=1)) > 0.05
+        or len(np.unique(offsets, axis=0)) != len(offsets)
+    ):
+        raise ValueError(
+            "Distinct COM hypotheses within 50 mm, nominal first, required"
+        )
+    return [
+        dict(
+            offset_m=offset.tolist(),
+            gravity_wrench=gravity_wrench_screen(
+                points,
+                normals,
+                np.asarray(center) + offset,
+                **{
+                    k: physics[k] for k in ("mass_kg", "friction", "max_normal_force_n")
+                },
+            ),
+        )
+        for offset in offsets
+    ]
+
+
 def combine(config):
     if not 1 <= len(config["surveys"]) <= 8:
         raise ValueError("One to eight pinned surveys required")
@@ -68,6 +99,15 @@ def combine(config):
                     k: physics[k] for k in ["mass_kg", "friction", "max_normal_force_n"]
                 },
             )
+    sensitivity = None
+    if config.get("center_of_mass_offsets_m") is not None and len(sites) >= 2:
+        sensitivity = com_sensitivity(
+            points,
+            normals,
+            candidate["pair"]["center_of_mass_m"],
+            config["center_of_mass_offsets_m"],
+            physics,
+        )
     result = dict(
         schema="real2sim2real.observed-support-arrangement/1",
         config=config,
@@ -78,6 +118,7 @@ def combine(config):
         bound_ignores_horizontal_balance_and_torque=True,
         per_site_normal_force_limit_n=physics["max_normal_force_n"],
         reconstructed_normals_not_independently_validated=True,
+        center_of_mass_sensitivity=sensitivity,
         finite_patch_validated=False,
         robot_pair_validated=False,
         control_ready=False,

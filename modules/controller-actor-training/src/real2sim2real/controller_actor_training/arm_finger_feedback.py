@@ -1,0 +1,153 @@
+"""Bind an admitted bilateral finger-pressure rule to assembled robot arms.
+
+The arm controller keeps wrist ownership. Finger waypoints are reconstructed
+before pressure correction, rather than adding feedback to archived corrections.
+"""
+
+from copy import deepcopy
+from pathlib import Path
+
+import numpy as np
+
+from real2sim2real.artifacts import digest
+
+
+def finger_waypoint(time, pre, opened, closed, rollout):
+    from .object_grasp_pilot import smoothstep
+
+    values = [np.asarray(v, float) for v in (pre, opened, closed)]
+    approach, close = rollout["approach_s"], rollout["close_s"]
+    if (
+        not np.isfinite([time, approach, close]).all()
+        or time < 0
+        or approach <= 0
+        or close <= 0
+        or any(v.shape != values[0].shape or not np.isfinite(v).all() for v in values)
+    ):
+        raise ValueError(
+            "Finite common finger waypoints and positive phase durations required"
+        )
+    if time < approach:
+        a = smoothstep(time / approach)
+        return (1 - a) * values[0] + a * values[1]
+    if time < approach + close:
+        a = smoothstep((time - approach) / close)
+        return (1 - a) * values[1] + a * values[2]
+    return values[2].copy()
+
+
+class ArmFingerFeedback:
+    def __init__(self, model, data, parent, roots, mesh, finger_actuators):
+        import mujoco
+        from real2sim2real.retargeting.grasp_kinematics import robot_indices
+        from .object_grasp_pilot import load_plan
+        from .contact_force_control import BilateralContactForce
+
+        config = parent["configuration"]
+        force = config.get("contact_force_feedback")
+        if (
+            not force
+            or force.get("posture_transition")
+            or config.get("finger_closure")
+            or config.get("finger_surface_feedback")
+            or config.get("contact_feedback")
+            or config["rollout"]["close_offset_rad"] != 0
+            or config["support_controller"].get("mode") != "simultaneous_grasp"
+        ):
+            raise ValueError(
+                "Live arm binding requires the admitted simultaneous pad-pressure rule without extra posture/closure controllers"
+            )
+        plan = load_plan(config)
+        if (
+            parent["candidate"] not in plan["candidates"]
+            or not parent["candidate"]["accepted"]
+        ):
+            raise ValueError(
+                "Live finger controller must use the unchanged admitted candidate"
+            )
+        self.rollout = config["rollout"]
+        self.settings = force
+        candidate = deepcopy(parent["candidate"])
+        candidate["root_body"] = model.body(roots["right"]).name
+        if candidate["support"]["root_body"] != model.body(roots["left"]).name:
+            raise ValueError("Mounted support-hand identity differs")
+        pose = np.asarray(plan["settling"]["settled_world_from_object"], float)
+        world_mesh = mesh.copy()
+        world_mesh.apply_transform(pose)
+        self.servo = BilateralContactForce(
+            model, data, force, candidate, pose, world_mesh
+        )
+        self.hands = []
+        owned = {int(q) for p in self.servo.pads for q in p["qids"]}
+        covered = set()
+        for role, hand in [("primary", candidate), ("secondary", candidate["support"])]:
+            columns, qids = [], []
+            for i, name in enumerate(hand["joint_names"]):
+                j = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, name)
+                if j >= 0 and int(model.jnt_qposadr[j]) in owned:
+                    columns.append(i)
+                    qids.append(int(model.jnt_qposadr[j]))
+            if not qids or covered & set(qids):
+                raise ValueError("Disjoint owned finger waypoint coordinates required")
+            covered.update(qids)
+            self.hands.append(
+                dict(
+                    role=role,
+                    qids=np.array(qids),
+                    waypoints=[
+                        np.asarray(hand[key], float)[columns]
+                        for key in ("q_pregrasp", "q_open", "q_closed")
+                    ],
+                )
+            )
+        if covered != owned:
+            raise ValueError("Source waypoints must cover every controlled finger")
+        self.actuators = np.asarray(sorted(finger_actuators), int)
+        self.qids = np.array(
+            [
+                int(model.jnt_qposadr[int(model.actuator_trnid[a, 0])])
+                for a in self.actuators
+            ]
+        )
+        if set(self.qids) != owned or len(self.qids) != len(owned):
+            raise ValueError("Live feedback may own existing finger actuators only")
+        self.support_bias = config["support_controller"].get(
+            "actuator_bias_compensation", False
+        )
+        self.support_indices = robot_indices(model, model.body(roots["left"]).name)
+        self.source_hashes = {
+            str(Path(config["output"]) / "settling.json"): digest(
+                Path(config["output"]) / "settling.json"
+            ),
+            str(
+                Path(config["output"])
+                / config.get("planning_directory", "planning")
+                / "plan.json"
+            ): digest(
+                Path(config["output"])
+                / config.get("planning_directory", "planning")
+                / "plan.json"
+            ),
+        }
+
+    def command(self, model, data, time, dt):
+        from .support_control import bias_compensated_target
+
+        nominal = data.qpos.copy()
+        for hand in self.hands:
+            nominal[hand["qids"]] = finger_waypoint(
+                time, *hand["waypoints"], self.rollout
+            )
+        activation = (
+            self.rollout["approach_s"]
+            + self.settings["close_activation_fraction"] * self.rollout["close_s"]
+        )
+        target = self.servo.target(
+            model, data, nominal, active=time >= activation, dt=dt
+        )
+        if self.support_bias:
+            target = bias_compensated_target(model, data, target, self.support_indices)
+        data.ctrl[self.actuators] = target[self.qids]
+
+    def diagnostics(self):
+        return self.servo.diagnostics()

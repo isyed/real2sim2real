@@ -14,7 +14,8 @@ import numpy as np
 from real2sim2real.artifacts import digest, write_json
 
 
-def bind(live, model, spec):
+def read_posture(spec, *, withdrawal=None, release=None):
+    """Read one pinned geometric proposal with its coupled path/clock contract."""
     if set(spec) != {"path", "sha256"}:
         raise ValueError("Pinned release posture path and digest required")
     path = Path(spec["path"])
@@ -26,6 +27,18 @@ def bind(live, model, spec):
         or report.get("accepted") is not True
     ):
         raise ValueError("Geometrically admitted release posture required")
+    if report.get("wrist_withdrawal") is not None and (
+        report["wrist_withdrawal"] != withdrawal
+        or report.get("release_settings") != release
+    ):
+        raise ValueError(
+            "Opening posture must use its jointly screened wrist path and release clock"
+        )
+    return path, report
+
+
+def bind(live, model, spec, *, withdrawal=None, release=None):
+    path, report = read_posture(spec, withdrawal=withdrawal, release=release)
     targets = report["joint_targets_rad"]
     if not targets:
         raise ValueError("Nonempty release posture required")
@@ -52,6 +65,36 @@ def bind(live, model, spec):
     for hand, released in zip(live.hands, proposals):
         hand["release_open"] = released
     live.source_hashes[str(path)] = digest(path)
+
+
+def planning_targets(model, hands, targets):
+    """Opening waypoints for fixture planning, preserving acquisition and wrists."""
+    allowed = {
+        n
+        for hand in hands
+        for n in hand["joint_names"]
+        if not n.startswith(hand["fixture_prefix"])
+    }
+    if not targets or not set(targets) <= allowed:
+        raise ValueError("Opening targets may own admitted finger joints only")
+    result = {}
+    for hand in hands:
+        values = np.asarray(hand["q_open"], float).copy()
+        for i, name in enumerate(hand["joint_names"]):
+            if name in targets:
+                value = targets[name]
+                joint = model.joint(name)
+                if (
+                    not np.isfinite(value)
+                    or abs(value - values[i]) > 0.5 + 1e-9
+                    or not joint.range[0] <= value <= joint.range[1]
+                ):
+                    raise ValueError(
+                        "Planned opening exceeds native finger limits or the 0.5 rad change budget"
+                    )
+                values[i] = value
+        result[hand["root_body"]] = values
+    return result
 
 
 def run(config):

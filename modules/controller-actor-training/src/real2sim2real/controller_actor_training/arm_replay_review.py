@@ -157,6 +157,16 @@ def render(directory, *, follow_object=False):
         if report.get("finger_control_mode") == "live_contact_force"
         else "recorded finger commands"
     )
+    release = (report.get("continuous_metrics") or {}).get("release")
+    phase_summary = ""
+    if release:
+        phase_summary = (
+            "<p><strong>Complete controller: "
+            + ("passed" if report["success"] else "rejected")
+            + ". Finger release: "
+            + ("passed" if release.get("accepted") else "rejected")
+            + ".</strong></p>"
+        )
     (directory / "review.html").write_text(
         '<!doctype html><meta charset="utf-8"><style>body{font:17px system-ui;max-width:1100px;margin:30px auto}video{width:100%}pre{white-space:pre-wrap}</style><h1>Two-arm control transfer</h1><p>Saved simulated dynamics, not hardware execution. Both Cartesian wrist fixtures are removed. Torque-limited arm actuators and '
         + finger_description
@@ -164,6 +174,7 @@ def render(directory, *, follow_object=False):
         + "<p>Motion condition: "
         + html.escape(report.get("motion_condition", "demonstrated"))
         + ". A stationary hold does not establish demonstrated-motion success.</p>"
+        + phase_summary
         + media
         + '<p><a href="result.json">Full result and provenance</a></p><pre>'
         + html.escape(json.dumps(metrics, indent=2))

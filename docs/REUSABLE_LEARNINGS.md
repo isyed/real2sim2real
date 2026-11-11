@@ -378,6 +378,18 @@ not reached those poses. Inspect actual closure response and early load transfer
 a static fit cannot substitute for stationary admission. An earlier finger closing
 command must retain the independently declared object clock and drift anchor.
 
+A free opening endpoint can still cross the object wall midway through the motion.
+Fit fingers and wrist rotation against contacts along the complete release path,
+then add dense verification witnesses back into the fit. A brief rotation before
+outward translation can untuck a finger that straight withdrawal leaves hooked.
+Keep the exact finger goals and wrist clock pinned together across planning and
+runtime. Hand-only geometry admission still requires a full-arm audit and dynamics.
+
+Measure release forces separately for both hands while retaining the combined
+acceptance limit. Removing a primary-hand hook can reveal support-pinky contact
+that the previous object displacement had concealed. Additional outward travel can
+worsen that hook; fit the remaining hand's opening path with the first solution fixed.
+
 Inspect seating before increasing pressure: unloaded pads at closure, millimetre
 normal gaps before lift, or wrist tracking active only after lift can explain later
 drift. Compare coherent contact force with requested pressure and preserve existing

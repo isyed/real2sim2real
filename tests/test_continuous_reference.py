@@ -150,3 +150,33 @@ def test_incomplete_release_keeps_a_serializable_rejection():
     assert "incomplete_table_return" in failures
     assert "incomplete_finger_release" in failures
     json.dumps(metrics, allow_nan=False)
+
+
+def test_per_hand_force_diagnostics_keep_the_combined_release_limit():
+    protocol = dict(
+        acquisition_end_s=1.8,
+        capture_duration_s=12,
+        terminal_settle_s=1,
+        finger_release=dict(start_s=13.1, duration_s=0.8, settle_s=0.8),
+    )
+    rows = records()
+    for t in [13.91, 14.3, 14.69]:
+        r = deepcopy(rows[-1])
+        r.update(
+            time_s=t,
+            finger_release=dict(fraction=1.0, maximum_open_error_rad=0.01),
+            contact_patch_motion=dict(
+                pads={
+                    "primary:index": {"force_n": 0.4},
+                    "secondary:pinky": {"force_n": 0.6},
+                },
+                other_object_contacts_n={"secondary:pinky_MP": 0.3},
+            ),
+        )
+        rows.append(r)
+    result, failures = evaluate_continuous(rows, protocol, 0)
+    assert result["release"]["peak_hand_forces_n"] == pytest.approx(
+        dict(primary=0.4, secondary=0.9)
+    )
+    assert result["release"]["maximum_hand_object_force_n"] == pytest.approx(1.3)
+    assert "incomplete_finger_release" in failures

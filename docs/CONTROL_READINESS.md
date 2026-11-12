@@ -1,5 +1,9 @@
 # From a fitted grasp to moving control
 
+[Command decomposition and table load transfer](TABLE_LOAD_TRANSFER.md) separate
+planned motion, corrected wrist targets and actual tracking. A bounded table-force
+response shares existing wrist authority and cannot erase an earlier failed lift.
+
 [Grasp force-and-torque auditing](GRASP_WRENCH_AUDIT.md) separates ideal
 actuator-limited contact capacity from controller realization, and airborne
 support from hands pushing against the table during load transfer. Saved wrist

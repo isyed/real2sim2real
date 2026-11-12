@@ -562,6 +562,22 @@ def verify_selected_trial(evaluation, selected, plan):
         raise ValueError("Selected grasp differs from its accepted contact plan")
 
 
+def required_hold_duration(goal, settings):
+    """Legacy lift-only tasks use the explicitly declared rollout hold duration."""
+    required = goal.get("hold_s", settings["hold_s"])
+    if (
+        type(settings["hold_s"]) not in (int, float)
+        or not np.isfinite(settings["hold_s"])
+        or settings["hold_s"] <= 0
+        or type(required) not in (int, float)
+        or not np.isfinite(required)
+        or required <= 0
+        or settings["hold_s"] < required
+    ):
+        raise ValueError("Trial requires a positive complete declared hold")
+    return required
+
+
 def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
     import mujoco
     from real2sim2real.retargeting.grasp_kinematics import robot_indices
@@ -643,8 +659,7 @@ def trial(config, candidate, output, *, mass_scale=1.0, friction=None):
     task = json.loads(Path(config["task"]).read_text())
     table_top = task["table"]["top_z_m"]
     goal = task["goal"]
-    if settings["hold_s"] < goal["hold_s"]:
-        raise ValueError("Trial hold cannot be shorter than the task requirement")
+    required_hold_duration(goal, settings)
     feedback = config.get("clearance_feedback")
     freeze_lift_at_hold = config.get("freeze_lift_at_hold", False)
     if type(freeze_lift_at_hold) is not bool:

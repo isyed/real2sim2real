@@ -42,6 +42,12 @@ See [bounded proposals](../../docs/BOUNDED_POLICY_PROPOSALS.md) and
 credentials, dataset paths and experiment ledgers belong downstream. These tools
 do not replace the simulator or perform residual RL training.
 
+For a new grasp without a passing controller seed, see
+[fresh grasp strategies](../../docs/FRESH_GRASP_STRATEGIES.md). This optional
+interface compares deterministic and authored paired contact layouts through
+one fitter and conditional fixture-hold evaluator, while retaining uncertain
+surface evidence and rejected acquisition paths.
+
 The [pipeline guide](../../docs/PIPELINES.md) separates human-reference training
 from object-reference control. `object_control_stage` exposes arm-path screening
 and actuator-driven evaluation through the common artifact/deadline protocol.

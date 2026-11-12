@@ -252,3 +252,11 @@ reference and evaluator. This optional experimental branch does not replace the
 object-reference recipe or authorize training after a failed rollout. The author
 backend and private evidence packet belong to the downstream campaign; reusable
 parameter validation, native phase execution and comparison media are public.
+
+When there is no passing parent grasp, use the separate
+[fresh grasp strategy interface](FRESH_GRASP_STRATEGIES.md). It evaluates a
+bounded bilateral contact proposal through common native fitting and conditional
+fixture holds. Observation admission remains independent of conditional model
+mechanics. Geometry rejection prevents a hold; graph completion alone never
+establishes task success. Optional deterministic comparisons use the same scene,
+fitter and criteria, with separate proposal-count and computational budgets.

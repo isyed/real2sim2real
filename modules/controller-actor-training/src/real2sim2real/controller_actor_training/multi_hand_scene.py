@@ -91,6 +91,111 @@ def append_hand(config):
     ):
         if config.get(key) != baseline.get(key):
             raise ValueError("Preserve baseline scene and primary controller")
+    return _append_prepared_hand(
+        config, baseline, {"parent_trial_sha256": parent["trial_sha256"]}
+    )
+
+
+def append_hypothesis_hand(config):
+    """Compose a fresh pair from pinned geometry without inventing a passing grasp.
+
+    This explicit development entry point preserves the old successful-parent
+    requirement in append_hand. It never admits observations, control or hardware.
+    """
+    from .paired_acquisition_audit import pinned_json
+    from .object_grasp_pilot import verify_scene_assets
+
+    if config.get("hypothesis_only") is not True or "parent" in config:
+        raise ValueError("Explicit fresh hypothesis condition required")
+    source = config["prepared_source"]
+    baseline = pinned_json(source["config"])
+    root, _ = verify_scene_assets(baseline)
+    if (
+        digest(root / "receipt.json") != source["scene_receipt_sha256"]
+        or digest(root.parent / "settling.json") != source["settling_sha256"]
+    ):
+        raise ValueError("Pinned source scene or initialization changed")
+    settling = json.loads((root.parent / "settling.json").read_text())
+    if not settling["accepted"] or settling["initialization"] != "gravity_settled_task":
+        raise ValueError("Explicit stable gravity-settled development scene required")
+    for key in ("task", "physics", "robot"):
+        if config[key] != baseline[key]:
+            raise ValueError("Preserve source task, physics and primary robot")
+    return _append_prepared_hand(
+        config,
+        baseline,
+        {
+            "hypothesis_only": True,
+            "source_configuration": source["config"],
+            "source_settling_sha256": source["settling_sha256"],
+            "contact_observation_admitted": False,
+            "control_ready": False,
+        },
+    )
+
+
+def verify_preserved_dynamics(before, after):
+    """Namespaced composition must not retune the original object, table or hand."""
+    for key in (
+        "timestep",
+        "gravity",
+        "integrator",
+        "solver",
+        "iterations",
+        "tolerance",
+    ):
+        if not np.array_equal(getattr(before.opt, key), getattr(after.opt, key)):
+            raise ValueError("Composition changed physics option: " + key)
+    groups = (
+        ("body", before.nbody, ("mass", "inertia", "ipos", "iquat", "gravcomp")),
+        (
+            "geom",
+            before.ngeom,
+            (
+                "friction",
+                "contype",
+                "conaffinity",
+                "solref",
+                "solimp",
+                "pos",
+                "quat",
+                "size",
+            ),
+        ),
+        ("joint", before.njnt, ("range", "axis", "stiffness", "limited")),
+        (
+            "actuator",
+            before.nu,
+            (
+                "gainprm",
+                "biasprm",
+                "forcerange",
+                "ctrlrange",
+                "forcelimited",
+                "ctrllimited",
+            ),
+        ),
+    )
+    checked = 0
+    for kind, count, fields in groups:
+        for i in range(count):
+            old = getattr(before, kind)(i)
+            if not old.name:
+                continue
+            new = getattr(after, kind)(old.name)
+            prefix = "jnt" if kind == "joint" else kind
+            for field in fields:
+                a = getattr(before, prefix + "_" + field)[old.id]
+                b = getattr(after, prefix + "_" + field)[new.id]
+                if not np.allclose(a, b, rtol=1e-10, atol=1e-12):
+                    raise ValueError(f"Composition changed {kind} {old.name}: {field}")
+            checked += 1
+    return {"named_entities_checked": checked, "original_dynamics_preserved": True}
+
+
+def _append_prepared_hand(config, baseline, provenance):
+    from .object_grasp_pilot import load_scene
+
     source = Path(baseline["output"]) / "scene"
     output = Path(config["output"]) / "scene"
     if output.exists():
@@ -200,7 +305,7 @@ def append_hand(config):
         schema="real2sim2real.multi-hand-scene/1",
         config=config,
         parent_scene_receipt_sha256=digest(source / "receipt.json"),
-        parent_trial_sha256=parent["trial_sha256"],
+        **provenance,
         support_sources=sources,
         scene_sha256=digest(output / "scene.xml"),
         robot_assets={p.name: digest(p) for p in (output / "robot_assets").iterdir()},
@@ -210,5 +315,8 @@ def append_hand(config):
     shutil.copyfile(
         Path(baseline["output"]) / "settling.json", output.parent / "settling.json"
     )
-    load_scene(config)
+    receipt["original_dynamics_verification"] = verify_preserved_dynamics(
+        load_scene(baseline)[0], load_scene(config)[0]
+    )
+    write_json(output / "receipt.json", receipt)
     return receipt

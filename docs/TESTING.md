@@ -1,5 +1,14 @@
 # Testing the reusable modules
 
+`test_grasp_strategy.py` checks the fresh graph's authority, immutable parameter
+copies, once-only plan/hold ordering, rejection before physics, declared hold
+duration and missing-feedback semantics. Optional runtime cases execute the
+actual GaP scheduler and detect physical-property changes during scene extension.
+Feedback/review loading checks both source hashes, sibling ownership and
+agreement between the fitted plan and its evaluation before exporting results.
+Campaign results, source-scene preservation, full holds and arm feasibility remain
+separate downstream evidence.
+
 `test_passthrough_graph.py` checks a single persistent zero-action session,
 ordered phase handoffs without added time or steps, rejection of waits/resets/
 scripts/parallel routing, nested source-hash validation, truncation and clock

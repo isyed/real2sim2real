@@ -526,3 +526,11 @@ as separate claims. A fixture hold can precede expensive arm fitting to isolate
 contacts, while an arm hold necessarily follows arm assembly/IK. Old staged holds
 cannot admit changed continuous acquisition, contacts or reference clocks. The
 named arm recipe is only part of this workflow; see [control readiness](CONTROL_READINESS.md).
+
+For fresh grasp proposals, retain per-hand progress without promoting an
+inadmissible pair. A pad-position tolerance can pass while the placed collision
+pad has no nearby opposing surface; check coverage, normals and paired insertion
+separately. Missing samples must not be reported as a solved force infeasibility
+or a measured hold failure. Preserve unsuccessful revisions and compare their
+geometry diagnostics before spending a physics trial. See
+[fresh grasp strategies](FRESH_GRASP_STRATEGIES.md).

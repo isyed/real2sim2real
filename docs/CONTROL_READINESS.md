@@ -1,5 +1,10 @@
 # From a fitted grasp to moving control
 
+[Fresh grasp strategies](FRESH_GRASP_STRATEGIES.md) provide an explicit
+hypothesis-based entry when no successful parent controller exists. Geometry
+and paired acquisition must pass before a fixture hold runs. The resulting
+mechanics verdict cannot admit uncertain contact observations or arm control.
+
 [Pass-through policy graphs](PASSTHROUGH_POLICY_GRAPH.md) first require exact
 reproduction of a frozen continuous controller across graph phase boundaries.
 Graph completion is distinct from physical acceptance; the original failed gates

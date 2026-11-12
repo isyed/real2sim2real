@@ -10,6 +10,10 @@ from .arm_object_feedback import joint_offset
 
 
 def validate_source(spec, config):
+    if config.get("descent_pad_control") is not None:
+        from .descent_pad_control import validate_source as validate_descent
+
+        validate_descent(config["descent_pad_control"], config)
     if set(spec) != {"baseline", "controller"}:
         raise ValueError("Pinned baseline and explicit feedback controller required")
     source = Path(spec["baseline"]["path"])
@@ -29,7 +33,13 @@ def validate_source(spec, config):
     for name, key in [("states.npz", "states_sha256"), ("scene.xml", "scene_sha256")]:
         if digest(source.with_name(name)) != baseline[key]:
             raise ValueError("Frozen physical baseline changed")
-    ignored = {"output", "purpose", "motion_condition", "closed_loop_grasp_feedback"}
+    ignored = {
+        "output",
+        "purpose",
+        "motion_condition",
+        "closed_loop_grasp_feedback",
+        "descent_pad_control",
+    }
     strip = lambda c: {k: v for k, v in c.items() if k not in ignored}
     if strip(config) != strip(baseline["config"]) or config.get(
         "motion_condition"

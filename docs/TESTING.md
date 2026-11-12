@@ -1,5 +1,11 @@
 # Testing the reusable modules
 
+`test_descent_pad_control.py` checks conserved pair pressure redistribution during
+slew, signed-load handling, per-pad/rate bounds, exact disabled/prefix goals,
+recovery on contact loss and once-only material anchors. Complete zero-policy
+state/record equality against original and wrist-feedback controllers and actual
+loaded descent/release remain separate downstream evidence.
+
 `test_slip_tilt_feedback.py` checks fixed anchors, correction sign/rate/travel,
 coordinated object-pivot tilt, contact/reference freezes, blocked downward slip,
 supported-release recovery and stationary offset retention. Its optional runtime

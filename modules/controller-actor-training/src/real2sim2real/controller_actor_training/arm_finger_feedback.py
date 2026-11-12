@@ -252,6 +252,8 @@ class ArmFingerFeedback:
             + self.settings["close_activation_fraction"] * self.rollout["close_s"]
         )
         extra = {}
+        if getattr(self.servo, "descent", None) is not None:
+            extra["time_s"] = time
         if "unloaded_acquisition" in self.settings:
             from .finger_acquisition import active
 

@@ -72,6 +72,7 @@ def build(config):
                 minimum_clearance_mm=result["hold_minimum_clearance_m"] * 1000,
                 bounded_grasp_correction=result.get("bounded_grasp_correction"),
                 closed_loop_grasp_feedback=result.get("closed_loop_grasp_feedback"),
+                descent_pad_control=result.get("descent_pad_control"),
             )
         )
     if clocks[0] != clocks[1]:
@@ -86,7 +87,11 @@ def build(config):
         audited_paths_equal=rows[0]["audit_sha256"] == rows[1]["audit_sha256"],
         command_corrections_equal=all(
             rows[0][k] == rows[1][k]
-            for k in ("bounded_grasp_correction", "closed_loop_grasp_feedback")
+            for k in (
+                "bounded_grasp_correction",
+                "closed_loop_grasp_feedback",
+                "descent_pad_control",
+            )
         ),
         controlled_single_variable_experiment=False,
         physics_rerun=False,

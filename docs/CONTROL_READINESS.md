@@ -1,5 +1,9 @@
 # From a fitted grasp to moving control
 
+[Descent pad seating and load-sharing probes](DESCENT_PAD_CONTROL.md) distinguish
+actual measured contact migration from lost contact and preserve the original
+acquisition scoring anchor while testing targeted finger-task changes.
+
 [Measured slip/tilt feedback](CLOSED_LOOP_GRASP_FEEDBACK.md) uses acquisition-time
 anchors, coordinated object-pivot wrist corrections and bounded recovery before
 release. Its zero-gain replay and complete loaded acceptance are separate checks.

@@ -166,7 +166,9 @@ def validate_settings(settings):
     if "unloaded_acquisition" in settings:
         from .finger_acquisition import validate
 
-        validate(settings["unloaded_acquisition"], settings["close_activation_fraction"])
+        validate(
+            settings["unloaded_acquisition"], settings["close_activation_fraction"]
+        )
     if "posture_transition" in settings:
         from .payload_posture import validate_settings as validate_posture
 
@@ -423,6 +425,7 @@ class BilateralContactForce:
         if len(set(all_q)) != len(all_q):
             raise ValueError("Independent per-pad finger joints required")
         self.posture = None
+        self.descent = None
         if "posture_transition" in settings:
             from .payload_posture import PayloadPosture
 
@@ -436,11 +439,26 @@ class BilateralContactForce:
                 allowed_penetration_m=allowed_penetration_m,
             )
 
-    def target(self, model, data, nominal, *, active, dt, retention_active=False,
-               pressure_offsets=None, acquisition_active=False):
+    def target(
+        self,
+        model,
+        data,
+        nominal,
+        *,
+        active,
+        dt,
+        retention_active=False,
+        pressure_offsets=None,
+        acquisition_active=False,
+        time_s=None,
+    ):
         import mujoco
 
         if pressure_offsets is not None:
+            if self.descent is not None:
+                raise ValueError(
+                    "Descent policy and pressure actor cannot share goal ownership"
+                )
             from .residual_pressure import validate_offsets
 
             validate_offsets(pressure_offsets)
@@ -457,7 +475,9 @@ class BilateralContactForce:
             model, data, self.object_id, [p["gid"] for p in self.pads]
         )
         if acquisition_active and "unloaded_acquisition" not in self.settings:
-            raise ValueError("Earlier pad activation requires explicit acquisition settings")
+            raise ValueError(
+                "Earlier pad activation requires explicit acquisition settings"
+            )
         if self.payload:
             from .support_control import contact_wrench_on_body
 
@@ -503,6 +523,24 @@ class BilateralContactForce:
                     active=active and self.payload.valid_updates > previous_updates,
                 )
         # Refresh only positions/Jacobians. Do not assign a physical coordinate.
+        if self.descent is not None:
+            if time_s is None:
+                raise ValueError("Descent control requires the unchanged native clock")
+            self.descent.advance(
+                time_s,
+                dt,
+                forces,
+                active=active,
+                isolated=isolated
+                and all(
+                    any(
+                        observations[p["gid"]]["force_n"] > 0.1
+                        for p in self.pads
+                        if p["role"] == role
+                    )
+                    for role in ("primary", "secondary")
+                ),
+            )
         mujoco.mj_kinematics(model, data)
         mujoco.mj_comPos(model, data)
         rotation = data.xmat[self.object_id].reshape(3, 3)
@@ -522,7 +560,8 @@ class BilateralContactForce:
                 from .finger_acquisition import seeking
 
                 seek = seeking(
-                    pad, observation["force_n"],
+                    pad,
+                    observation["force_n"],
                     active=acquisition_active,
                     threshold_n=self.settings.get("minimum_observed_force_n", 0.1),
                 )
@@ -537,16 +576,26 @@ class BilateralContactForce:
             goal_n = self.settings["target_force_n"][pad["group"]]
             if self.payload:
                 goal_n = self.payload.target(pad["role"], goal_n, group=pad["group"])
+            label = pad["role"] + ":" + pad["group"]
+            if self.descent is not None:
+                goal_n = self.descent.target(label, goal_n)
             if pressure_offsets is not None:
                 from .residual_pressure import pressure_goal
 
-                channel = pad["role"] + ":" + (
-                    "thumb" if pad["group"] == "thumb" else "fingers"
+                channel = (
+                    pad["role"]
+                    + ":"
+                    + ("thumb" if pad["group"] == "thumb" else "fingers")
                 )
                 goal_n = pressure_goal(goal_n, pressure_offsets[channel])
             pad["target_n"] = goal_n
             observed = (
-                self.settings.get("normal_observation", "planned") == "solved_contact"
+                (
+                    self.settings.get("normal_observation", "planned")
+                    == "solved_contact"
+                    or self.descent is not None
+                    and self.descent.observed_normal(label)
+                )
                 and pad["force"] >= self.settings.get("minimum_observed_force_n", 0.1)
                 and observation["outward_normal_world"] is not None
             )
@@ -568,6 +617,28 @@ class BilateralContactForce:
                 )
                 jac = np.zeros((3, model.nv))
                 tangent = {}
+                if self.descent is not None:
+                    body_pose, object_pose = np.eye(4), np.eye(4)
+                    body_pose[:3, :3] = data.xmat[pad["body"]].reshape(3, 3)
+                    body_pose[:3, 3] = data.xpos[pad["body"]]
+                    object_pose[:3, :3], object_pose[:3, 3] = rotation, position
+                    task = self.descent.anchor_task(
+                        label, body_pose, object_pose, observation, normal
+                    )
+                    if task is not None:
+                        p, projection, velocity = task
+                        mujoco.mj_jac(model, data, jac, None, p, pad["body"])
+                        tangent = dict(
+                            tangent_jacobian=projection @ jac[:, pad["dofs"]],
+                            tangent_velocity=velocity,
+                        )
+                    elif observed and self.descent.zero_tangent(label):
+                        mujoco.mj_jac(model, data, jac, None, p, pad["body"])
+                        projection = np.eye(3) - np.outer(normal, normal)
+                        tangent = dict(
+                            tangent_jacobian=projection @ jac[:, pad["dofs"]],
+                            tangent_velocity=np.zeros(3),
+                        )
                 if self.anchors:
                     body_pose, object_pose = np.eye(4), np.eye(4)
                     body_pose[:3, :3] = data.xmat[pad["body"]].reshape(3, 3)
@@ -605,10 +676,13 @@ class BilateralContactForce:
                     )
                 rates = self.settings
                 if seek:
-                    rates = dict(self.settings, **{
-                        k: self.settings["unloaded_acquisition"][k]
-                        for k in ("gain_m_per_n_s", "max_normal_speed_m_s")
-                    })
+                    rates = dict(
+                        self.settings,
+                        **{
+                            k: self.settings["unloaded_acquisition"][k]
+                            for k in ("gain_m_per_n_s", "max_normal_speed_m_s")
+                        },
+                    )
                 command, offset = normal_force_step(
                     q,
                     pad["offset"],
@@ -654,10 +728,16 @@ class BilateralContactForce:
                     updated_steps=p["updated"],
                     frozen_steps=p["frozen"],
                     loaded_continuation_steps=p["loaded_continuation"],
-                    **(dict(
-                        acquisition_contact_seen=p.get("acquisition_contact_seen", False),
-                        acquisition_seeking=p.get("acquisition_seeking", False),
-                    ) if "unloaded_acquisition" in self.settings else {}),
+                    **(
+                        dict(
+                            acquisition_contact_seen=p.get(
+                                "acquisition_contact_seen", False
+                            ),
+                            acquisition_seeking=p.get("acquisition_seeking", False),
+                        )
+                        if "unloaded_acquisition" in self.settings
+                        else {}
+                    ),
                 )
                 for p in self.pads
             },

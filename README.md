@@ -21,6 +21,11 @@ checks observation agreement before accepting a physically settled pose.
 [Arm path audits](docs/ARM_PATH_AUDIT.md) check explicit embodiments against saved
 wrist trajectories before dynamic integration.
 
+For offline controller proposals, the optional
+[ASL/GaP integration](docs/BOUNDED_POLICY_PROPOSALS.md) lives within
+`controller-actor-training`. It preserves the existing simulator and requires
+zero-correction reproduction before bounded changes and measured feedback.
+
 Original project contributions are licensed under [Apache License 2.0](LICENSE).
 Bundled third-party components and upstream documentation retain their own
 terms; see [NOTICE](NOTICE) and [component licenses](docs/THIRD_PARTY.md).

@@ -242,3 +242,13 @@ to screen exterior lower surfaces, insertion and static load paths before new
 arm/control trials. It preserves the source controller and never promotes a
 geometric fit directly to control. Stationary report banners distinguish the
 intentional command freeze from a complete demonstrated-motion replay.
+
+## Optional graph-author comparison
+
+An existing continuous controller can serve as the seed for a separately bounded
+[policy proposal experiment](BOUNDED_POLICY_PROPOSALS.md). Prove exact pass-through
+first, then admit one declarative correction graph against the frozen scene,
+reference and evaluator. This optional experimental branch does not replace the
+object-reference recipe or authorize training after a failed rollout. The author
+backend and private evidence packet belong to the downstream campaign; reusable
+parameter validation, native phase execution and comparison media are public.

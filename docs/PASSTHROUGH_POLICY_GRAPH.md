@@ -95,3 +95,7 @@ that every unsaved physics substep is identical or that the original grasp is
 successful. The graph's zero actions do not establish useful correction authority,
 robustness or hardware readiness. Candidate generation, skill adaptation and
 nonzero residual control require separate experiments.
+
+The next, separately bounded interface is described in
+[Bounded policy proposals](BOUNDED_POLICY_PROPOSALS.md). It preserves this strict
+pass-through path and admits only declared wrist/posture parameter changes.

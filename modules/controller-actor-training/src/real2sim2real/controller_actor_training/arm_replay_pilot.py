@@ -96,12 +96,16 @@ def subtree_geoms(model, root):
     return result
 
 
-def rollout(config, interaction=None):
+def rollout(config, interaction=None, *, phase_handoff=False):
     """Shared simulation coroutine; an optional adapter pauses at policy ticks.
 
-    The adapter can request pressure offsets only. Default execution never yields
-    and retains the original controller operations and physical clock.
+    The residual adapter can request pressure offsets only. The separate phase
+    interface yields metadata and accepts no actions. Default execution never
+    yields and retains the original controller operations and physical clock.
     """
+    if phase_handoff and interaction is not None:
+        raise ValueError("Phase handoffs and residual actions cannot share a replay")
+    previous_handoff_phase = None
     import mujoco
 
     finger_mode = config.get("finger_control_mode", "archived")
@@ -678,6 +682,19 @@ def rollout(config, interaction=None):
                 np.searchsorted(times, control_time, side="right") - 1, len(times) - 2
             )
             alpha = np.clip((control_time - times[i]) / (times[i + 1] - times[i]), 0, 1)
+            if phase_handoff:
+                handoff_phase = parent["records"][i]["phase"]
+                if handoff_phase != previous_handoff_phase:
+                    # Yield before any command update. Resumption neither steps
+                    # physics nor resets the native clock or controller state.
+                    command = yield {
+                        "phase": handoff_phase,
+                        "time_s": float(data.time),
+                        "physics_steps": steps,
+                    }
+                    if command is not None:
+                        raise ValueError("Phase boundaries accept no control action")
+                    previous_handoff_phase = handoff_phase
             pressure_offsets = None
             if interaction is not None:
                 interaction.check_deadline()

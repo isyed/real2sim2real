@@ -96,10 +96,65 @@ def subtree_geoms(model, root):
     return result
 
 
-def run(config):
+def rollout(config, interaction=None):
+    """Shared simulation coroutine; an optional adapter pauses at policy ticks.
+
+    The adapter can request pressure offsets only. Default execution never yields
+    and retains the original controller operations and physical clock.
+    """
     import mujoco
 
     finger_mode = config.get("finger_control_mode", "archived")
+    table_spec = config.get("table_load_transfer")
+    record_commands = config.get("record_arm_commands", table_spec is not None)
+    if not isinstance(record_commands, bool):
+        raise ValueError("record_arm_commands must be a boolean observation option")
+    if table_spec is not None:
+        from .table_load_transfer import validate_source
+
+        validate_source(table_spec, config)
+        if config.get("closed_loop_grasp_feedback") is None or interaction is not None:
+            raise ValueError(
+                "Table transfer requires the existing closed-loop wrist owner"
+            )
+    descent_spec = config.get("descent_pad_control")
+    if descent_spec is not None:
+        from .descent_pad_control import validate_source
+
+        validate_source(descent_spec, config)
+        if finger_mode != "live_contact_force" or interaction is not None:
+            raise ValueError(
+                "Descent trials require the existing live finger owner without an actor"
+            )
+    closed_spec = config.get("closed_loop_grasp_feedback")
+    if closed_spec is not None:
+        from .closed_loop_grasp import validate_source
+
+        validate_source(closed_spec, config)
+        if (
+            finger_mode != "live_contact_force"
+            or interaction is not None
+            or any(
+                config.get(k)
+                for k in (
+                    "object_feedback",
+                    "support_height_alignment",
+                    "bounded_grasp_correction",
+                )
+            )
+        ):
+            raise ValueError(
+                "Closed-loop grasp feedback requires exclusive live arm/finger ownership"
+            )
+    correction_spec = config.get("bounded_grasp_correction")
+    if correction_spec is not None:
+        from .bounded_grasp_correction import validate
+
+        validate(correction_spec, config)
+        if finger_mode != "live_contact_force" or interaction is not None:
+            raise ValueError(
+                "Bounded grasp probes require the live finger owner without another residual"
+            )
     if finger_mode not in ("archived", "live_contact_force"):
         raise ValueError(
             "Explicit archived or live_contact_force finger control required"
@@ -108,6 +163,14 @@ def run(config):
         raise ValueError(
             "Live pad feedback and separate finger trim cannot share ownership"
         )
+    if config.get("finger_seating_plan") and finger_mode != "live_contact_force":
+        raise ValueError("Seating proposals require the live finger owner")
+    if "acquisition_profile" in config:
+        from .acquisition_profile import validate
+
+        validate(config["acquisition_profile"])
+        if finger_mode != "live_contact_force":
+            raise ValueError("Acquisition profiles require the live finger owner")
     if config.get("finger_feedback_override") and finger_mode != "live_contact_force":
         raise ValueError("Finger feedback overrides require the live owner")
     simulation_case = validate_case(config)
@@ -116,7 +179,12 @@ def run(config):
         if finger_mode != "live_contact_force":
             raise ValueError("Replanned finger ownership requires live feedback")
     if config.get("motion_condition", "demonstrated") == "demonstrated" and (
-        config.get("finger_plan") or config.get("validated_stationary")
+        config.get("finger_plan")
+        or config.get("acquisition_profile")
+        or config.get("finger_seating_plan")
+        or config.get("finger_feedback_override", {}).get("unloaded_acquisition")
+        or config.get("validated_stationary")
+        or config.get("diagnostic_stationary")
     ):
         from .arm_finger_plan import validate_stationary
 
@@ -129,6 +197,8 @@ def run(config):
         name: Path(__file__).with_name(name).read_bytes()
         for name in (
             "arm_replay_pilot.py",
+            "arm_command_observation.py",
+            "table_load_transfer.py",
             "arm_object_feedback.py",
             "arm_replay_diagnostics.py",
             "arm_tracking_control.py",
@@ -143,6 +213,19 @@ def run(config):
             "contact_anchor.py",
             "arm_motion_condition.py",
             "arm_finger_plan.py",
+            "continuous_reference.py",
+            "bounded_grasp_correction.py",
+            "closed_loop_grasp.py",
+            "slip_tilt_feedback.py",
+            "descent_pad_control.py",
+            "finger_release.py",
+            "finger_release_plan.py",
+            "wrist_withdrawal.py",
+            "pad_seating_plan.py",
+            "finger_acquisition.py",
+            "closing_wrist_offsets.py",
+            "acquisition_profile.py",
+            "arm_clearance_audit.py",
         )
     }
     audit_path = Path(config["audit"])
@@ -166,6 +249,24 @@ def run(config):
     if {a["name"] for a in arms} != {"left", "right"}:
         raise ValueError("Both hands must have arms")
     parent = json.loads(Path(audit["config"]["trial"]).read_text())
+    from .closing_wrist_offsets import nonzero
+
+    if nonzero(parent.get("continuous_protocol", {}).get("closing_wrist_offsets")) and (
+        finger_mode != "live_contact_force" or not config.get("finger_seating_plan")
+    ):
+        raise ValueError("Closing wrist preload requires its coupled live finger plan")
+    required_posture = parent.get("continuous_protocol", {}).get(
+        "finger_release_posture"
+    )
+    if required_posture and config.get("finger_release_posture") != required_posture:
+        raise ValueError(
+            "Live release must use the exact posture in the audited command plan"
+        )
+    if config.get("finger_release_posture") and (
+        finger_mode != "live_contact_force"
+        or not parent.get("continuous_protocol", {}).get("release_planned")
+    ):
+        raise ValueError("A release posture requires continuous live-finger release")
     parent = effective_parent(parent, audit)
     old, _, mesh = load_scene(parent["configuration"])
     archive = Path(audit["config"]["trial"]).with_name("states.npz")
@@ -246,6 +347,30 @@ def run(config):
     )
     motion_condition = config.get("motion_condition", "demonstrated")
     parent, targets = apply_condition(parent, targets, motion_condition)
+    acquisition_path = None
+    if config.get("acquisition_profile"):
+        from .acquisition_profile import arm_targets, screen
+
+        targets = arm_targets(
+            times,
+            targets,
+            arms,
+            parent["configuration"]["rollout"],
+            config["acquisition_profile"],
+        )
+        acquisition_path = screen(
+            model,
+            qids,
+            targets,
+            times,
+            speed_limits,
+            audit["config"]["criteria"]["joint_margin_rad"],
+        )
+        write_json(out / "acquisition-path.json", acquisition_path)
+        if not acquisition_path["accepted"]:
+            raise ValueError(
+                "Acquisition arm schedule fails native speed/margin admission"
+            )
     accelerations = np.gradient(np.gradient(targets, times, axis=0), times, axis=0)
     inertia_control = (
         InertialFeedforward(config["inertial_feedforward"], limits)
@@ -335,8 +460,70 @@ def run(config):
             [dst for _, dst in finger_pairs],
             overrides=config.get("finger_feedback_override"),
         )
+        if config.get("finger_release_posture"):
+            from .finger_release_plan import bind
+
+            bind(
+                live_fingers,
+                model,
+                config["finger_release_posture"],
+                withdrawal=parent.get("continuous_protocol", {}).get(
+                    "wrist_withdrawal"
+                ),
+                release=parent.get("continuous_protocol", {}).get("finger_release"),
+            )
+        if config.get("finger_seating_plan"):
+            from .pad_seating_plan import bind
+
+            bind(
+                live_fingers,
+                model,
+                config["finger_seating_plan"],
+                closing_wrist_offsets=parent.get("continuous_protocol", {}).get(
+                    "closing_wrist_offsets"
+                ),
+            )
     finger_path = None
-    if finger_plan_admission:
+    descent = None
+    if descent_spec is not None:
+        from .descent_pad_control import bind
+
+        descent = bind(live_fingers, descent_spec, parent)
+    if config.get("acquisition_profile"):
+        from .acquisition_profile import bind_fingers
+
+        bind_fingers(live_fingers, model, config["acquisition_profile"])
+    correction_path = None
+    if correction_spec is not None:
+        from .bounded_grasp_correction import bind_fingers, wrist_targets
+
+        bind_fingers(
+            live_fingers, model, correction_spec, parent["continuous_protocol"]
+        )
+        targets, correction_path = wrist_targets(
+            model,
+            data,
+            targets,
+            times,
+            qids,
+            vids,
+            arms,
+            roots,
+            parent,
+            correction_spec,
+            speed_limits,
+            audit["config"]["criteria"]["joint_margin_rad"],
+        )
+        write_json(out / "bounded-correction-path.json", correction_path)
+        if not correction_path["accepted"]:
+            raise ValueError(
+                "Bounded grasp correction fails wrist IK/speed/margin admission"
+            )
+        accelerations = np.gradient(np.gradient(targets, times, axis=0), times, axis=0)
+        np.savez_compressed(
+            out / "bounded-command-targets.npz", targets=targets, timestamps_s=times
+        )
+    if finger_plan_admission or parent.get("continuous_protocol"):
         from .arm_finger_plan import path_screen
 
         finger_path = path_screen(
@@ -400,6 +587,7 @@ def run(config):
         raise ValueError(
             "Choose filtered tracking compensation or legacy velocity feedforward"
         )
+    task = json.loads(Path(parent["configuration"]["task"]).read_text())
     reference_objects = []
     for record in parent["records"]:
         pose = np.eye(4)
@@ -424,8 +612,45 @@ def run(config):
     control_period, control_stride = controller_clock(
         model.opt.timestep, config.get("control_period_s")
     )
+    command_lead_s = float(np.max(np.diff(times)))
     control_start = float(data.time)
     control_updates = 0
+    closed = None
+    if closed_spec is not None:
+        from .closed_loop_grasp import ClosedLoopGrasp
+
+        closed = ClosedLoopGrasp(
+            model,
+            data,
+            roots,
+            arms,
+            qids,
+            vids,
+            ranges,
+            speed_limits,
+            parent,
+            closed_spec["controller"],
+            control_period,
+            robot_geoms,
+            arm_geoms,
+            object_geoms,
+            hands,
+            dict(
+                joint_margin_rad=audit["config"]["criteria"]["joint_margin_rad"],
+                arm_penetration_m=audit["config"]["criteria"]["arm_penetration_m"],
+                robot_penetration_m=parent["configuration"]["planning"][
+                    "max_penetration_m"
+                ],
+            ),
+            table_settings=None if table_spec is None else table_spec["controller"],
+            table_geom=table,
+        )
+    if interaction is not None:
+        if live_fingers is None or condition != "loaded":
+            raise ValueError("Residual learning requires loaded live finger feedback")
+        interaction.bind(
+            model, data, live_fingers, roots, parent, times, control_period
+        )
     while data.time < times[-1] - model.opt.timestep / 2:
         if steps % control_stride == 0:
             control_time = (
@@ -434,11 +659,37 @@ def run(config):
                 else float(data.time)
             )
             control_updates += 1
+            withdrawal = parent.get("continuous_protocol", {}).get("wrist_withdrawal")
+            if withdrawal and motion_condition == "demonstrated":
+                from .wrist_withdrawal import release_ready
+
+                if live_fingers is None or live_fingers.release is None:
+                    raise ValueError("Wrist withdrawal requires live supported release")
+                if not release_ready(
+                    control_time,
+                    withdrawal,
+                    parent["continuous_protocol"]["finger_release"],
+                    live_fingers.release.started_s,
+                    command_lead_s=command_lead_s,
+                ):
+                    aborted = "withdrawal_without_supported_unhooking"
+                    break
             i = min(
                 np.searchsorted(times, control_time, side="right") - 1, len(times) - 2
             )
             alpha = np.clip((control_time - times[i]) / (times[i + 1] - times[i]), 0, 1)
+            pressure_offsets = None
+            if interaction is not None:
+                interaction.check_deadline()
+                if (control_updates - 1) % interaction.policy_stride == 0:
+                    action = yield interaction.observe(control_time, i, alpha)
+                    interaction.accept(action)
+                pressure_offsets = interaction.advance(
+                    control_period, parent["records"][i]["phase"]
+                )
             target = targets[i] * (1 - alpha) + targets[i + 1] * alpha
+            if record_commands:
+                planned_target = target.copy()
             if feedback or height_alignment:
                 # Read the last solved contact forces before refreshing kinematics.
                 normal = dict.fromkeys(roots, 0.0)
@@ -548,7 +799,13 @@ def run(config):
                     not np.allclose(target, bounded, atol=1e-12, rtol=0)
                 )
                 target = bounded
+            if closed is not None:
+                target = closed.target(
+                    control_time, control_period, target, previous_command, i, alpha
+                )
             previous_command = target.copy()
+            if record_commands:
+                feedback_target = target.copy()
             velocity = (
                 (targets[i + 1] - targets[i]) / (times[i + 1] - times[i])
                 if config.get("velocity_feedforward", False)
@@ -568,6 +825,9 @@ def run(config):
                 margin = audit["config"]["criteria"]["joint_margin_rad"]
                 target = np.clip(target, ranges[:, 0] + margin, ranges[:, 1] - margin)
             inertial_torque = 0.0
+            if closed is not None and not closed.check_command(target):
+                aborted = "closed_loop_collision_guard"
+                break
             if inertia_control:
                 mujoco.mj_fullM(model, mass_matrix, data.qM)
                 acceleration = (1 - alpha) * accelerations[i] + alpha * accelerations[
@@ -587,8 +847,72 @@ def run(config):
                 target_velocity=velocity,
                 kd=config["kd_nm_s_per_rad"],
             )
+            if record_commands:
+                arm_command = dict(
+                    command_time_s=float(control_time),
+                    planned_q_rad=planned_target,
+                    feedback_q_rad=feedback_target,
+                    kinematic_q_rad=target.copy(),
+                    servo_ctrl_rad=data.ctrl[aids].copy(),
+                    model_bias_nm=data.qfrc_bias[vids].copy(),
+                    inertial_feedforward_nm=np.broadcast_to(
+                        inertial_torque, target.shape
+                    ).copy(),
+                    velocity_feedforward_rad_s=np.broadcast_to(
+                        velocity, target.shape
+                    ).copy(),
+                )
             if live_fingers:
-                live_fingers.command(model, data, control_time, control_period)
+                release_observation = {}
+                if (
+                    live_fingers.release
+                    and control_time >= live_fingers.release.settings["start_s"] - 0.5
+                ):
+                    actual_pose = object_transform(model, data)
+                    object_geoms = set(np.where(model.geom_bodyid == obj)[0])
+                    on_table = sum(
+                        table in (c.geom1, c.geom2)
+                        and bool(object_geoms & {c.geom1, c.geom2})
+                        for c in data.contact[: data.ncon]
+                    )
+                    table_load = 0.0
+                    for contact_index, contact in enumerate(data.contact[: data.ncon]):
+                        if table in (contact.geom1, contact.geom2) and object_geoms & {
+                            contact.geom1,
+                            contact.geom2,
+                        }:
+                            contact_force = np.zeros(6)
+                            mujoco.mj_contactForce(
+                                model, data, contact_index, contact_force
+                            )
+                            table_load += max(0.0, float(contact_force[0]))
+                    dof = model.joint("task_object_free").dofadr[0]
+                    release_observation["table_observation"] = dict(
+                        table_contacts=on_table,
+                        clearance_m=float(
+                            (
+                                mesh.vertices @ actual_pose[:3, :3].T
+                                + actual_pose[:3, 3]
+                            )[:, 2].min()
+                            - task["table"]["top_z_m"]
+                        ),
+                        speed_m_s=float(np.linalg.norm(data.qvel[dof : dof + 3])),
+                        table_load_fraction=table_load
+                        / float(model.body_mass[obj] * 9.81),
+                    )
+                if pressure_offsets is None:
+                    live_fingers.command(
+                        model, data, control_time, control_period, **release_observation
+                    )
+                else:
+                    live_fingers.command(
+                        model,
+                        data,
+                        control_time,
+                        control_period,
+                        pressure_offsets=pressure_offsets,
+                        **release_observation,
+                    )
             else:
                 for src, dst in finger_pairs:
                     data.ctrl[dst] = (
@@ -739,9 +1063,23 @@ def run(config):
             desired.qpos[qids] = targets[sample_index]
             mujoco.mj_kinematics(model, desired)
             record["wrist_tracking"] = wrist_errors(data, desired, roots)
+            if parent.get("continuous_protocol", {}).get("wrist_withdrawal") and source[
+                "phase"
+            ] in ("release", "released_settle"):
+                from .arm_finger_plan import hand_table_clearance
+
+                record["hand_table_clearance_m"] = hand_table_clearance(
+                    model, data, hands["left"] | hands["right"], table
+                )
             desired.qpos[qids] = target
             mujoco.mj_kinematics(model, desired)
             record["commanded_wrist_tracking"] = wrist_errors(data, desired, roots)
+            if record_commands:
+                from .arm_command_observation import capture
+
+                record["arm_command"] = capture(
+                    model, data, desired, roots, qids, arm_command
+                )
             record["joint_tracking_error_rad"] = (
                 data.qpos[qids] - targets[sample_index]
             ).tolist()
@@ -779,6 +1117,12 @@ def run(config):
                     )
                 )
             records.append(record)
+            if interaction is not None:
+                interaction.record(record)
+            if closed is not None:
+                closed.record(record)
+            if descent is not None:
+                descent.record(record)
             qstates.append(data.qpos.copy())
             controls.append(data.ctrl.copy())
             timestamps.append(data.time)
@@ -786,9 +1130,21 @@ def run(config):
             if record["minimum_object_height_m"] < -0.04:
                 aborted = "object_dropped"
                 break
-    task = json.loads(Path(parent["configuration"]["task"]).read_text())
     metrics = measure_hold(records, table_top_m=task["table"]["top_z_m"])
     metrics.update(support_hold_metrics(records, float(model.body_mass[obj] * 9.81)))
+    continuous_metrics, continuous_failures = None, []
+    if parent.get("continuous_protocol"):
+        from .continuous_reference import evaluate_continuous
+
+        continuous_metrics, continuous_failures = evaluate_continuous(
+            records,
+            parent["continuous_protocol"],
+            task["table"]["top_z_m"],
+            stationary=motion_condition == "stationary_hold",
+        )
+        for key in ("hold_slip_m", "support_wrist_drift_m"):
+            if key in continuous_metrics:
+                metrics[key] = continuous_metrics[key]
     failures = hold_rejections(
         metrics,
         minimum_clearance_m=task["goal"]["minimum_clearance_m"],
@@ -799,10 +1155,16 @@ def run(config):
         aborted=aborted,
     )
     failures.extend(support_rejections(metrics))
+    failures.extend(continuous_failures)
+    if stationary_admission and stationary_admission.get("diagnostic_only"):
+        failures.append("diagnostic_motion_without_stationary_promotion")
     if condition != "loaded":
         failures.append("diagnostic_contact_condition")
     reference = [
-        r for r in records if r["phase"] == "hold" and "reference_position_error_m" in r
+        r
+        for r in records
+        if (r["phase"] == "hold" or parent.get("continuous_protocol"))
+        and "reference_position_error_m" in r
     ]
     if (
         not reference
@@ -833,6 +1195,7 @@ def run(config):
         demonstrated_motion_executed=motion_condition == "demonstrated",
         finger_plan_admission=finger_plan_admission,
         finger_path_screen=finger_path,
+        acquisition_command_path=acquisition_path,
         stationary_admission=stationary_admission,
         finger_control_mode=finger_mode,
         controller_period_s=control_period,
@@ -887,6 +1250,8 @@ def run(config):
             if feedback
             else "latched precontact support-height alignment"
             if height_alignment
+            else "bounded fixed-anchor slip and coordinated object-tilt feedback"
+            if closed is not None
             else "no online object feedback"
         ),
         object_feedback=None if feedback is None else feedback.diagnostics(),
@@ -896,7 +1261,7 @@ def run(config):
         if inertia_control is None
         else inertia_control.peak.tolist(),
         feedback_observation_source="privileged simulator poses and solved contact forces"
-        if feedback or height_alignment or trim
+        if feedback or height_alignment or trim or closed is not None
         else None,
         fixture_joints_removed=True,
         object_state_written_only_at_initialization=True,
@@ -930,6 +1295,44 @@ def run(config):
         ),
         feedback_implementation_sha256=digest(snapshot / "arm_object_feedback.py"),
     )
+    if interaction is not None:
+        report["residual_adapter"] = interaction.finish(report, out)
+    if closed is not None:
+        report["closed_loop_grasp_feedback"] = closed.finish(out)
+        if table_spec is not None:
+            report["table_load_transfer"] = dict(
+                spec=table_spec,
+                **closed.table_policy.diagnostics(),
+                promotion_eligible=False,
+                reference_edited=False,
+                finger_release_edited=False,
+                shared_translation_cap_m=closed.feedback.settings["max_offset_m"],
+                observations="privileged separate-data solved table/object force at wrist observation ticks",
+                implementation_sha256=digest(snapshot / "table_load_transfer.py"),
+            )
+        report["closed_loop_grasp_feedback"]["implementation_sha256"] = {
+            name: digest(snapshot / name)
+            for name in ("closed_loop_grasp.py", "slip_tilt_feedback.py")
+        }
+    if descent is not None:
+        report["descent_pad_control"] = descent.finish(out)
+        report["descent_pad_control"]["implementation_sha256"] = digest(
+            snapshot / "descent_pad_control.py"
+        )
+    if correction_spec is not None:
+        report["bounded_grasp_correction"] = dict(
+            spec=correction_spec,
+            path=correction_path,
+            promotion_eligible=False,
+            correction_is_learned=False,
+            finger_owner="existing live pressure servo nominal target",
+            release_owner="original table-supported release; command offsets recover to zero before release",
+            command_targets_sha256=digest(out / "bounded-command-targets.npz"),
+            implementation_sha256=digest(snapshot / "bounded_grasp_correction.py"),
+        )
+    if parent.get("continuous_protocol"):
+        report["continuous_protocol"] = parent["continuous_protocol"]
+        report["continuous_metrics"] = continuous_metrics
     write_json(out / "result.json", report)
     print(
         json.dumps(
@@ -949,6 +1352,18 @@ def run(config):
         flush=True,
     )
     return report
+
+
+def run(config):
+    """Run the unchanged noninteractive controller to completion."""
+    worker = rollout(config)
+    try:
+        next(worker)
+    except StopIteration as done:
+        return done.value
+    finally:
+        worker.close()
+    raise RuntimeError("A frozen replay cannot request a policy action")
 
 
 def main():

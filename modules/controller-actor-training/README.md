@@ -1,5 +1,26 @@
 # Controller and actor training
 
+The [continuous object-reference route](../../docs/CONTINUOUS_OBJECT_REFERENCE.md)
+places robot acquisition on the capture clock, followed by the demonstrated lift
+and table return. It emits a planning-only artifact for fresh arm/finger admission
+and evaluates complete free-object motion with acquisition-anchored retention.
+The same route includes bounded unloaded-pad acquisition, optional non-pad finger
+clearance fitting, and a saved-state position-motor audit. Geometry, stationary
+retention, demonstrated motion and bilateral release have separate admission steps.
+`closing_grasp_plan` adds joint closing-wrist and ten-finger proposals with optional
+calibration from an actual loaded hold. Proposals remain coupled to bounded
+object-frame wrist preload through arm-path admission and live finger ownership.
+The [acquisition rollout search](../../docs/ACQUISITION_ROLLOUT_SEARCH.md) evaluates
+bounded wrist/thumb/finger schedules in complete stationary physics, with identity
+regression, full-hold contact scoring and unchanged task acceptance. Rejected
+scores and path failures remain explicit; a new stationary pass still requires
+moving/return/release validation.
+
+The [CPU arm residual environment](../../docs/ARM_RESIDUAL_ADAPTER.md) adds a
+reset/step interface for bounded bilateral pressure corrections on frozen arm
+control. Its zero-policy validator compares full saved physics and unchanged
+task outcomes. Observations are privileged; learner integration is separate.
+
 The [pipeline guide](../../docs/PIPELINES.md) separates human-reference training
 from object-reference control. `object_control_stage` exposes arm-path screening
 and actuator-driven evaluation through the common artifact/deadline protocol.
@@ -447,3 +468,25 @@ not automatically promoted controllers. See [arm integration](../../docs/ARM_HAN
 Use `stereo_patch_audit` to distinguish isolated supported surface points from
 observed finite patch geometry before fitting hands. See
 [contact-site search](../../docs/CONTACT_SITE_SEARCH.md).
+
+`bearing_support_plan` provides bounded exterior top/underside support proposals,
+real-pad fitting, insertion/seating collision witnesses and static load-path
+screens. `bearing_support_review` produces a saved-data contact schematic and
+rejection table. These stages never admit control or inherit a release pass;
+see [bearing support planning](../../docs/BEARING_SUPPORT_PLANNING.md).
+`paired_acquisition_audit --config <config.json>` checks a pinned retained primary
+and replacement support moving together through pregrasp/open/closed states;
+it preserves setup state and rechecks paired collisions and finite-patch balance.
+`paired_contact_review --config <config.json>` projects those contact centres into
+the matching saved calibrated RGB/depth and masks, retaining occlusion and missing
+evidence explicitly. Both run under finite CPU deadlines and leave old results
+unchanged. Neither claims loaded success or independently verified contact
+patches. See [control readiness and preservation of earlier evidence](../../docs/CONTROL_READINESS.md).
+`fixture_hold --config <config.json>` binds a paired hypothesis to a declared
+staged or continuous-prefix stationary diagnostic with separately fixed physics
+and feedback clocks. `fixture_hold_diagnostics --directory <trial>` separates
+saved wrist tracking from grasp drift; `fixture_hold_review --directory <trial>`
+renders CPU video without rerunning physics. New holds do not inherit earlier
+arm, continuous-motion or release passes.
+`arm_replay_review --refresh-page` updates protocol explanations using immutable
+saved video, with prominent stationary hold/start/end labeling.

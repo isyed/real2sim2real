@@ -144,3 +144,17 @@ def summarize_contact(
         else "insufficient",
         independent_ground_truth=False,
     )
+
+
+def visible_surface(mesh, points, normals, object_from_camera, tolerance):
+    center = object_from_camera[:3, 3]
+    vectors = points - center
+    distances = np.linalg.norm(vectors, axis=1)
+    direction = vectors / distances[:, None]
+    hits, rays, _ = mesh.ray.intersects_location(
+        np.tile(center, (len(points), 1)), direction, multiple_hits=True
+    )
+    nearest = np.full(len(points), np.inf)
+    if len(hits):
+        np.minimum.at(nearest, rays, np.linalg.norm(hits - center, axis=1))
+    return ((normals * -direction).sum(1) >= 0.25) & (nearest >= distances - tolerance)

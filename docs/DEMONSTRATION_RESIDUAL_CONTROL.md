@@ -1,10 +1,11 @@
 # Demonstrations followed by residual control learning
 
-This is a proposed reusable experiment protocol, not an implemented UR/Sharpa
-trainer or a validated reward configuration. Existing reconstruction, contact,
-arm replay, diagnostics and FlashSAC components can be reused. An embodiment's
-environment, observations, correction actions and learner integration still need
-separate implementation and verification.
+This is a proposed reusable experiment protocol, not a validated training recipe.
+The [CPU arm residual environment](ARM_RESIDUAL_ADAPTER.md) now implements a
+pressure-action reset/step boundary with privileged observations and provisional
+rewards on the shared arm replay. Demonstration ingestion, batched learner
+integration and hardware observations still need implementation and verification.
+Existing reconstruction, contact, diagnostics and FlashSAC components can be reused.
 
 ## What to learn
 

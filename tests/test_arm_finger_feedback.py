@@ -89,7 +89,7 @@ def test_mounted_arm_binding_preserves_arm_object_and_native_limits(
         validate_settings,
     )
 
-    xml = ['<mujoco><compiler autolimits="true"/><worldbody>']
+    xml = ['<mujoco><compiler autolimits="true" angle="radian"/><worldbody>']
     act = []
     hands = []
     groups = ["thumb", "index", "middle", "ring", "pinky"]
@@ -196,3 +196,86 @@ def test_mounted_arm_binding_preserves_arm_object_and_native_limits(
         (data.qpos, data.qvel, model.jnt_range, model.actuator_forcerange), before
     ):
         np.testing.assert_array_equal(got, want)
+
+    # Real mounted-hand pressure injection retains sole finger ownership.
+    from real2sim2real.controller_actor_training.residual_pressure import CHANNELS
+
+    c.command(model, data, 2.0, 0.001, pressure_offsets=dict.fromkeys(CHANNELS, -0.5))
+    assert all(data.ctrl[a] == 0.123 for a in range(model.nu) if a not in fingers)
+    for pad in c.servo.pads:
+        assert pad["target_n"] == control["target_force_n"][pad["group"]] - 0.5
+    for got, want in zip(
+        (data.qpos, data.qvel, model.jnt_range, model.actuator_forcerange), before
+    ):
+        np.testing.assert_array_equal(got, want)
+
+    # Reading policy observations must not perturb live solver state or commands.
+    from real2sim2real.controller_actor_training.arm_residual_observation import (
+        ArmResidualObservation,
+    )
+    from real2sim2real.controller_actor_training.residual_pressure import (
+        PressureResidual,
+    )
+
+    parent["records"] = [
+        dict(
+            phase="hold",
+            reference_position_m=[0, 0, 0],
+            reference_rotation=np.eye(3).tolist(),
+        )
+    ] * 2
+    observer = ArmResidualObservation(
+        model,
+        data,
+        c,
+        dict(right=model.body("right_hand").id, left=model.body("left_hand").id),
+        parent,
+        np.array([0, 0.02]),
+    )
+    controller = PressureResidual(
+        dict(
+            policy_period_s=0.02,
+            max_offset_n=1.0,
+            max_rate_n_s=5.0,
+            active_phases=["hold"],
+        )
+    )
+    fields = (
+        "qpos",
+        "qvel",
+        "ctrl",
+        "qacc",
+        "qacc_warmstart",
+        "qfrc_bias",
+        "actuator_force",
+    )
+    original = {name: getattr(data, name).copy() for name in fields}
+    packet = observer.capture(0.0, 0, 0.0, controller)
+    assert np.isfinite(packet["observation"]).all()
+    for name in fields:
+        np.testing.assert_array_equal(getattr(data, name), original[name])
+
+    # Release owns fingers only, removes pressure and does not write object state.
+    from real2sim2real.controller_actor_training.finger_release import FingerRelease
+
+    c.release = FingerRelease(
+        dict(
+            start_s=3.0,
+            duration_s=0.8,
+            settle_s=0.8,
+            support_dwell_s=0.1,
+            maximum_clearance_m=0.005,
+            maximum_speed_m_s=0.02,
+        )
+    )
+    obs = dict(
+        table_contacts=1, clearance_m=0.0, speed_m_s=0.0, table_load_fraction=1.0
+    )
+    for t in np.arange(3.0, 3.2, 0.001):
+        c.command(model, data, t, 0.001, table_observation=obs)
+    c.command(model, data, 4.2, 0.001, table_observation=obs)
+    assert c.diagnostics()["finger_release"]["fraction"] == 1.0
+    assert all(p["target_n"] == 0 and not np.any(p["offset"]) for p in c.servo.pads)
+    for name in ("qpos", "qvel"):
+        np.testing.assert_array_equal(getattr(data, name), original[name])
+    assert all(data.ctrl[a] == 0.123 for a in range(model.nu) if a not in fingers)

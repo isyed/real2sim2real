@@ -4,12 +4,28 @@ The implementation keeps capture-specific data and outcomes downstream. This
 index maps findings to reusable mechanisms, checks and explicit remaining work.
 It is not an assertion that a new scene, hand or robot has been validated.
 
+[Table load transfer](TABLE_LOAD_TRANSFER.md) uses separate-data table-only force,
+confirmed support, common wrist corrections and shared authority with anti-windup.
+`arm_command_observation` keeps kinematic targets distinct from servo feedforward;
+`arm_command_audit` decomposes actual motion without retiming the reference.
+Default record schemas remain compatible with existing zero-residual evidence.
+
+[Force-and-torque auditing](GRASP_WRENCH_AUDIT.md) separates ideal contact capacity
+from controller realization and airborne carrying from table load transfer.
+`wrench_feasibility` retains full friction dimensions and actuator Jacobians;
+`grasp_wrench_review` preserves infeasible/unresolved bounds and original verdicts.
+`sampled_motion_variation` checks saved movement independently of rendering without
+calling it tracking error. Premature actual touchdown must be compared with the
+unchanged reference geometry before increasing pressure or changing release.
+
 [Pad contact planning](PAD_CONTACT_PLANNING.md) adds collision-pad geometry,
 orientation, closing paths and static balance. Finite patch samples share one
 force budget per pad; failed balance is not a control success.
 
 | Finding | Reusable implementation | Verification / interpretation |
 | --- | --- | --- |
+| A residual policy needs an exact zero-action reference before learning | `arm_residual_env`, shared `arm_replay_pilot.rollout`, `residual_pressure`, `arm_residual_validate` | Bounded pressure-only ownership, separate-data observations, fresh resets, explicit interruptions and exact saved-array/record comparison; reproducing a failed task does not promote it |
+| A learned correction cannot silently disappear during later validation | Residual metadata in arm reviews/comparisons and rejection by controller-only stationary/robustness admission | Policy-aware replay is required before transferring a residual-controlled success into another evaluation route |
 | A new contact posture can recover one payload and fail another | `grasp_sensitivity` freezes one candidate/controller across the full declared case set | Keep alternate case failures and completion flags; successful cases from different plans cannot be pooled without a separately tested observation-based selection policy |
 | A moving contact centroid does not by itself establish rolling or sliding | `contact_patch_motion` records solved-contact point velocities, relative angular motion and separate centroid migration; `contact_patch_audit` requires identical replay states | Common-motion, normal/tangent separation, gap-safe integration and read-only MuJoCo tests; rolling-compatible observations are explicitly not material correspondence |
 | Pressure adjustment can leave contact near a curved pad tip | `bilateral_patch_replan` refits bounded pad rays/finger posture with fixed wrists and unchanged object targets | Frozen-joint bounds plus finite-patch, whole-pair path and static-wrench admission; every accepted proposal still requires fresh physical cases |
@@ -342,3 +358,152 @@ Simulation controller rate is an experimental setting until matched to each
 embodiment's documented interfaces and measured latency/sensing. Separate the
 hand's command and tactile rates from the arm's update rate. Similar stationary
 results at two rates do not establish moving-contact rate robustness.
+
+### Pressure authority before residual learning
+
+A separate robot lift followed by restarting reference frame zero creates a pause
+and an elevated replay anchor that are absent from a continuous demonstration.
+The continuous protocol uses the pre-lift capture interval for robot acquisition.
+Reference-defined suspension, acquisition-anchored drift and table-return checks
+must be explicit; post-lift drift and continuous drift are different cohorts.
+Bounded table-aware command projection must leave the raw scored reference intact.
+See [continuous object-reference control](CONTINUOUS_OBJECT_REFERENCE.md).
+
+Returning an object while still squeezing it does not demonstrate release. Add
+an explicit table-supported opening phase and check actual open posture, residual
+hand contact and object stability afterward. End retention at the declared release
+start without changing its acquisition anchor. A stationary diagnostic must disable
+release instead of opening the hands while the object is suspended.
+
+An open acquisition posture is not necessarily collision-free at the returned
+wrist poses. Even a newly optimized opening endpoint with positive geometric
+clearance can retain thumb contact in dynamics. Verify the opening path, actual
+joint response and residual contact through the full settling window. Longer
+opening does not substitute for a table-clear unhooking/withdrawal path.
+
+Thumb-first opening can collide with a finger that remains closed. Screen the
+complete articulated-hand trajectory on the same finger clocks used by live
+control, and retain the pair/time witness when it fails. A wrist translation that
+frees one hand can leave the other hooked to the object. Check both hands' residual
+contact forces, object pose, and tabletop support through the full release window.
+
+Geometrically seated pads can remain unloaded in dynamics because the robot has
+not reached those poses. Inspect actual closure response and early load transfer;
+a static fit cannot substitute for stationary admission. An earlier finger closing
+command must retain the independently declared object clock and drift anchor.
+
+A free opening endpoint can still cross the object wall midway through the motion.
+Fit fingers and wrist rotation against contacts along the complete release path,
+then add dense verification witnesses back into the fit. A brief rotation before
+outward translation can untuck a finger that straight withdrawal leaves hooked.
+Keep the exact finger goals and wrist clock pinned together across planning and
+runtime. Hand-only geometry admission still requires a full-arm audit and dynamics.
+
+Measure release forces separately for both hands while retaining the combined
+acceptance limit. Removing a primary-hand hook can reveal support-pinky contact
+that the previous object displacement had concealed. Additional outward travel can
+worsen that hook; fit the remaining hand's opening path with the first solution fixed.
+
+Inspect seating before increasing pressure: unloaded pads at closure, millimetre
+normal gaps before lift, or wrist tracking active only after lift can explain later
+drift. Compare coherent contact force with requested pressure and preserve existing
+force, joint and collision budgets when changing approach/closure response rates.
+
+Separate unloaded opposing-pad acquisition from loaded pressure regulation. A
+brief first touch can disappear before lift; an acquisition latch is not a stable
+contact certificate. Faster finger seeking can load pads earlier while increasing
+force on proximal links, so retain per-pad and other-link contact diagnostics and
+require the complete stationary gates before motion. When endpoint pad fitting
+does not survive compliance, include non-pad finger clearance in the geometric
+proposal, then test the resulting commands in actual dynamics.
+
+Audit saved position-motor effort, including damping and native clipping, before
+attributing posture lag to torque saturation. Tracking error under compliant low
+stiffness can occur far below the force ceiling. Preserve the original actuator
+parameters; a diagnostic should not silently stiffen the hand. Mesh distance
+queries with inconsistent witnesses must not enter contact admission. Near-contact
+margin queries are a separate planning model, and missing pairs are distance lower
+bounds rather than exact zero-distance observations.
+
+Joint wrist/finger acquisition planning must account for opposition: moving a
+wrist toward an unloaded finger can unload its thumb across a thin object wall.
+Fit both sides together, preserve full-hand collision clearance and keep the
+original acquisition clock. Measured command/posture displacement at closure is
+often transient; use a separately identified loaded hold to estimate preload,
+remove any existing actuator bias compensation, and then test that approximation
+in free-object dynamics. Earlier or more numerous pad contacts alone do not
+establish retention. Report force build-up and the complete drift interval.
+
+Keep closure preload, its finger/contact proposal and the newly audited wrist
+path coupled by hashes and exact settings. Recovering a nominal preload before
+opening does not inherit a release pass from another loaded grasp. A zero-offset
+replay is a useful exact regression check, distinct from robustness evidence.
+
+Check both load-deflected and commanded postures when identifying preload. A
+collision-free loaded prediction can require a nominal thumb command that passes
+through another finger. Enforce the original self/environment limits in both
+configurations, then screen the entire arm/finger trajectory; reject before
+physics when that commanded path is unsafe.
+
+Use complete simulated acquisition/hold rollouts to compare contact sequencing;
+static pad fits cannot predict every loaded branch. A thumb-first schedule can
+reduce primary drift while leaving support drift and clearance outside limits.
+Retain all metrics, blocked paths and original verdicts. Evaluate sustained
+bilateral pad loading over the full reference-defined hold, never an
+outcome-selected stable segment. A better scalar search objective is not a pass.
+
+Transfer promising schedules to other admitted grasp seeds before attributing
+failure solely to initialization. Require an exact identity replay for each seed,
+preserve task/physics budgets, and repeat a selected candidate without retuning.
+If bounded acquisition searches still fail, replan support contact geometry and
+bearing/insertion clearance rather than indefinitely tuning timing or weakening
+acceptance. Reproducibility in one nominal scene does not establish robustness.
+
+Measure correction authority with small signed pressure changes and thumb/finger
+redistribution before training an actor. Higher force targets can change object
+rotation, rolling and the other hand's load; they do not guarantee less grasp
+drift. A pad's joint-offset bound or geometry freeze can prevent the requested
+target from producing the expected contact force. Preserve those guards and
+report requested targets separately from solved forces.
+
+Evaluate complete trials against the original task gates, not a learning reward
+or a shorter contact segment. A causal drift policy must use the original fixed
+grasp anchor; reanchoring after slip hides the error. Selecting directions and
+activation thresholds on the same replay is development. Confirming a nominal
+result with a deterministic repeat checks reproducibility, not generalization.
+
+When replacing frictional wall support with a bearing grasp, first check the
+**exterior** underside, finite pad coverage and insertion gap at the initial rest
+pose. A cavity floor or a surface reachable only after lifting cannot establish
+from-table acquisition. A coarse grid that finds no broad body patch is a
+sampling result, not proof that every possible contact is absent.
+
+Match target order to the real hand's finger order before interpreting fit
+failures. Submillimetre pad position errors can coexist with a misaligned thumb
+or deep proximal-link penetration. Record collision witnesses along insertion
+and closure, rather than increasing pressure on an inadmissible posture.
+
+Use complete contact forces to inspect a proposed load path: normal pressure and
+net upward support are different quantities. An underside contact can still
+require friction and substantial opposing clamp forces to balance torque about
+the centre of mass. Keep static feasibility separate from finite pad coverage,
+actuator feasibility, observation evidence and actual loaded retention. See
+[bearing support planning](BEARING_SUPPORT_PLANNING.md).
+
+Label stationary review videos with the intentional command-freeze time and
+full simulated endpoint. Motion stopping in a diagnostic is not a truncated
+capture or a faithful replay of a continuously moving demonstration. Reuse
+immutable media for text-only corrections; do not change archived physics.
+
+Use a side-thumb contact when a top-thumb route collides, but separately check the
+complete insertion posture, all five finite pad samples and the paired load path.
+Reconstructed first-hit geometry must still provide a finite side patch. Reducing
+a planning preload can recover coverage at the original distance criterion;
+report the target change and retain the criterion. Static point equilibrium,
+finite-patch equilibrium and actual supported load are distinct evidence.
+
+Keep fixture retention, complete arm-path feasibility and arm-mounted retention
+as separate claims. A fixture hold can precede expensive arm fitting to isolate
+contacts, while an arm hold necessarily follows arm assembly/IK. Old staged holds
+cannot admit changed continuous acquisition, contacts or reference clocks. The
+named arm recipe is only part of this workflow; see [control readiness](CONTROL_READINESS.md).

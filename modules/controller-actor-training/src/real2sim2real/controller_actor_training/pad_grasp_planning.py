@@ -167,23 +167,42 @@ def path_audit(model, data, indices, waypoints, *, max_step_rad=0.02, max_step_m
         max_step_rad,
     )
     max_pen, samples = 0.0, 0
-    for a, b in zip(q[:-1], q[1:]):
+    witness = None
+    owned_geoms = set(map(int, indices["geoms"]))
+    for segment, (a, b) in enumerate(zip(q[:-1], q[1:])):
         count = max(2, int(np.ceil(np.max(abs(b - a) / step))) + 1)
         if count > 512:
             raise ValueError("Path exceeds bounded sampling budget")
-        for value in np.linspace(a, b, count):
+        for sample_index, value in enumerate(np.linspace(a, b, count)):
             scratch.qpos[indices["q"]] = value
             mujoco.mj_fwdPosition(model, scratch)
-            max_pen = max(
-                max_pen,
-                float(contact_penetrations(model, scratch, indices).max(initial=0)),
+            penetration = float(
+                contact_penetrations(model, scratch, indices).max(initial=0)
             )
+            if penetration > max_pen:
+                worst = min(
+                    (
+                        c
+                        for c in scratch.contact
+                        if int(c.geom1) in owned_geoms or int(c.geom2) in owned_geoms
+                    ),
+                    key=lambda c: c.dist,
+                )
+                witness = dict(
+                    segment=segment,
+                    fraction=float(sample_index / (count - 1)),
+                    joint_positions=value.tolist(),
+                    geoms=[model.geom(int(g)).name for g in (worst.geom1, worst.geom2)],
+                    penetration_m=float(-worst.dist),
+                )
+            max_pen = max(max_pen, penetration)
             samples += 1
     return dict(
         max_penetration_m=max_pen,
         samples=samples,
         within_joint_limits=bool(((q >= bounds[:, 0]) & (q <= bounds[:, 1])).all()),
         continuous_collision_certified=False,
+        worst_contact=witness,
     )
 
 

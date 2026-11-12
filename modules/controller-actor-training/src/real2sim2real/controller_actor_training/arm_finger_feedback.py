@@ -20,20 +20,48 @@ def feedback_settings(original, overrides=None):
         "minimum_observed_force_n",
         "contact_anchor",
         "loaded_tangent_gap_m",
+        "close_activation_fraction",
+        "gain_m_per_n_s",
+        "max_normal_speed_m_s",
+        "unloaded_acquisition",
     }:
         raise ValueError(
-            "Arm feedback overrides may change normal observations or retention rules only"
+            "Arm feedback overrides may change observations, seating rate or retention rules only"
         )
     result = {**deepcopy(original), **deepcopy(overrides or {})}
     validate_settings(result)
     return result
 
 
-def finger_waypoint(time, pre, opened, closed, rollout):
+def finger_waypoint(
+    time,
+    pre,
+    opened,
+    closed,
+    rollout,
+    *,
+    release_open=None,
+    release_fast_mask=None,
+    closing_windows=None,
+):
     from .object_grasp_pilot import smoothstep
 
     values = [np.asarray(v, float) for v in (pre, opened, closed)]
     approach, close = rollout["approach_s"], rollout["close_s"]
+    fraction = rollout.get("finger_close_fraction", 1.0)
+    if not np.isfinite(fraction) or not 0.5 <= fraction <= 1:
+        raise ValueError(
+            "Finger closure may use 50–100% of the acquisition close window"
+        )
+    close *= fraction
+    if closing_windows is not None:
+        from .acquisition_profile import window
+
+        windows = np.asarray(closing_windows, float)
+        if values[0].ndim != 1 or windows.shape != (len(values[0]), 2) or fraction != 1:
+            raise ValueError("Exclusive matching per-joint closing windows required")
+        for value in windows:
+            window(value)
     if (
         not np.isfinite([time, approach, close]).all()
         or time < 0
@@ -48,8 +76,39 @@ def finger_waypoint(time, pre, opened, closed, rollout):
         a = smoothstep(time / approach)
         return (1 - a) * values[0] + a * values[1]
     if time < approach + close:
-        a = smoothstep((time - approach) / close)
+        f = (time - approach) / close
+        a = smoothstep(
+            f
+            if closing_windows is None
+            else (f - windows[:, 0]) / (windows[:, 1] - windows[:, 0])
+        )
         return (1 - a) * values[1] + a * values[2]
+    if rollout.get("finger_release"):
+        from .finger_release import release_fraction
+
+        a = release_fraction(time, rollout["finger_release"])
+        released = (
+            values[1] if release_open is None else np.asarray(release_open, float)
+        )
+        if released.shape != values[1].shape or not np.isfinite(released).all():
+            raise ValueError("Finite matching release posture required")
+        result = (1 - a) * values[2] + a * released
+        if (
+            release_fast_mask is not None
+            and "thumb_duration_s" in rollout["finger_release"]
+        ):
+            mask = np.asarray(release_fast_mask, bool)
+            if mask.shape != result.shape:
+                raise ValueError("Thumb mask must match the planned hand coordinates")
+            fast = release_fraction(
+                time,
+                dict(
+                    rollout["finger_release"],
+                    duration_s=rollout["finger_release"]["thumb_duration_s"],
+                ),
+            )
+            result[mask] = (1 - fast) * values[2][mask] + fast * released[mask]
+        return result
     return values[2].copy()
 
 
@@ -86,6 +145,14 @@ class ArmFingerFeedback:
                 "Live finger controller must use the unchanged admitted candidate"
             )
         self.rollout = config["rollout"]
+        from .finger_release import FingerRelease
+
+        self.release = (
+            FingerRelease(self.rollout["finger_release"])
+            if self.rollout.get("finger_release")
+            else None
+        )
+        self.last_target = None
         self.settings = force
         candidate = deepcopy(parent["candidate"])
         candidate["root_body"] = model.body(roots["right"]).name
@@ -131,6 +198,18 @@ class ArmFingerFeedback:
         )
         if set(self.qids) != owned or len(self.qids) != len(owned):
             raise ValueError("Live feedback may own existing finger actuators only")
+        if self.release is not None:
+            thumbs = {
+                int(q)
+                for p in self.servo.pads
+                if p["group"] == "thumb"
+                for q in p["qids"]
+            }
+            self.release.unhook_mask = np.array([int(q) in thumbs for q in self.qids])
+            for hand in self.hands:
+                hand["release_fast_mask"] = np.array(
+                    [int(q) in thumbs for q in hand["qids"]]
+                )
         self.support_bias = config["support_controller"].get(
             "actuator_bias_compensation", False
         )
@@ -150,19 +229,39 @@ class ArmFingerFeedback:
             ),
         }
 
-    def command(self, model, data, time, dt):
+    def command(
+        self, model, data, time, dt, *, pressure_offsets=None, table_observation=None
+    ):
         from .support_control import bias_compensated_target
 
         nominal = data.qpos.copy()
+        schedule = {k: v for k, v in self.rollout.items() if k != "finger_release"}
         for hand in self.hands:
             nominal[hand["qids"]] = finger_waypoint(
-                time, *hand["waypoints"], self.rollout
+                time,
+                *hand["waypoints"],
+                schedule,
+                closing_windows=hand.get("closing_windows"),
             )
+        if hasattr(self, "correction_protocol"):
+            from .bounded_grasp_correction import finger_command
+
+            finger_command(self, time, nominal)
         activation = (
             self.rollout["approach_s"]
             + self.settings["close_activation_fraction"] * self.rollout["close_s"]
         )
         extra = {}
+        if getattr(self.servo, "descent", None) is not None:
+            extra["time_s"] = time
+        if "unloaded_acquisition" in self.settings:
+            from .finger_acquisition import active
+
+            extra["acquisition_active"] = active(
+                time, self.rollout, self.settings["unloaded_acquisition"]
+            )
+        if pressure_offsets is not None:
+            extra["pressure_offsets"] = pressure_offsets
         if self.settings.get("contact_anchor"):
             extra["retention_active"] = bool(
                 time
@@ -170,12 +269,43 @@ class ArmFingerFeedback:
                 + self.rollout["close_s"]
                 + self.rollout["lift_s"]
             )
+        release = getattr(self, "release", None)
+        opening = None
+        if release and table_observation is not None:
+            opened = nominal.copy()
+            for hand in self.hands:
+                opened[hand["qids"]] = hand.get("release_open", hand["waypoints"][1])
+            held = self.last_target if self.last_target is not None else nominal
+            opening = release.command(
+                time,
+                dt,
+                held[self.qids],
+                opened[self.qids],
+                data.qpos[self.qids],
+                **table_observation,
+            )
+        if opening is not None and "acquisition_active" in extra:
+            extra["acquisition_active"] = False
         target = self.servo.target(
-            model, data, nominal, active=time >= activation, dt=dt, **extra
+            model,
+            data,
+            nominal,
+            active=time >= activation and opening is None,
+            dt=dt,
+            **extra,
         )
+        if opening is not None:
+            target[self.qids] = opening
+            for pad in self.servo.pads:
+                pad["target_n"] = 0.0
+                pad["offset"][:] = 0.0
+        self.last_target = target.copy()
         if self.support_bias:
             target = bias_compensated_target(model, data, target, self.support_indices)
         data.ctrl[self.actuators] = target[self.qids]
 
     def diagnostics(self):
-        return self.servo.diagnostics()
+        result = self.servo.diagnostics()
+        if self.release:
+            result["finger_release"] = self.release.diagnostics()
+        return result

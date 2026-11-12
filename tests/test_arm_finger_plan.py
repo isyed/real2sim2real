@@ -86,6 +86,16 @@ def test_stationary_admission_pins_clock_posture_physics_and_complete_hold(tmp_p
         )
 
     assert validate_stationary(proposed())["sha256"] == digest(path)
+    report["records"][-1]["time_s"] = 4.99996
+    assert validate_stationary(proposed())["sha256"] == digest(path)
+    report["records"][-1]["time_s"] = 4.9998
+    with pytest.raises(ValueError, match="complete"):
+        validate_stationary(proposed())
+    report["records"][-1]["time_s"] = 5.0
+    report["residual_adapter"] = {"all_actions_zero": False}
+    with pytest.raises(ValueError, match="policy-aware"):
+        validate_stationary(proposed())
+    del report["residual_adapter"]
     changed = proposed()
     changed["control_period_s"] = 0.002
     with pytest.raises(ValueError, match="retune"):
@@ -97,6 +107,19 @@ def test_stationary_admission_pins_clock_posture_physics_and_complete_hold(tmp_p
     report["success"] = False
     with pytest.raises(ValueError, match="Passing"):
         validate_stationary(proposed())
+    report.update(physics_run=True, rejected_for=["hold_slip"])
+    diagnostic = proposed()
+    diagnostic["diagnostic_stationary"] = diagnostic.pop("validated_stationary")
+    receipt = validate_stationary(diagnostic)
+    assert receipt["diagnostic_only"] and not receipt["promotion_eligible"]
+    assert receipt["stationary_rejected_for"] == ["hold_slip"]
+    with pytest.raises(ValueError, match="retune"):
+        validate_stationary(dict(diagnostic, control_period_s=0.002))
+    report["rejected_for"] = ["incomplete_pilot"]
+    diagnostic = proposed()
+    diagnostic["diagnostic_stationary"] = diagnostic.pop("validated_stationary")
+    with pytest.raises(ValueError):
+        validate_stationary(diagnostic)
 
 
 def test_finger_path_screen_leaves_physical_state_and_native_limits_unchanged():
@@ -140,3 +163,27 @@ def test_finger_path_screen_leaves_physical_state_and_native_limits_unchanged():
         np.testing.assert_array_equal(actual, original)
     model.geom_pos[model.geom("wall").id] = [0.05, 0, 0.2]
     assert not path_screen(*args)["accepted"]
+
+
+def test_signed_hand_table_clearance_uses_collision_geometry_without_state_writes():
+    mj = pytest.importorskip("mujoco")
+    from real2sim2real.controller_actor_training.arm_finger_plan import (
+        hand_table_clearance,
+    )
+
+    model = mj.MjModel.from_xml_string("""<mujoco><worldbody>
+    <geom name="table" type="box" pos="0 0 -.01" size=".1 .1 .01"/>
+    <body pos="0 0 .02"><joint type="slide" axis="0 0 1"/><geom name="finger" size=".005"/></body>
+    </worldbody></mujoco>""")
+    data = mj.MjData(model)
+    mj.mj_forward(model, data)
+    before = data.qpos.copy()
+    assert hand_table_clearance(
+        model, data, {model.geom("finger").id}, model.geom("table").id
+    ) == pytest.approx(0.015)
+    np.testing.assert_array_equal(data.qpos, before)
+    data.qpos[0] = -0.016
+    mj.mj_forward(model, data)
+    assert hand_table_clearance(
+        model, data, {model.geom("finger").id}, model.geom("table").id
+    ) == pytest.approx(-0.001)

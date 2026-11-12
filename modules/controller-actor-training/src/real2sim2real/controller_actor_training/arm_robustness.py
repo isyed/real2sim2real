@@ -14,6 +14,8 @@ def validate_case(config):
     if digest(path) != frozen["sha256"]:
         raise ValueError("Frozen controller result changed")
     parent = json.loads(path.read_text())
+    if parent.get("residual_adapter") is not None:
+        raise ValueError("Residual policies need policy-aware robustness replay; do not silently omit the actor")
     if (
         not parent["success"]
         or digest(path.with_name("states.npz")) != parent["states_sha256"]

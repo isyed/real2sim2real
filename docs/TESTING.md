@@ -1,5 +1,78 @@
 # Testing the reusable modules
 
+`test_descent_pad_control.py` checks conserved pair pressure redistribution during
+slew, signed-load handling, per-pad/rate bounds, exact disabled/prefix goals,
+recovery on contact loss and once-only material anchors. Complete zero-policy
+state/record equality against original and wrist-feedback controllers and actual
+loaded descent/release remain separate downstream evidence.
+
+`test_slip_tilt_feedback.py` checks fixed anchors, correction sign/rate/travel,
+coordinated object-pivot tilt, contact/reference freezes, blocked downward slip,
+supported-release recovery and stationary offset retention. Its optional runtime
+case rejects a collision at a command midpoint even when both endpoints are
+clear, while preserving live simulation state. Exact observed zero-gain replay
+and complete downstream physics remain required separately.
+
+`test_bounded_grasp_correction.py` checks pinned physical sources, frozen controller
+settings, owned finger commands, correction rate/travel limits and stationary
+retention of offsets. Its optional MuJoCo case checks object/world frame mapping,
+scratch IK state isolation and rejection of coarse waypoint interpolation into
+release. Full zero-probe state equality and actual loaded-motion/stationary
+acceptance remain separate downstream evidence.
+
+`test_continuous_residual.py` checks actual supported-release stage transitions,
+carry retention versus release unloading costs, the fixed acquisition anchor,
+complete native-clock admission and pressure decay after carrying. Finger-plan
+tests cover diagnostic-only pinned failed holds without weakening normal promotion.
+Full staged and continuous zero-action saved-state equality remains a separate
+downstream simulation check, including protocol, return and release diagnostics.
+
+`test_continuous_tracking_proxy.py` checks known translation/rotation metric values,
+surface-ADD invariance under body-origin changes, input immutability, timestamp
+interpolation and rejection of missing coverage. Downstream equality against the
+official registered-pose formulas on the same reconstructed inputs validates the
+math only; it does not provide independent ground truth or benchmark scores.
+
+`test_release_path_search.py` checks hand-role contact residuals, structural matching
+of unnamed colliders, bounded rotation parameters and position-only near-contact
+queries without physics advancement. Wrist withdrawal tests check world-axis
+rotation about the wrist origin, separate rotation/translation clocks and support
+admission before the earliest motion. Opening-posture tests reject mixed wrist/clock
+contracts and protect fixture/arm/object coordinates during planning. Continuous
+release tests retain the combined force limit despite per-hand diagnostics.
+
+`test_pad_seating_plan.py` checks bounded, pinned opposing-finger changes, contact
+frame validation, atomic rejection and preserved acquisition timing. Withdrawal
+tests check translation/duration bounds and supported-unhooking admission.
+Mounted-hand and finger-path tests verify independent thumb clocks and conservative
+table clearance without writes to the physical state. Stationary promotion tests
+accept integration-grid endpoint rounding and reject a genuinely shortened trial.
+
+`test_finger_release.py` checks table-load gating, smooth opening without a command
+jump, blocked release and no automatic re-close. `test_finger_release_plan.py`
+checks pinned, bounded finger-only posture binding without changing acquisition.
+Mounted-hand runtime tests verify release does not write arm or object state.
+These unit checks do not establish a successful physical release; saved-state
+opening, residual-contact and tabletop stability checks remain required.
+
+`test_continuous_reference.py` checks capture-clock motion without an independent
+lift, raw-reference preservation under bounded table command projection, nonfinite
+input rejection, reference-defined phases, acquisition-anchored drift and table
+return. Reference-scoring tests ensure acquisition/return are included and terminal
+settling is excluded from the native-duration cohort. Downstream dense IK, complete
+free-object physics and exact staged zero-action regression remain separate evidence.
+
+`tests/test_pressure_policy.py` checks copied bounded requests, causal drift
+activation with a fixed-anchor flag, saturation, invalid settings and rejection
+of changed gates, clocks or incomplete timelines in pressure-authority trials.
+
+`tests/test_arm_residual_env.py` covers bounded pressure actions, policy clocks,
+immutable source binding, reset/terminal semantics, time-normalized rewards,
+fixed grasp anchors and deadline truncation. The extended mounted-hand MuJoCo
+fixture in `test_arm_finger_feedback.py` checks pressure-target injection without
+arm/state/limit writes and verifies that observation capture preserves the live
+solver state. Complete zero-action physical replay is separate downstream evidence.
+
 `tests/test_arm_finger_feedback.py` checks native finger waypoint timing,
 reconstruction before feedback, and exclusive actuator ownership. Its optional
 MuJoCo test binds hands under actuated arms while preserving physical arm/object
@@ -380,3 +453,20 @@ side and seed offsets to respect frozen joints and search bounds. Reference-scor
 tests reject stationary runs as demonstrated-motion evidence. Actual candidate
 admission, complete stationary holds and matched motion retries remain downstream
 physics evidence.
+
+`test_wrench_feasibility.py` checks analytically known pinch loads and motor-limited
+capacity, torsional moment transmission, COM moment arms, inner/outer friction
+bounds, reference acceleration, servo saturation and a lower-torque-bound case
+where maximum load above one does not imply nominal feasibility.
+`test_sampled_motion_variation.py` distinguishes smooth cubic trends from actual
+sampled variation and rejects irregular clocks or insufficient duration. These
+unit checks do not certify retention or attribute visual sway to a control loop.
+
+`test_table_load_transfer.py` checks support/phase gating, confirmation dwell,
+common-wrist bounds, conserved lateral/rotational commands, shared-budget
+anti-windup and zero correction before release. Optional MuJoCo tests verify
+scratch-only command capture and distinguish upward table support from downward
+force by other geometry. `test_arm_command_audit.py` verifies exact translation
+decomposition and world-translation invariance. Complete downstream disabled/
+ordinary replay and pre-activation prefix checks remain necessary after shared
+runner changes; passing a table-transfer diagnostic never waives earlier gates.

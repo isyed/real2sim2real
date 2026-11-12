@@ -135,7 +135,14 @@ def bind(parent, spec, output):
 
 
 def validate_stationary(config):
-    spec = config.get("validated_stationary")
+    diagnostic = bool(config.get("diagnostic_stationary"))
+    if diagnostic and config.get("validated_stationary"):
+        raise ValueError("Choose diagnostic replay or stationary promotion, not both")
+    spec = (
+        config.get("diagnostic_stationary")
+        if diagnostic
+        else config.get("validated_stationary")
+    )
     if not spec:
         raise ValueError(
             "New finger-plan motion requires a complete passing stationary arm hold"
@@ -144,9 +151,20 @@ def validate_stationary(config):
     if digest(path) != spec["sha256"]:
         raise ValueError("Pinned stationary arm hold changed")
     report = json.loads(path.read_text())
+    if report.get("residual_adapter") is not None:
+        raise ValueError(
+            "Residual stationary holds require policy-aware promotion; do not silently omit the actor"
+        )
     if (
         report.get("schema") != "real2sim2real.arm-replay-pilot/1"
-        or report["success"] is not True
+        or (not diagnostic and report["success"] is not True)
+        or (
+            diagnostic
+            and (
+                not report.get("physics_run")
+                or "incomplete_pilot" in report.get("rejected_for", [])
+            )
+        )
         or report.get("motion_condition") != "stationary_hold"
         or digest(path.with_name("states.npz")) != report["states_sha256"]
         or digest(path.with_name("scene.xml")) != report["scene_sha256"]
@@ -158,6 +176,7 @@ def validate_stationary(config):
         "purpose",
         "motion_condition",
         "validated_stationary",
+        "diagnostic_stationary",
     }
     strip = lambda x: {k: v for k, v in x.items() if k not in allowed}
     if strip(config) != strip(report["config"]):
@@ -172,15 +191,35 @@ def validate_stationary(config):
     if digest(source) != audit["sources"][str(source)]:
         raise ValueError("Source command duration changed")
     expected = json.loads(source.read_text())["records"]
+    # The shared rollout ends at the nearest integration-grid point to the
+    # declared endpoint. Native capture clocks need not divide the physics step.
+    timestep = report.get("physics_timestep_s", config.get("timestep_s", 0.000001))
+    if not np.isfinite(timestep) or not 0 < timestep <= 0.01:
+        raise ValueError("Finite recorded physics clock required for promotion")
+    endpoint_tolerance = max(1e-6, 0.5 * timestep + 1e-9)
     if (
         len(report["records"]) != len(expected)
         or not np.isfinite(report["records"][-1]["time_s"])
-        or report["records"][-1]["time_s"] < expected[-1]["time_s"] - 1e-6
+        or abs(report["records"][-1]["time_s"] - expected[-1]["time_s"])
+        > endpoint_tolerance
     ):
         raise ValueError(
             "Stationary promotion must preserve the complete declared command clock"
         )
-    return dict(result=str(path), sha256=digest(path))
+    return dict(
+        result=str(path),
+        sha256=digest(path),
+        **(
+            dict(
+                diagnostic_only=True,
+                promotion_eligible=False,
+                stationary_success=report["success"],
+                stationary_rejected_for=report["rejected_for"],
+            )
+            if diagnostic
+            else {}
+        ),
+    )
 
 
 def path_screen(
@@ -203,13 +242,33 @@ def path_screen(
     scratch = mujoco.MjData(model)
     scratch.qpos[:] = data.qpos
     maximum_arm = maximum_robot = 0.0
+    worst_contact = None
+    release_clearances = []
     for time, target in zip(times, targets):
         scratch.qpos[qids] = target
         for hand in live.hands:
             scratch.qpos[hand["qids"]] = finger_waypoint(
-                time, *hand["waypoints"], live.rollout
+                time,
+                *hand["waypoints"],
+                live.rollout,
+                release_open=hand.get("release_open"),
+                release_fast_mask=hand.get("release_fast_mask"),
+                closing_windows=hand.get("closing_windows"),
             )
+        if hasattr(live, "correction_protocol"):
+            from .bounded_grasp_correction import finger_command
+
+            finger_command(live, time, scratch.qpos)
         mujoco.mj_fwdPosition(model, scratch)
+        if (
+            live.rollout.get("finger_release")
+            and time >= live.rollout["finger_release"]["start_s"]
+        ):
+            release_clearances.append(
+                hand_table_clearance(
+                    model, scratch, robot_geoms - arm_geoms, model.geom("table").id
+                )
+            )
         for contact in scratch.contact:
             pair = {int(contact.geom1), int(contact.geom2)}
             if pair & object_geoms or not pair & robot_geoms:
@@ -217,7 +276,13 @@ def path_screen(
             bodies = [int(model.geom_bodyid[g]) for g in (contact.geom1, contact.geom2)]
             if pair & arm_geoms and joint_neighbors(model, *bodies):
                 continue
-            maximum_robot = max(maximum_robot, -float(contact.dist))
+            if -float(contact.dist) > maximum_robot:
+                maximum_robot = -float(contact.dist)
+                worst_contact = dict(
+                    time_s=float(time),
+                    geoms=[model.geom(g).name for g in (contact.geom1, contact.geom2)],
+                    penetration_m=maximum_robot,
+                )
             if pair & arm_geoms:
                 maximum_arm = max(maximum_arm, -float(contact.dist))
     accepted = (
@@ -232,5 +297,22 @@ def path_screen(
         object_contacts_excluded=True,
         pressure_offsets_not_predicted=True,
         physical_retention_validated=False,
+        worst_robot_contact=worst_contact,
+        minimum_release_hand_table_clearance_m=min(release_clearances)
+        if release_clearances
+        else None,
+        table_clearance_method="conservative collision-geometry height above the infinite tabletop upper envelope",
     )
     return report
+
+
+def hand_table_clearance(model, data, hand_geoms, table):
+    """Positive envelope gap guarantees table clearance; negative is conservative."""
+    from .arm_clearance_audit import table_gap
+
+    collidable = [
+        g for g in hand_geoms if model.geom_contype[g] or model.geom_conaffinity[g]
+    ]
+    if not collidable:
+        raise ValueError("Collidable hand geometries required for table clearance")
+    return table_gap(model, data, collidable, table)

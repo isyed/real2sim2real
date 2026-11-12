@@ -23,6 +23,18 @@ def test_empty_cohort_cannot_look_perfect():
         score_poses(np.empty((0, 7)), np.empty((0, 7)), np.eye(3))
 
 
+def test_continuous_scope_cannot_drop_acquisition_return_or_count_settle_as_motion():
+    from real2sim2real.controller_actor_training.arm_reference_evaluation import (
+        row_scope,
+    )
+
+    row = dict(time_s=9.0, reference_elapsed_s=9.0, phase="return")
+    assert row_scope(row, 12.0, True) == (True, True)
+    assert row_scope(row, 12.0, False) == (False, False)
+    row.update(time_s=13.0, reference_elapsed_s=12.0, phase="settle")
+    assert row_scope(row, 12.0, True) == (True, False)
+
+
 def test_stationary_diagnostic_cannot_receive_demonstrated_motion_scores(tmp_path):
     import json
     from real2sim2real.controller_actor_training.arm_reference_evaluation import (

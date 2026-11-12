@@ -55,7 +55,11 @@ def phase_object_deviation(baseline, candidate):
 
 def summarize(report):
     hold = [r for r in report["records"] if r["phase"] == "hold"]
-    reference = [r for r in hold if "reference_position_error_m" in r]
+    reference = [
+        r
+        for r in (report["records"] if report.get("continuous_protocol") else hold)
+        if "reference_position_error_m" in r
+    ]
     result = {
         k: report[k]
         for k in (
@@ -128,6 +132,7 @@ def compare(paths, output):
                 result=str(path),
                 result_sha256=digest(path),
                 config=report["config"],
+                residual_adapter=report.get("residual_adapter"),
                 integration_timestep_s=actual_step,
                 controller_period_s=report.get("controller_period_s", actual_step),
                 metrics=summarize(report),
@@ -162,6 +167,10 @@ def compare(paths, output):
         "feedback_phases",
         "finger_feedback_override",
         "finger_plan",
+        "bounded_grasp_correction",
+        "closed_loop_grasp_feedback",
+        "descent_pad_control",
+        "residual_adapter",
         *defaults,
     )
     differing = [
@@ -174,6 +183,8 @@ def compare(paths, output):
                     if k == "timestep_s"
                     else r["controller_period_s"]
                     if k == "control_period_s"
+                    else r["residual_adapter"]
+                    if k == "residual_adapter"
                     else r["config"].get(k, defaults.get(k)),
                     sort_keys=True,
                 )

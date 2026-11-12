@@ -21,15 +21,21 @@ model backends. Execution needs the selected modules and their local assets.
 ```mermaid
 flowchart TD
     A[Video and calibration] --> B[Metric object, tabletop and demonstrated object poses]
-    B --> C[Observation-supported robot contacts and insertion paths]
-    C --> D[Bounded grasp and hold evaluation]
-    D --> E[Two-arm IK, joint speed and collision audit]
-    E --> F[Torque-driven object-motion control]
-    F --> G[Longer motion and fixed-controller robustness tests]
-    G --> H[Separate decision about policy training]
-    B --> I[Human hand observations]
+    B --> C[Observation-supported hand contacts and insertion checks]
+    C --> D[Fixture grasp and stationary hold]
+    C --> E[Arm assembly and complete two-arm IK/path audit]
+    D --> F[Arm-mounted stationary hold]
+    E --> F
+    F --> G[Continuous object motion, return and release]
+    G --> H[Frozen-controller robustness and training decision]
+    B --> I[Uncertain human-hand cues]
     I --> C
 ```
+
+Fixture retention and arm-path fitting answer different questions; their order
+can depend on experiment cost. Both precede promotion to arm-mounted moving
+control. See [control readiness](CONTROL_READINESS.md) for the two hold types,
+actual enforced gates, legacy diagnostic exceptions and orchestration gaps.
 
 Human hands supply optional timing, contact-region and grasp-strategy cues. The
 robot plans contacts and chooses feasible wrist postures for its own embodiment.
@@ -75,6 +81,13 @@ hashes. It is an evidence envelope, not a self-contained robot asset bundle.
 Original inputs and rejected outputs remain intact.
 
 ## Extend motion without redefining success
+
+For acquisition followed directly by demonstrated lift and table return, use the
+separate [continuous object-reference preparation](CONTINUOUS_OBJECT_REFERENCE.md).
+It removes the independent lift and reference restart, emits a planning-only
+artifact, and requires fresh arm/finger screening and free-object dynamics.
+Acquisition-anchored drift and table-return gates define a new task protocol;
+preserve the original staged experiment for comparison.
 
 `guided_motion.select_interval` requires every requested inclusive frame ID;
 requesting a longer interval from a truncated export fails. Capture timestamps
@@ -217,3 +230,15 @@ moving-reference scores or stand in for a complete motion pass. See
 Residual RL is a distinct optional pipeline: it can improve an imperfect frozen
 controller, but learned error correction and held-out generalization require an
 explicit training/evaluation protocol. See [residual actor pilots](RESIDUAL_ACTOR_PILOTS.md#residual-reinforcement-learning-and-generalization).
+
+The [CPU arm residual environment](ARM_RESIDUAL_ADAPTER.md) supplies a concrete
+reset/step pressure-action boundary on the same replay loop. Pin the baseline and
+verify exact zero-action reproduction before collecting corrections or learning.
+A reproduced failed task remains failed; scalar adapter validation does not imply
+vectorized learner, domain-randomization or hardware readiness.
+
+A contact-strategy branch can use [bearing support planning](BEARING_SUPPORT_PLANNING.md)
+to screen exterior lower surfaces, insertion and static load paths before new
+arm/control trials. It preserves the source controller and never promotes a
+geometric fit directly to control. Stationary report banners distinguish the
+intentional command freeze from a complete demonstrated-motion replay.

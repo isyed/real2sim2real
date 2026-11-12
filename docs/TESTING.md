@@ -1,5 +1,12 @@
 # Testing the reusable modules
 
+`test_passthrough_graph.py` checks a single persistent zero-action session,
+ordered phase handoffs without added time or steps, rejection of waits/resets/
+scripts/parallel routing, nested source-hash validation, truncation and clock
+failures. With optional GaP installed, it executes the upstream graph scheduler
+against a deterministic test environment. Complete saved-state equality on the
+actual arm/hand scene remains separate downstream simulation evidence.
+
 `test_descent_pad_control.py` checks conserved pair pressure redistribution during
 slew, signed-load handling, per-pad/rate bounds, exact disabled/prefix goals,
 recovery on contact loss and once-only material anchors. Complete zero-policy

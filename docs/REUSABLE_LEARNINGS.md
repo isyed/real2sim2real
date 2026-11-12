@@ -4,6 +4,12 @@ The implementation keeps capture-specific data and outcomes downstream. This
 index maps findings to reusable mechanisms, checks and explicit remaining work.
 It is not an assertion that a new scene, hand or robot has been validated.
 
+[Pass-through graphs](PASSTHROUGH_POLICY_GRAPH.md) preserve one persistent replay
+across phase nodes and compare exact saved states before allowing policy changes.
+Graph completion, simulator-clock preservation and physical task acceptance are
+separate verdicts. Downloaded skill defaults must not replace existing timing,
+collision or retention criteria without an explicitly evaluated adaptation.
+
 [Table load transfer](TABLE_LOAD_TRANSFER.md) uses separate-data table-only force,
 confirmed support, common wrist corrections and shared authority with anti-windup.
 `arm_command_observation` keeps kinematic targets distinct from servo feedforward;

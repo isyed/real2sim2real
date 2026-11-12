@@ -21,6 +21,11 @@ reset/step interface for bounded bilateral pressure corrections on frozen arm
 control. Its zero-policy validator compares full saved physics and unchanged
 task outcomes. Observations are privileged; learner integration is separate.
 
+The optional [pass-through GaP adapter](../../docs/PASSTHROUGH_POLICY_GRAPH.md)
+executes frozen controller phases through one persistent zero-correction replay.
+It verifies exact saved-state/record parity and zero added simulation time at
+graph boundaries before candidate policy generation or skill adaptation.
+
 The [pipeline guide](../../docs/PIPELINES.md) separates human-reference training
 from object-reference control. `object_control_stage` exposes arm-path screening
 and actuator-driven evaluation through the common artifact/deadline protocol.

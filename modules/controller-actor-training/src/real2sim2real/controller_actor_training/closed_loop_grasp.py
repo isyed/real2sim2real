@@ -39,6 +39,8 @@ def validate_source(spec, config):
         "motion_condition",
         "closed_loop_grasp_feedback",
         "descent_pad_control",
+        "table_load_transfer",
+        "record_arm_commands",
     }
     strip = lambda c: {k: v for k, v in c.items() if k not in ignored}
     if strip(config) != strip(baseline["config"]) or config.get(
@@ -76,6 +78,8 @@ class ClosedLoopGrasp:
         object_geoms,
         hand_geoms,
         criteria,
+        table_settings=None,
+        table_geom=None,
     ):
         import mujoco
 
@@ -106,9 +110,22 @@ class ClosedLoopGrasp:
         self.guard_checks = self.guard_rejections = self.rate_limited = 0
         self.rows = []
         self.previous_checked = None
+        self.table_policy = None
+        if table_settings is not None:
+            from .table_load_transfer import TableLoadTransfer
+
+            if table_geom is None:
+                raise ValueError("Explicit table geometry required")
+            self.table_geom = table_geom
+            self.table_policy = TableLoadTransfer(
+                table_settings, parent["continuous_protocol"]
+            )
+            self.table_force_n, self.table_contacts = 0.0, 0
 
     def record(self, record):
         self.feedback.record(record)
+        if self.table_policy is not None:
+            record["table_load_transfer"] = self.table_policy.diagnostics()
         self.rows.append(
             dict(
                 time_s=record["time_s"],
@@ -127,6 +144,12 @@ class ClosedLoopGrasp:
             d.time = self.live.time
             mujoco.mj_forward(m, d)
             self.actual = pose(d, self.obj)
+            if self.table_policy is not None:
+                from .table_load_transfer import observe_table_force
+
+                self.table_force_n, self.table_contacts = observe_table_force(
+                    m, d, self.object_geoms, self.table_geom, self.obj
+                )
             self.wrists = [pose(d, self.roots[r]) for r in ("right", "left")]
             self.forces[:] = 0
             for cid, c in enumerate(d.contact):
@@ -160,6 +183,14 @@ class ClosedLoopGrasp:
         offsets = self.feedback.update(
             time, dt, self.actual, ref, self.wrists, nominal_wrists, self.forces
         )
+        if self.table_policy is not None:
+            self.table_policy.advance(
+                time, dt, self.table_force_n, float(m.body_mass[self.obj] * 9.81),
+                table_contacts=self.table_contacts, phase=source["phase"],
+            )
+            offsets = self.table_policy.compose(
+                offsets, self.feedback.settings["max_offset_m"]
+            )
         if not np.any(offsets) and not self.ever_corrected:
             return nominal
         if not self.ever_corrected:

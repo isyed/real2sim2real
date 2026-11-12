@@ -461,3 +461,12 @@ where maximum load above one does not imply nominal feasibility.
 `test_sampled_motion_variation.py` distinguishes smooth cubic trends from actual
 sampled variation and rejects irregular clocks or insufficient duration. These
 unit checks do not certify retention or attribute visual sway to a control loop.
+
+`test_table_load_transfer.py` checks support/phase gating, confirmation dwell,
+common-wrist bounds, conserved lateral/rotational commands, shared-budget
+anti-windup and zero correction before release. Optional MuJoCo tests verify
+scratch-only command capture and distinguish upward table support from downward
+force by other geometry. `test_arm_command_audit.py` verifies exact translation
+decomposition and world-translation invariance. Complete downstream disabled/
+ordinary replay and pre-activation prefix checks remain necessary after shared
+runner changes; passing a table-transfer diagnostic never waives earlier gates.

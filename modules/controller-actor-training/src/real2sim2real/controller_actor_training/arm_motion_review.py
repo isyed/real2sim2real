@@ -73,6 +73,7 @@ def build(config):
                 bounded_grasp_correction=result.get("bounded_grasp_correction"),
                 closed_loop_grasp_feedback=result.get("closed_loop_grasp_feedback"),
                 descent_pad_control=result.get("descent_pad_control"),
+                table_load_transfer=result.get("table_load_transfer"),
             )
         )
     if clocks[0] != clocks[1]:
@@ -91,6 +92,7 @@ def build(config):
                 "bounded_grasp_correction",
                 "closed_loop_grasp_feedback",
                 "descent_pad_control",
+                "table_load_transfer",
             )
         ),
         controlled_single_variable_experiment=False,

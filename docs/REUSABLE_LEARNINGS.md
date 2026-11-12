@@ -4,6 +4,12 @@ The implementation keeps capture-specific data and outcomes downstream. This
 index maps findings to reusable mechanisms, checks and explicit remaining work.
 It is not an assertion that a new scene, hand or robot has been validated.
 
+[Table load transfer](TABLE_LOAD_TRANSFER.md) uses separate-data table-only force,
+confirmed support, common wrist corrections and shared authority with anti-windup.
+`arm_command_observation` keeps kinematic targets distinct from servo feedforward;
+`arm_command_audit` decomposes actual motion without retiming the reference.
+Default record schemas remain compatible with existing zero-residual evidence.
+
 [Force-and-torque auditing](GRASP_WRENCH_AUDIT.md) separates ideal contact capacity
 from controller realization and airborne carrying from table load transfer.
 `wrench_feasibility` retains full friction dimensions and actuator Jacobians;

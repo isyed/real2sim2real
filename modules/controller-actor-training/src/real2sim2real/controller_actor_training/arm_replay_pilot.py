@@ -105,6 +105,18 @@ def rollout(config, interaction=None):
     import mujoco
 
     finger_mode = config.get("finger_control_mode", "archived")
+    table_spec = config.get("table_load_transfer")
+    record_commands = config.get("record_arm_commands", table_spec is not None)
+    if not isinstance(record_commands, bool):
+        raise ValueError("record_arm_commands must be a boolean observation option")
+    if table_spec is not None:
+        from .table_load_transfer import validate_source
+
+        validate_source(table_spec, config)
+        if config.get("closed_loop_grasp_feedback") is None or interaction is not None:
+            raise ValueError(
+                "Table transfer requires the existing closed-loop wrist owner"
+            )
     descent_spec = config.get("descent_pad_control")
     if descent_spec is not None:
         from .descent_pad_control import validate_source
@@ -185,6 +197,8 @@ def rollout(config, interaction=None):
         name: Path(__file__).with_name(name).read_bytes()
         for name in (
             "arm_replay_pilot.py",
+            "arm_command_observation.py",
+            "table_load_transfer.py",
             "arm_object_feedback.py",
             "arm_replay_diagnostics.py",
             "arm_tracking_control.py",
@@ -628,6 +642,8 @@ def rollout(config, interaction=None):
                     "max_penetration_m"
                 ],
             ),
+            table_settings=None if table_spec is None else table_spec["controller"],
+            table_geom=table,
         )
     if interaction is not None:
         if live_fingers is None or condition != "loaded":
@@ -672,6 +688,8 @@ def rollout(config, interaction=None):
                     control_period, parent["records"][i]["phase"]
                 )
             target = targets[i] * (1 - alpha) + targets[i + 1] * alpha
+            if record_commands:
+                planned_target = target.copy()
             if feedback or height_alignment:
                 # Read the last solved contact forces before refreshing kinematics.
                 normal = dict.fromkeys(roots, 0.0)
@@ -786,6 +804,8 @@ def rollout(config, interaction=None):
                     control_time, control_period, target, previous_command, i, alpha
                 )
             previous_command = target.copy()
+            if record_commands:
+                feedback_target = target.copy()
             velocity = (
                 (targets[i + 1] - targets[i]) / (times[i + 1] - times[i])
                 if config.get("velocity_feedforward", False)
@@ -827,6 +847,21 @@ def rollout(config, interaction=None):
                 target_velocity=velocity,
                 kd=config["kd_nm_s_per_rad"],
             )
+            if record_commands:
+                arm_command = dict(
+                    command_time_s=float(control_time),
+                    planned_q_rad=planned_target,
+                    feedback_q_rad=feedback_target,
+                    kinematic_q_rad=target.copy(),
+                    servo_ctrl_rad=data.ctrl[aids].copy(),
+                    model_bias_nm=data.qfrc_bias[vids].copy(),
+                    inertial_feedforward_nm=np.broadcast_to(
+                        inertial_torque, target.shape
+                    ).copy(),
+                    velocity_feedforward_rad_s=np.broadcast_to(
+                        velocity, target.shape
+                    ).copy(),
+                )
             if live_fingers:
                 release_observation = {}
                 if (
@@ -1039,6 +1074,12 @@ def rollout(config, interaction=None):
             desired.qpos[qids] = target
             mujoco.mj_kinematics(model, desired)
             record["commanded_wrist_tracking"] = wrist_errors(data, desired, roots)
+            if record_commands:
+                from .arm_command_observation import capture
+
+                record["arm_command"] = capture(
+                    model, data, desired, roots, qids, arm_command
+                )
             record["joint_tracking_error_rad"] = (
                 data.qpos[qids] - targets[sample_index]
             ).tolist()
@@ -1258,6 +1299,17 @@ def rollout(config, interaction=None):
         report["residual_adapter"] = interaction.finish(report, out)
     if closed is not None:
         report["closed_loop_grasp_feedback"] = closed.finish(out)
+        if table_spec is not None:
+            report["table_load_transfer"] = dict(
+                spec=table_spec,
+                **closed.table_policy.diagnostics(),
+                promotion_eligible=False,
+                reference_edited=False,
+                finger_release_edited=False,
+                shared_translation_cap_m=closed.feedback.settings["max_offset_m"],
+                observations="privileged separate-data solved table/object force at wrist observation ticks",
+                implementation_sha256=digest(snapshot / "table_load_transfer.py"),
+            )
         report["closed_loop_grasp_feedback"]["implementation_sha256"] = {
             name: digest(snapshot / name)
             for name in ("closed_loop_grasp.py", "slip_tilt_feedback.py")

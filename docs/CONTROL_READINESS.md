@@ -1,5 +1,10 @@
 # From a fitted grasp to moving control
 
+[Pass-through policy graphs](PASSTHROUGH_POLICY_GRAPH.md) first require exact
+reproduction of a frozen continuous controller across graph phase boundaries.
+Graph completion is distinct from physical acceptance; the original failed gates
+remain failed when a graph reproduces them exactly.
+
 [Command decomposition and table load transfer](TABLE_LOAD_TRANSFER.md) separate
 planned motion, corrected wrist targets and actual tracking. A bounded table-force
 response shares existing wrist authority and cannot erase an earlier failed lift.

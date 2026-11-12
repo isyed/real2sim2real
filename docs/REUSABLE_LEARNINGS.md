@@ -4,6 +4,25 @@ The implementation keeps capture-specific data and outcomes downstream. This
 index maps findings to reusable mechanisms, checks and explicit remaining work.
 It is not an assertion that a new scene, hand or robot has been validated.
 
+[Pass-through graphs](PASSTHROUGH_POLICY_GRAPH.md) preserve one persistent replay
+across phase nodes and compare exact saved states before allowing policy changes.
+Graph completion, simulator-clock preservation and physical task acceptance are
+separate verdicts. Downloaded skill defaults must not replace existing timing,
+collision or retention criteria without an explicitly evaluated adaptation.
+
+[Bounded policy proposals](BOUNDED_POLICY_PROPOSALS.md) keep author authority in
+one data-only graph node and preserve the native controller, phase clock and
+acceptance checks. A static path pass can still fail loaded collision or retention
+limits. Improving clearance or orientation alone cannot promote a candidate.
+Keep author setup failures separate from evaluated proposals, freeze the proposal
+before physics, and never call a zero-feedback trial a completed learning cycle.
+
+[Measured policy feedback](POLICY_FEEDBACK.md) preserves acquisition anchors,
+source gate limits, sparse-contact caveats and previous verdicts. Revising a seed
+means replacing its absolute offsets against the frozen controller, not stacking
+corrections. Improving a later collision violation can leave earlier retention
+unchanged; score the full sequence and retain that tradeoff explicitly.
+
 [Table load transfer](TABLE_LOAD_TRANSFER.md) uses separate-data table-only force,
 confirmed support, common wrist corrections and shared authority with anti-windup.
 `arm_command_observation` keeps kinematic targets distinct from servo feedforward;

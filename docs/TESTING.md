@@ -1,5 +1,12 @@
 # Testing the reusable modules
 
+`test_passthrough_graph.py` checks a single persistent zero-action session,
+ordered phase handoffs without added time or steps, rejection of waits/resets/
+scripts/parallel routing, nested source-hash validation, truncation and clock
+failures. With optional GaP installed, it executes the upstream graph scheduler
+against a deterministic test environment. Complete saved-state equality on the
+actual arm/hand scene remains separate downstream simulation evidence.
+
 `test_descent_pad_control.py` checks conserved pair pressure redistribution during
 slew, signed-load handling, per-pad/rate bounds, exact disabled/prefix goals,
 recovery on contact loss and once-only material anchors. Complete zero-policy
@@ -470,3 +477,21 @@ force by other geometry. `test_arm_command_audit.py` verifies exact translation
 decomposition and world-translation invariance. Complete downstream disabled/
 ordinary replay and pre-activation prefix checks remain necessary after shared
 runner changes; passing a table-transfer diagnostic never waives earlier gates.
+
+`test_bounded_policy_graph.py` checks parameter authority, immutable graph routing,
+nonfinite/unknown inputs, one native simulation clock, early completion and
+exclusive residual ownership. A downstream all-zero proposal must additionally
+reproduce the pinned full physical replay exactly before nonzero testing.
+It also rejects an abort during the final phase, nonfinite handoff clocks and
+invalid deadlines before importing the optional runtime.
+
+`test_arm_motion_comparison.py` checks that a combined video preserves the input
+frame count and source files, and rejects mismatched video frame rates rather
+than silently retiming one controller.
+It checks unequal-length failure cleanup and prevents overwriting source media
+or a previous comparison through the simulator-independent export helper.
+
+`test_policy_feedback.py` checks fixed acquisition anchors, release exclusion,
+common-motion invariance, gate direction, invalid clocks and missing loaded-pad
+evidence. Exporting a real run also verifies reproduced retention metrics and
+unchanged input hashes.

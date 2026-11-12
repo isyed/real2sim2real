@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 
 from real2sim2real.artifacts import digest, write_json
+from real2sim2real.review_comparison import side_by_side
 from .paired_acquisition_audit import pinned_json
 
 
@@ -18,12 +19,13 @@ def build(config):
     if len(config["runs"]) != 2:
         raise ValueError("Exactly two pinned motion reviews required")
     out = Path(config["output"])
-    rows, sections, clocks = [], [], []
+    rows, sections, clocks, videos = [], [], [], []
     for entry in config["runs"]:
         result = pinned_json(entry["result"])
         path = Path(entry["result"]["path"])
         receipt = json.loads(path.with_name("review-receipt-follow.json").read_text())
         video = path.with_name("rollout-follow.mp4")
+        videos.append(video)
         if (
             receipt["result_sha256"] != digest(path)
             or receipt["video_sha256"] != digest(video)
@@ -70,6 +72,24 @@ def build(config):
                 primary_drift_mm=result["hold_slip_m"] * 1000,
                 support_drift_mm=result["support_wrist_drift_m"] * 1000,
                 minimum_clearance_mm=result["hold_minimum_clearance_m"] * 1000,
+                peak_reference_position_error_mm=max(
+                    (
+                        r["reference_position_error_m"] * 1000
+                        for r in result["records"]
+                        if "reference_position_error_m" in r
+                    ),
+                    default=None,
+                ),
+                peak_reference_rotation_error_deg=max(
+                    (
+                        r["reference_rotation_error_deg"]
+                        for r in result["records"]
+                        if "reference_rotation_error_deg" in r
+                    ),
+                    default=None,
+                ),
+                maximum_robot_penetration_mm=result["max_robot_penetration_m"] * 1000,
+                maximum_arm_penetration_mm=result["max_arm_penetration_m"] * 1000,
                 bounded_grasp_correction=result.get("bounded_grasp_correction"),
                 closed_loop_grasp_feedback=result.get("closed_loop_grasp_feedback"),
                 descent_pad_control=result.get("descent_pad_control"),
@@ -99,21 +119,76 @@ def build(config):
         physics_rerun=False,
         implementation_sha256=digest(Path(__file__)),
     )
+    combined_link = ""
+    if config.get("combined_video", False):
+        report["combined_video"] = side_by_side(
+            videos, [row["label"] for row in rows], out / "comparison.mp4"
+        )
+        combined_link = '<p><a href="comparison.mp4">Open or download one synchronized side-by-side MP4</a>.</p>'
     write_json(out / "comparison.json", report)
+    metric_rows = []
+    for key, label in (
+        ("primary_drift_mm", "Primary fixed-anchor drift (mm)"),
+        ("support_drift_mm", "Support fixed-anchor drift (mm)"),
+        ("minimum_clearance_mm", "Suspended minimum clearance (mm)"),
+        (
+            "peak_reference_position_error_mm",
+            "Peak object-reference position error (mm)",
+        ),
+        (
+            "peak_reference_rotation_error_deg",
+            "Peak object-reference rotation error (degrees)",
+        ),
+        ("maximum_robot_penetration_mm", "Maximum robot penetration (mm)"),
+        ("maximum_arm_penetration_mm", "Maximum arm penetration (mm)"),
+    ):
+        values = ["—" if row[key] is None else f"{row[key]:.3f}" for row in rows]
+        metric_rows.append(
+            "<tr><th>"
+            + label
+            + "</th>"
+            + "".join("<td>" + v + "</td>" for v in values)
+            + "</tr>"
+        )
+    metric_rows.append(
+        "<tr><th>Supported finger release</th>"
+        + "".join(
+            "<td>" + ("Pass" if row["release"]["accepted"] else "Reject") + "</td>"
+            for row in rows
+        )
+        + "</tr>"
+    )
+    table = (
+        "<table><thead><tr><th>Observed metric</th>"
+        + "".join("<th>" + html.escape(row["label"]) + "</th>" for row in rows)
+        + "</tr></thead><tbody>"
+        + "".join(metric_rows)
+        + "</tbody></table>"
+    )
     (out / "review.html").write_text(
         '<!doctype html><meta charset="utf-8"><title>Full-motion grasp comparison</title>'
         "<style>body{font:17px system-ui;margin:24px;background:#f7f8fa;color:#17202b}"
         "main{display:grid;grid-template-columns:1fr 1fr;gap:20px}video{width:100%}"
         "button{padding:10px;margin:6px}section{min-width:0}pre{white-space:pre-wrap}"
+        "table{border-collapse:collapse;margin:20px 0}th,td{padding:8px;border:1px solid #ccd3dc;text-align:left}"
         "@media(max-width:800px){main{grid-template-columns:1fr}}</style>"
         "<h1>Full continuous motion: acquisition → lift → return → release</h1>"
-        "<p>Saved simulation; both attempts retain their original rejection status. "
-        "These use different grasp/path configurations. This is a visual comparison, "
-        "not an isolated test of closure order. No diagnostic hold or time warp is added.</p>"
+        "<p>Saved simulation; both attempts retain their original acceptance status. "
+        + html.escape(
+            config.get(
+                "description",
+                "These may use different grasp/path configurations. "
+                "This is a visual comparison, not an isolated test of closure order.",
+            )
+        )
+        + " No diagnostic hold or time warp is added.</p>"
         '<button id="play">Play both</button><button id="pause">Pause both</button>'
         '<button id="restart">Restart both</button><span id="status"></span><main>'
         + "".join(sections)
-        + "</main><p>Use the left video to seek; the right follows. "
+        + "</main>"
+        + combined_link
+        + table
+        + "<p>Use the left video to seek; the right follows. "
         "Object-following camera views are rendered independently. "
         '<a href="comparison.json">Metrics and provenance</a>.</p>'
         '<script>const [a,b]=document.querySelectorAll("video");'

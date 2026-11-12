@@ -21,6 +21,27 @@ reset/step interface for bounded bilateral pressure corrections on frozen arm
 control. Its zero-policy validator compares full saved physics and unchanged
 task outcomes. Observations are privileged; learner integration is separate.
 
+The optional [pass-through GaP adapter](../../docs/PASSTHROUGH_POLICY_GRAPH.md)
+executes frozen controller phases through one persistent zero-correction replay.
+It verifies exact saved-state/record parity and zero added simulation time at
+graph boundaries before candidate policy generation or skill adaptation.
+
+ASL integration is an optional part of this module. The upstream author backend
+remains separately installed; ordinary reconstruction and control do not import
+it. The public integration components are:
+
+| Component | Responsibility |
+| --- | --- |
+| `proposal_contract` | Standard-library validation of bounded parameters and immutable graph structure |
+| `bounded_policy_graph` | Execute an admitted graph on the existing continuous simulator clock |
+| `policy_feedback` | Export only named, pinned development runs with measured contact/retention diagnostics |
+| `arm_motion_review` | Compare verified saved videos and original acceptance metrics |
+
+See [bounded proposals](../../docs/BOUNDED_POLICY_PROPOSALS.md) and
+[feedback-informed revisions](../../docs/POLICY_FEEDBACK.md). Author prompts,
+credentials, dataset paths and experiment ledgers belong downstream. These tools
+do not replace the simulator or perform residual RL training.
+
 The [pipeline guide](../../docs/PIPELINES.md) separates human-reference training
 from object-reference control. `object_control_stage` exposes arm-path screening
 and actuator-driven evaluation through the common artifact/deadline protocol.

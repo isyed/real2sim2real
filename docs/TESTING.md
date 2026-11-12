@@ -453,3 +453,11 @@ side and seed offsets to respect frozen joints and search bounds. Reference-scor
 tests reject stationary runs as demonstrated-motion evidence. Actual candidate
 admission, complete stationary holds and matched motion retries remain downstream
 physics evidence.
+
+`test_wrench_feasibility.py` checks analytically known pinch loads and motor-limited
+capacity, torsional moment transmission, COM moment arms, inner/outer friction
+bounds, reference acceleration, servo saturation and a lower-torque-bound case
+where maximum load above one does not imply nominal feasibility.
+`test_sampled_motion_variation.py` distinguishes smooth cubic trends from actual
+sampled variation and rejects irregular clocks or insufficient duration. These
+unit checks do not certify retention or attribute visual sway to a control loop.

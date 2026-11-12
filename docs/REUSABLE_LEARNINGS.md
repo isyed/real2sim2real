@@ -4,6 +4,14 @@ The implementation keeps capture-specific data and outcomes downstream. This
 index maps findings to reusable mechanisms, checks and explicit remaining work.
 It is not an assertion that a new scene, hand or robot has been validated.
 
+[Force-and-torque auditing](GRASP_WRENCH_AUDIT.md) separates ideal contact capacity
+from controller realization and airborne carrying from table load transfer.
+`wrench_feasibility` retains full friction dimensions and actuator Jacobians;
+`grasp_wrench_review` preserves infeasible/unresolved bounds and original verdicts.
+`sampled_motion_variation` checks saved movement independently of rendering without
+calling it tracking error. Premature actual touchdown must be compared with the
+unchanged reference geometry before increasing pressure or changing release.
+
 [Pad contact planning](PAD_CONTACT_PLANNING.md) adds collision-pad geometry,
 orientation, closing paths and static balance. Finite patch samples share one
 force budget per pad; failed balance is not a control success.

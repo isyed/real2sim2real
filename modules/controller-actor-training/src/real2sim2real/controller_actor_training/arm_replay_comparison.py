@@ -169,6 +169,7 @@ def compare(paths, output):
         "finger_plan",
         "bounded_grasp_correction",
         "closed_loop_grasp_feedback",
+        "descent_pad_control",
         "residual_adapter",
         *defaults,
     )

@@ -197,6 +197,7 @@ def refresh_page(directory, *, follow_object=False):
         "residual_adapter",
         "bounded_grasp_correction",
         "closed_loop_grasp_feedback",
+        "descent_pad_control",
         "continuous_protocol",
         "continuous_metrics",
     ):

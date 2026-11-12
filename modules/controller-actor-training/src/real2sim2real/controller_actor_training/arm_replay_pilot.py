@@ -105,6 +105,15 @@ def rollout(config, interaction=None):
     import mujoco
 
     finger_mode = config.get("finger_control_mode", "archived")
+    descent_spec = config.get("descent_pad_control")
+    if descent_spec is not None:
+        from .descent_pad_control import validate_source
+
+        validate_source(descent_spec, config)
+        if finger_mode != "live_contact_force" or interaction is not None:
+            raise ValueError(
+                "Descent trials require the existing live finger owner without an actor"
+            )
     closed_spec = config.get("closed_loop_grasp_feedback")
     if closed_spec is not None:
         from .closed_loop_grasp import validate_source
@@ -194,6 +203,7 @@ def rollout(config, interaction=None):
             "bounded_grasp_correction.py",
             "closed_loop_grasp.py",
             "slip_tilt_feedback.py",
+            "descent_pad_control.py",
             "finger_release.py",
             "finger_release_plan.py",
             "wrist_withdrawal.py",
@@ -460,6 +470,11 @@ def rollout(config, interaction=None):
                 ),
             )
     finger_path = None
+    descent = None
+    if descent_spec is not None:
+        from .descent_pad_control import bind
+
+        descent = bind(live_fingers, descent_spec, parent)
     if config.get("acquisition_profile"):
         from .acquisition_profile import bind_fingers
 
@@ -1065,6 +1080,8 @@ def rollout(config, interaction=None):
                 interaction.record(record)
             if closed is not None:
                 closed.record(record)
+            if descent is not None:
+                descent.record(record)
             qstates.append(data.qpos.copy())
             controls.append(data.ctrl.copy())
             timestamps.append(data.time)
@@ -1245,6 +1262,11 @@ def rollout(config, interaction=None):
             name: digest(snapshot / name)
             for name in ("closed_loop_grasp.py", "slip_tilt_feedback.py")
         }
+    if descent is not None:
+        report["descent_pad_control"] = descent.finish(out)
+        report["descent_pad_control"]["implementation_sha256"] = digest(
+            snapshot / "descent_pad_control.py"
+        )
     if correction_spec is not None:
         report["bounded_grasp_correction"] = dict(
             spec=correction_spec,

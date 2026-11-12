@@ -1,5 +1,10 @@
 # From a fitted grasp to moving control
 
+[Grasp force-and-torque auditing](GRASP_WRENCH_AUDIT.md) separates ideal
+actuator-limited contact capacity from controller realization, and airborne
+support from hands pushing against the table during load transfer. Saved wrist
+variation and rendering effects must also be distinguished before diagnosing sway.
+
 [Descent pad seating and load-sharing probes](DESCENT_PAD_CONTROL.md) distinguish
 actual measured contact migration from lost contact and preserve the original
 acquisition scoring anchor while testing targeted finger-task changes.

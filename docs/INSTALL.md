@@ -1,5 +1,22 @@
 # Installation
 
+For standalone policy campaigns without upstream robotics checkouts, build the
+project wheels and install the optional module:
+
+```bash
+python -m pip install wheel
+python modules/agentic-policy/tools/build_wheels.py --output dist/agentic
+python -m pip install --find-links dist/agentic 'real2sim2real[agentic,mujoco]==0.1.0'
+r2s2r agentic --help
+```
+
+The isolated author/graph host currently requires Linux and the system
+`bubblewrap` executable. Standard numerical dependencies remain required;
+reconstruction models and residual-RL stacks are optional separate installations.
+Use the module's `constraints-cpu-py312.txt` for the recorded Linux/Python 3.12
+acceptance environment. See [campaign setup](../modules/agentic-policy/README.md)
+for portable assets, author configuration and manual/review modes.
+
 Use Linux and Python 3.11 for the existing heavy backends. The orchestrator
 also supports Python 3.12. Keep independent environments for reconstruction,
 CPU repair, retargeting, and controller training.

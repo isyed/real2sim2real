@@ -1,0 +1,12 @@
+{
+  "description": "Illustrative schema only. Supply task-specific cases and justified limits before freezing a campaign.",
+  "evaluation": {
+    "target": "rl",
+    "robustness_cases": [
+      {"name": "declared-mass-case", "backend": {"kind": "continuous", "runtime": "cases/mass/runtime.json"}}
+    ],
+    "admission": {
+      "rl": {"require_robustness": true, "limits": {"peak_penetration_m": {"max": 0.003}}}
+    }
+  }
+}

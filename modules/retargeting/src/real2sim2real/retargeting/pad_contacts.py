@@ -1,10 +1,10 @@
 """Contact frames on compiled collision pads and bounded position/normal IK."""
 
 import numpy as np
-from scipy.optimize import least_squares, linprog
 import trimesh
+from scipy.optimize import least_squares, linprog
 
-from .grasp_kinematics import robot_indices, contact_penetrations
+from .grasp_kinematics import contact_penetrations, robot_indices
 
 
 def unit(value):
@@ -80,6 +80,32 @@ def collision_pad_hull(model, gid):
         + model.geom_pos[gid]
     )
     return trimesh.Trimesh(vertices=vertices, process=False).convex_hull
+
+
+def convex_outward_point(hull, direction):
+    """Exit a convex collision hull along a ray from its vertex centroid.
+
+    Plane intersection avoids an optional spatial-index dependency when only
+    exporting pad geometry. Returns the actual face normal, not the ray direction.
+    """
+    from scipy.spatial import ConvexHull
+
+    direction = unit(direction)
+    convex = ConvexHull(np.asarray(hull.vertices, float))
+    # Work with Qhull planes: tiny STL facets can make mesh watertightness
+    # diagnostics unreliable even for an explicitly computed convex hull.
+    planes = convex.equations
+    center = np.mean(hull.vertices[convex.vertices], axis=0)
+    denominator = planes[:, :3] @ direction
+    distance = np.full(len(denominator), np.inf)
+    forward = denominator > 1e-10
+    distance[forward] = (
+        -(planes[forward, :3] @ center + planes[forward, 3]) / denominator[forward]
+    )
+    face = int(np.argmin(distance))
+    if not np.isfinite(distance[face]) or distance[face] <= 0:
+        raise ValueError("No forward convex surface intersection")
+    return center + distance[face] * direction, planes[face, :3]
 
 
 def contact_patch_samples(
@@ -175,8 +201,20 @@ def fit_pad_contacts(
     joint_bounds=None,
     fixture_prefix="fixture_",
     position_scale_m=0.006,
+    collision_reserves=(),
+    normal_scale=0.35,
+    normal_guard_deg=None,
 ):
-    """Fit pad points AND normals in scratch data; leave the caller state intact."""
+    """Fit pad frames in scratch state, optionally reserving selected-link room.
+
+    CollisionReserve costs are additive; no base collision or acceptance check
+    is disabled. Callers must use aligned uncertainty scenes and unchanged native
+    joint conventions. Empty reserves and normal_scale=0.35 preserve the
+    historical objective. The normal scale weights unit-vector differences;
+    it is not an angular acceptance threshold. An optional normal_guard_deg
+    adds a strong cone-violation penalty, not a feasibility guarantee. Check
+    actual normals on every executed path sample independently.
+    """
     import mujoco
 
     roots = [root_name] if isinstance(root_name, str) else list(root_name)
@@ -213,12 +251,21 @@ def fit_pad_contacts(
         or not np.allclose(np.linalg.norm(normals, axis=1), 1)
         or not 1 <= max_nfev <= 400
         or not 0.0005 <= position_scale_m <= 0.006
+        or not 0.1 <= normal_scale <= 0.35
+        or (normal_guard_deg is not None and not 1 <= normal_guard_deg <= 45)
     ):
         raise ValueError("Bounded finite pad targets and unit normals required")
     scratch = mujoco.MjData(model)
     scratch.qpos[:] = data.qpos
     lower, upper = model.jnt_range[idx["joints"]].T.copy()
     names = [model.joint(int(j)).name for j in idx["joints"]]
+    collision_reserves = tuple(collision_reserves)
+    if len(collision_reserves) > 4 or any(
+        r.joint_names != names for r in collision_reserves
+    ):
+        raise ValueError(
+            "At most four reserves with identical owned joint ordering required"
+        )
     for i, name in enumerate(names):
         prefix = next((p for p in prefixes if name.startswith(p)), None)
         if prefix is not None:
@@ -253,18 +300,29 @@ def fit_pad_contacts(
         penetration, jac = contact_penetrations(model, scratch, idx, jacobian=True)
         residual = np.r_[
             (p - targets).ravel() / position_scale_m,
-            (n - normals).ravel() / 0.35,
+            (n - normals).ravel() / normal_scale,
             (q - seed) * 0.03,
             np.maximum(penetration - 0.001, 0) / 0.002,
         ]
         derivative = np.vstack(
             [
                 a.reshape(-1, len(q)) / position_scale_m,
-                b.reshape(-1, len(q)) / 0.35,
+                b.reshape(-1, len(q)) / normal_scale,
                 np.eye(len(q)) * 0.03,
                 jac * (penetration > 0.001)[:, None] / 0.002,
             ]
         )
+        for reserve in collision_reserves:
+            extra, extra_jac = reserve.evaluate(q)
+            residual = np.r_[residual, extra]
+            derivative = np.vstack([derivative, extra_jac])
+        if normal_guard_deg is not None:
+            violation = np.cos(np.deg2rad(normal_guard_deg)) - (n * normals).sum(1)
+            residual = np.r_[residual, np.maximum(violation, 0) / 0.01]
+            cone_jac = -np.einsum("ij,ijk->ik", normals, b)
+            derivative = np.vstack(
+                [derivative, cone_jac * (violation > 0)[:, None] / 0.01]
+            )
         cache.update(q=q.copy(), r=residual, j=derivative)
         return residual, derivative
 

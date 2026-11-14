@@ -1,5 +1,10 @@
 # Controller and actor training
 
+[Continuous policy tools](../../docs/CONTINUOUS_POLICY_TOOLS.md) expose persistent
+physics, named joint commands, scratch IK/pad fitting, collision screening and
+supported release to broader GaP/ASL policies. The author can reuse project and
+upstream tools while the downstream host freezes scene and evaluation criteria.
+
 The [continuous object-reference route](../../docs/CONTINUOUS_OBJECT_REFERENCE.md)
 places robot acquisition on the capture clock, followed by the demonstrated lift
 and table return. It emits a planning-only artifact for fresh arm/finger admission
@@ -517,3 +522,30 @@ renders CPU video without rerunning physics. New holds do not inherit earlier
 arm, continuous-motion or release passes.
 `arm_replay_review --refresh-page` updates protocol explanations using immutable
 saved video, with prominent stationary hold/start/end labeling.
+
+`conditional_fixture_scene` creates explicit free-object dynamics hypotheses from
+static collision scenes and audits object/environment initialization separately
+from hand-only path checks. See [control readiness](../../docs/CONTROL_READINESS.md)
+for planning keep-outs versus physical contact material and initialization gates.
+
+`pad_pressure_correction.PadPressureCorrection` wraps the existing normal-force
+admittance for explicit disjoint finger groups. It bounds joint-offset norm,
+normal speed and joint speed, while leaving scene, wrist commands and actuator
+limits untouched. Callers retain live collision/orientation checks and the
+sustained-contact lift gate; simulated pad force is privileged evidence. A
+zero-correction replay should match the retained controller before new trials.
+
+`arm_pose_screen.screen` provides an early, scratch-state endpoint IK and
+collision screen with multiple seeds and explicit native joint margins. It can
+compare base placements and candidate inversion directions before full path
+fitting. Passing endpoints do not admit connecting paths or loaded motion. See
+[loaded contact repair and arm screening](../../docs/LOADED_CONTACT_REPAIR.md).
+
+`diagnostic_verdict.DiagnosticVerdict` separates nominal task completion,
+recorded quality warnings and control acceptance. Physical/numerical faults stay
+hard stops in explicit continuation mode. See
+[nominal arm and scene diagnostics](../../docs/NOMINAL_TASK_DIAGNOSTICS.md).
+
+[Inversion retention and phase retiming](../../docs/INVERSION_RETENTION.md) combines
+explicit reference/execution clocks with optional per-pad force targets and
+bounded tangential tasks. Omitted options retain scalar-normal behavior exactly.

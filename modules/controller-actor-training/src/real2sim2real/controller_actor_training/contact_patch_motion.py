@@ -135,9 +135,9 @@ class ContactPatchMotion:
         return dict(pads=result, other_object_contacts_n=other)
 
 
-def summarize(records, settings):
+def summarize(records, settings, *, phase="hold"):
     validate_settings(settings)
-    hold = [r for r in records if r["phase"] == "hold"]
+    hold = [r for r in records if r["phase"] == phase]
     result = {}
     labels = (
         set().union(*(r["contact_patch_motion"]["pads"] for r in hold))

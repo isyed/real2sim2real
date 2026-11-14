@@ -5,6 +5,8 @@ saved arm state. No dynamics run is claimed. Every accepted proposal still needs
 fresh full-arm IK/collision admission and free-object release evaluation.
 """
 
+from real2sim2real.mujoco_assets import load_model as load_mujoco_model
+
 import argparse
 from copy import deepcopy
 import json
@@ -106,7 +108,7 @@ class FixturePath:
             if digest(Path(name)) != sha:
                 raise ValueError("Release planning source changed")
         parent = json.loads(Path(audit["config"]["trial"]).read_text())
-        original = mujoco.MjModel.from_xml_path(str(path.with_name("scene.xml")))
+        original = load_mujoco_model(str(path.with_name("scene.xml")))
         observed = mujoco.MjData(original)
         with np.load(path.with_name("states.npz"), allow_pickle=False) as states:
             index = int(np.argmin(abs(states["timestamps_s"] - config["time_s"])))

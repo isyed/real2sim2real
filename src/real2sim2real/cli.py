@@ -2,16 +2,25 @@
 
 import argparse
 import json
+import sys
 from .pipeline import stage_registry, read_config, plan, execute
 from .artifacts import load
 from .pipeline_profiles import PROFILES
 
 
 def main(argv=None):
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if argv and argv[0] == "agentic":
+        try:
+            from real2sim2real.agentic_policy.cli import main as agentic_main
+        except ImportError as error:
+            raise SystemExit("Install the agentic-policy module (real2sim2real[agentic]).") from error
+        return agentic_main(argv[1:])
     parser = argparse.ArgumentParser(prog="r2s2r")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("modules", help="List selectable modules")
     sub.add_parser("pipelines", help="List named, composable pipeline recipes")
+    sub.add_parser("agentic", help="Standalone automated or human-reviewed policy campaigns")
     p = sub.add_parser("assess", help="Check an explicit set of pinned evidence claims")
     p.add_argument("--config", required=True)
     p = sub.add_parser(

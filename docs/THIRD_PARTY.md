@@ -1,5 +1,19 @@
 # Upstream code and assets
 
+The `agentic-policy` module bundles selected GaP runtime/core and geometry
+sources under a private namespace, plus upstream ASL prompt references. Its
+`_vendor/provenance.json` records exact source revisions, original/bundled hashes
+and namespace modifications. Component license/notice files are included in the
+wheel. The portable campaign engine is an ASL-derived integration rather than
+the original RoboSimStudio benchmark. See the module's NOTICE and README.
+
+All 33 higher-level open-robot-skills definitions and their supporting scripts
+and references are included verbatim as source resources. Their separate
+`_vendor/robot_skills/manifest.json` records revision and per-file hashes, with
+the upstream LICENSE and original per-skill declarations preserved. These are
+not automatically executable integrations. Project grasp/transport/placement
+adaptations are catalogued separately, with their simulator prerequisites.
+
 The extraction preserves upstream copyright notices and bundled license
 texts. New adapters do not relicense the included third-party components.
 The top-level [Apache-2.0 license](../LICENSE) covers original project
@@ -32,3 +46,8 @@ histories are deliberately excluded. Public release should include a review
 of component/model redistribution terms and the documented GPU acceptance
 test, rather than assuming that making the repository public makes every
 model freely redistributable.
+
+The bundled executable geometry tools also import `typing.Any` so
+`AttachmentResult` annotations resolve during tool-schema inspection. This
+integration patch is recorded in provenance and the vendor refresh script;
+verbatim higher-level skill resources are unchanged.

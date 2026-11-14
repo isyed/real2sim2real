@@ -23,6 +23,7 @@ ALLOWED_SUFFIXES = {
     ".svg",
     ".mp4",
     ".webm",
+    ".ply",
 }
 
 

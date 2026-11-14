@@ -5,6 +5,8 @@ approximation, not a force model. Optimization is position-only. Admission still
 requires new full-arm paths and complete free-object stationary dynamics.
 """
 
+from real2sim2real.mujoco_assets import load_model as load_mujoco_model
+
 import argparse
 import json
 from pathlib import Path
@@ -142,7 +144,7 @@ def run(config):
         "closing_wrist_offsets"
     ):
         raise ValueError("Use the frozen unmodified acquisition as the planning anchor")
-    model = mujoco.MjModel.from_xml_path(str(path.with_name("scene.xml")))
+    model = load_mujoco_model(str(path.with_name("scene.xml")))
     data = mujoco.MjData(model)
     response = None
     with np.load(path.with_name("states.npz"), allow_pickle=False) as states:

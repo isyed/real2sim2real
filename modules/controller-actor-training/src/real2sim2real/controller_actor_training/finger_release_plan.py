@@ -4,6 +4,8 @@ This is endpoint geometry evidence, not a successful dynamic release. The live
 adapter must screen the complete opening path and evaluate actual separation.
 """
 
+from real2sim2real.mujoco_assets import load_model as load_mujoco_model
+
 import argparse
 import json
 from pathlib import Path
@@ -119,7 +121,7 @@ def run(config):
         and 1 <= config["maximum_evaluations"] <= 200
     ):
         raise ValueError("Bounded opening search required")
-    model = mujoco.MjModel.from_xml_path(str(path.with_name("scene.xml")))
+    model = load_mujoco_model(str(path.with_name("scene.xml")))
     data = mujoco.MjData(model)
     with np.load(path.with_name("states.npz")) as states:
         index = int(np.argmin(abs(states["timestamps_s"] - config["time_s"])))

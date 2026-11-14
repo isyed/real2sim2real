@@ -1,0 +1,258 @@
+{
+  "gap": {
+    "repository": "graph-as-policy",
+    "revision": "09e45f8de27bc1a29629382ed7c2b9b4b384b3d6",
+    "source_root": "gap",
+    "files": {
+      "__init__.py": {
+        "source_sha256": "d3a1956d23edea4a55c178d6aca2020821c93e87ad1e3924703996d8209658f9",
+        "bundled_sha256": "9377e2005eeff8e75df75ebfb940af5dbd5bd003c4d1aa1080a5486a2d8142c0"
+      },
+      "env_config.py": {
+        "source_sha256": "de77f74a033258246056fcf2e652c57fb02ea6fd17a70a258c2b99b6e40f188c",
+        "bundled_sha256": "0d8f79ede294975dfc418aa28af2df77ea33d1218f0c305a7da1aab10897be04"
+      },
+      "skills/discovery.py": {
+        "source_sha256": "948e32ef9baf778ea4eb0070548156a645aad2d38c18d21de82f16a5d9513b1a",
+        "bundled_sha256": "2d76f94a62b6b383c817de6a780cc03148b8731c523c9c0270d9f25c386aaa51"
+      },
+      "skills/capability.py": {
+        "source_sha256": "536e0321e8e60847919a76530f67ff64cfa3aec5191c447946d2838179cd8d1b",
+        "bundled_sha256": "839b0d39af36adf3a6316c070a47eb0377a67287c0c05f4f1b4160b97ceb9190"
+      },
+      "skills/_meta_from_skill_md.py": {
+        "source_sha256": "bbeac8159c7239f0bbd9000f5b9a0004750212629647ba5f54f9f892575a9028",
+        "bundled_sha256": "6c0630112a2271c90e469ab0bdafd97a9495aac627ba2ff4a179c91fbcbc5171"
+      },
+      "skills/registries.py": {
+        "source_sha256": "2d868d2ffbceef93a936d74ac491ddcebd7a00ee84028dece3d2bc4aca997ed8",
+        "bundled_sha256": "dfd54a9c2a44731e2c5b547be1992897b2fb1f799baee3bef96b3247b90bc4a2"
+      },
+      "skills/_prompt_loader.py": {
+        "source_sha256": "8242683304df5bbd7b895e9dd5647c2684c15e78a24e1c041838bb2726c7ef8b",
+        "bundled_sha256": "0c949ccdc87c3ae12f37a7b778bc80f637fe6fb57df7b68bb8334de279580530"
+      },
+      "skills/_registry.py": {
+        "source_sha256": "11c1b9df0df8d96f6d6ee3eaba8e7428b643402fb25b9a98df71683cfa0c07fc",
+        "bundled_sha256": "9cc529c9856a87dcfe83b4366ef5055a6b639184122139ec33661d8bb25f18b8"
+      },
+      "skills/validate.py": {
+        "source_sha256": "2828c2ef6368a27ee0aa78f21594bf4d5e1e2eb44e729364719ab6d0054f9486",
+        "bundled_sha256": "a577aa0e50301d5a89701584e17bb4d4e426ed0e509d00b8306c8932f035e156"
+      },
+      "skills/__init__.py": {
+        "source_sha256": "d3c65b3c01a123ca9cfd9a5871cb50161071650d718ec60700826240e5558978",
+        "bundled_sha256": "a6bb880ded625e433bde9a36da17fd879a9f974ec41d393ce5376d351c74ea2b"
+      },
+      "runtime/policy_manager.py": {
+        "source_sha256": "500b33d78aa64acd4831fad73e715ac6329a02376700a9745b804516b7aba95a",
+        "bundled_sha256": "70b7ca8bcc1a0e06925f20f843e8b2830f6180676a1e58309f8e37da441319d5"
+      },
+      "runtime/context.py": {
+        "source_sha256": "8fa841bb9c96648071c4b83d7db71dfcaa155ef456631edac38136713fd2c26b",
+        "bundled_sha256": "345e52f9261bac6d682e23589ca31879c2f2c742a8d60cce44a1321d12efd7e2"
+      },
+      "runtime/policy.py": {
+        "source_sha256": "784910b6e1b79a8d5f4dff09c61ee1228fc98724ac0c6680f8ddc02abcae07dd",
+        "bundled_sha256": "616d25dfa7d78c4c33ff9f8ddee4b3143eefd4ab587f005614e935b90b7408a2"
+      },
+      "runtime/observation_stream.py": {
+        "source_sha256": "4ac181760673dccf25abd16a8d575b226c20eedc12e61ddc876808d668120c83",
+        "bundled_sha256": "67fa237edc1b3c69147f18360b39843d78599d60250a4b3a7c53c9b97aa4fbbb"
+      },
+      "runtime/validate.py": {
+        "source_sha256": "49439ae2a75ab61ac673fcc54a92a03702d8e3dfeba6f0e983d961c38c0827e2",
+        "bundled_sha256": "3ecb8e6c78f701877e87fc147238722d962512c1e29f6068902ddda03bc8c5bd"
+      },
+      "runtime/executor.py": {
+        "source_sha256": "329fb2cb298ca7d6b66573822b3f961436fc51827126ce24a5872a7436d6fde5",
+        "bundled_sha256": "b06cd962f669d0b3dc5dd7ce83022fefdd957c1993588f42d7fdf7c6a2948071"
+      },
+      "runtime/nodes.py": {
+        "source_sha256": "0b36b603b19ea1d6c3c8726ebcdeb8be565b2a4084aa3034646bc75f37356988",
+        "bundled_sha256": "1c6a4e090537c688ac43410979fe2fc22f6ceb4a956de1eba3f31245b9d50b96"
+      },
+      "runtime/__init__.py": {
+        "source_sha256": "8e10db40e34c082505cab6f5b89d7e84f08ff392574769c5850ec1740be2b35a",
+        "bundled_sha256": "a41e240239dba15e634255d229cc80e3f91fa7b0df76c508d1c960bff1fe4fce"
+      },
+      "runtime/policy_skill.py": {
+        "source_sha256": "2c96a489bd544cc588b0b299b41a948509b5af5b6840c8f8a3d72a23cac30cdd",
+        "bundled_sha256": "14c9cc43c9f12522234ffbd946cc0f70434cdfc837a44bf33c8fb6708d6da96b"
+      },
+      "runtime/tracing.py": {
+        "source_sha256": "46acf5a3b70837f4731e7f401cca37ca4807b7bb100f4af5c569fa1dc337b63b",
+        "bundled_sha256": "9b6544c11744fdb90d33de29aa7ff232b1f257d7427df0b19a008ad4e6e28aba"
+      },
+      "runtime/tool_bundle_manager.py": {
+        "source_sha256": "d3ce5981d3da7eb32d892ebd76e53269a5208a3e006c3d54803ed372a3392392",
+        "bundled_sha256": "2631893ebfff09fbe6c71b739daa0b081d8b02198e579b23fdc7aff7d0c2d69a"
+      },
+      "runtime/execute.py": {
+        "source_sha256": "2387de0097a95bc5f1ab3769940daa204c93411cd11b036765a06dde017a2d5a",
+        "bundled_sha256": "0ba29d3052678ef1439e8facd1cfd98a381cd059c00cf1139637c328f8f6f637"
+      },
+      "runtime/workflow.py": {
+        "source_sha256": "d9555c23e98db7a1dae0e994690e19c6b03b87b9aa76fa806dcad4acc46059c8",
+        "bundled_sha256": "ef4bd3fb5db3e92ca0f351ab8dca31cd79f47e4ffeeed07c582f02cd244962df"
+      },
+      "runtime/tool_bundle_boot.py": {
+        "source_sha256": "b858a4b8495c3148f83be4945aebf3c0ab3e5662b2d194273dfd759ba5c32006",
+        "bundled_sha256": "aab7ea1f0b94192de7630d084c49f1139bc54ff720aae82bca1f2df86f8fffaf"
+      },
+      "runtime/policy_boot.py": {
+        "source_sha256": "affe734763c087cdca5ae96122e0acb9d2c9c089126c2f126ae7b7ac9cc1dc5b",
+        "bundled_sha256": "548ee8ac546ade431b1513e4cfdb23a73e7b2e810c994bb3ac65795cf94fe120"
+      },
+      "runtime/trace_diff/__init__.py": {
+        "source_sha256": "c97540e501503528337c5e8508ebc7068468a79c1ad1c9a96182f3079f9c8537",
+        "bundled_sha256": "da1bfe9637d7433c09fb6fd09dad9b49bd37d7b836a18503b7bcdb3cde7689c4"
+      },
+      "runtime/trace_diff/differ.py": {
+        "source_sha256": "86f89266bc0fe259311ee852e65d9098f67859fcf61f1e546f29a70de01d9523",
+        "bundled_sha256": "e063c91e6c501dd55125ec4fa6de248297269ed45fc32485d5e2f1467d0099da"
+      },
+      "runtime/verify/checkpoints.py": {
+        "source_sha256": "4a9dec87087630f645f201e15ccd53c8470027809d6fa485ee650e1b638aac23",
+        "bundled_sha256": "d63b9d62fcda26e33f34735f69dde16b502483fc64afe4ee7eca5a13161f001f"
+      },
+      "runtime/verify/__init__.py": {
+        "source_sha256": "90f18c4832db074c822a02c9f128c455c941093afd0be5d1452eecd8fef19b58",
+        "bundled_sha256": "53822e6145ba472ba3ec3380a9450f55dcb64567bb357389d29202cf910d30b9"
+      },
+      "runtime/verify/world.py": {
+        "source_sha256": "bc28d223029b3d1d01cb12c2bedfb36533d5f4224fb036b2b913a32563891ec2",
+        "bundled_sha256": "9132c36915c7695e6caeaead65eb685e84a857b134501ee932014b4728782ab8"
+      },
+      "runtime/predicates/predicates.py": {
+        "source_sha256": "a5e814f261b73167988a18e2bc3e57d7e8c5ee88d5153ff5161d825effdab615",
+        "bundled_sha256": "f2354aaf28896640f0fb2699fe5243bc59e04c31c70406dd10e2187f1e1ab049"
+      },
+      "runtime/predicates/goal_eval.py": {
+        "source_sha256": "acec498d5b579f50d07e70c611e14e7841161e1ea4e3757e1098063e1c80fc2e",
+        "bundled_sha256": "e31460188ce81096b5ef03e26d2e0d099897fcea87775c4902d02b84e71e8925"
+      },
+      "runtime/predicates/__init__.py": {
+        "source_sha256": "524c6a35e350706faabbf855f4d7ab2dad8fc7aa84377d76344acad378d70352",
+        "bundled_sha256": "8af89abd7d3a129bc9df38887d7de5da983b02a31e60df28558e26114846b2ac"
+      },
+      "runtime/predicates/predicate_evaluators.py": {
+        "source_sha256": "0cf5c556f6e970083bc8d93962abd77a537408ede72c430a5c45b647defdb811",
+        "bundled_sha256": "9ab446c45c065dc1668dd93283148333a7bb116d6e9e00c18e56eef77e645119"
+      }
+    },
+    "modifications": "Module namespace relocation only; source text including docs follows namespace. ASL prompts retained as provenance, adapted campaign uses its own task-specific brief."
+  },
+  "gap_core": {
+    "repository": "graph-as-policy",
+    "revision": "09e45f8de27bc1a29629382ed7c2b9b4b384b3d6",
+    "source_root": "gap-core/src/gap_core",
+    "files": {
+      "types.py": {
+        "source_sha256": "ef71e145e8ca9224d5fba5e2134a0f69aef7b6af90378c51ffa67c0cb1f618ac",
+        "bundled_sha256": "6069b5b3791075a2802108033a9312790f39b51d6a8c80090c7a5446f673a16d"
+      },
+      "__init__.py": {
+        "source_sha256": "f673bb799bbfcca46b5897c0914f68206fd01fa85c66263f880fc82b5d3e1f51",
+        "bundled_sha256": "db928f3fcd6cd015e8f29911bcc80ca6c4eea0ff3b899d57d82b18c61c65fc49"
+      },
+      "errors.py": {
+        "source_sha256": "3a3444c723d87226f586e6a05ed97ca07b773a99bc3b3864787f129cc1390f4b",
+        "bundled_sha256": "93451d1490c89aa7c2dc89d868d6589c333c965bacb71a5bd834f60492c273a2"
+      },
+      "schema.py": {
+        "source_sha256": "aff0411f39b9a53178629755ac577b00ab8a9467bf509398fc434ff92f9cfb8c",
+        "bundled_sha256": "49a47677e2688e1f487e2dcd6d1f167a748a67a39a8a76765e62c61c688ed178"
+      },
+      "skills/__init__.py": {
+        "source_sha256": "0f0ffc0db73ecb8a58d94b37d0dda069c5373a86c27ceb276e56eef4822ac6ae",
+        "bundled_sha256": "d11c64f0d503a4efd1ca1784ac8109aa9d6b6960ef859cd43ecec4b8d90ef643"
+      },
+      "skills/meta.py": {
+        "source_sha256": "1c8641d3fa6159dea214a6c8bd7e1cdd90c9c5f04ae814503fe09ddd77e8b3fb",
+        "bundled_sha256": "825847b4563f0fed04f459bfb1eb75de54799575b57b96e1988c6069d7f7b74c"
+      },
+      "rpc/__init__.py": {
+        "source_sha256": "75189d0dd553a1fd52d45b44747f7289d8f933a4835198a0ef278398e7b5b021",
+        "bundled_sha256": "bf8a7ced29a1684b45319ff1f85822fdffbe2878d64afa3993d574d126133485"
+      },
+      "rpc/codec.py": {
+        "source_sha256": "7d8f1e9e902dcc72fd38e9f736be1929a5850d40c325ed1fc5e8358b027dca21",
+        "bundled_sha256": "7d7c4d7c2f99f2d0e077be13bb7fc91b2dab5a7830f58972d634ab0d86664747"
+      },
+      "rpc/client.py": {
+        "source_sha256": "eddb252ed5d000f160a9eeb0da721a180ecffa365c4e0ae1b8e09c1a770e2fff",
+        "bundled_sha256": "5a3c1e53d122abeba0d8e535f0ac71e7ef7a9508162acf7a61977908ec94dcd4"
+      },
+      "rpc/server.py": {
+        "source_sha256": "8346f8c8f942848546a38939d17a2e6fc4fda7cd9472132c893d2f2aea58e50d",
+        "bundled_sha256": "0a4f39e6a5df4d1e94335db2c4f955743fdfc24a7012168d9426e868a95b95ea"
+      },
+      "tools/_registry.py": {
+        "source_sha256": "b950f4c89403efa0669efbb0100ae4ae225b2152690b8c6c9d8169630dd455e5",
+        "bundled_sha256": "843d3bfdeea3278d353b230247e038a3894c2abe5cf2bef581f784b16fe6abd8"
+      },
+      "tools/ray_executor.py": {
+        "source_sha256": "c7e15a0f6f52228909ed085fed7981ae298c8e4e0f42207eeeb5368e7b98720d",
+        "bundled_sha256": "5e354f36eccfefa43895dd2fe7606a9bf15c412f7d040829fe5b28964ccc8d9c"
+      },
+      "tools/guards.py": {
+        "source_sha256": "fe400943d7c4145fd0871dbfd3f58e1a4c0b859370581f6a9e444f6f23b6fc8e",
+        "bundled_sha256": "734c622b5885cd4a1f81bc586f50d6b6a90f5f345183e17bd313fe41b8bdd598"
+      },
+      "tools/__init__.py": {
+        "source_sha256": "b35fcf6b7e58ffbd9ca610446e14a8fb812b8221e1a2650c4e05925dbd82bc52",
+        "bundled_sha256": "b35fcf6b7e58ffbd9ca610446e14a8fb812b8221e1a2650c4e05925dbd82bc52"
+      },
+      "tools/schema.py": {
+        "source_sha256": "82d591233fff4475e129a4915cbb038247527bd11e8583b6fa4b3c343a3d886a",
+        "bundled_sha256": "82d591233fff4475e129a4915cbb038247527bd11e8583b6fa4b3c343a3d886a"
+      }
+    },
+    "modifications": "Module namespace relocation only; source text including docs follows namespace. ASL prompts retained as provenance, adapted campaign uses its own task-specific brief."
+  },
+  "geometry": {
+    "repository": "open-robot-skills",
+    "revision": "752dfbd96968d4d08379f8111765efbf6457800b",
+    "source_root": "tools/geometry",
+    "files": {
+      "tools.py": {
+        "source_sha256": "c87fe093037ba0c7b6d2ff417a972052feb071236c414577617baaa5c239b841",
+        "bundled_sha256": "63d9ef17d72d861e2a50b3edef6439bc6b9d873f304d654aff122bfdc1dc5dc4"
+      },
+      "SKILL.md": {
+        "source_sha256": "b8cb9b8ba62fdb1a0198556c36ec8baf794e77203888a546a44e0feb898f05e4",
+        "bundled_sha256": "e309a1071a8021635af91fd0ba07f3985b11f4eca8dbe2c401f599acc4995df4"
+      },
+      "_impl.py": {
+        "source_sha256": "606d17935ed7d7a0ce330ee2a55f9d58d35d13f91777c8fb8caa4f867d6947e9",
+        "bundled_sha256": "5f280048a108d464cff759f5ef1a886be3ed00ddf8d58e17b5e47f0011fc7a02"
+      }
+    },
+    "modifications": "Module namespace relocation; import typing.Any for AttachmentResult annotation resolution."
+  },
+  "asl_prompts": {
+    "repository": "agentic-self-learning",
+    "revision": "6987542273c3f2e6e360e5ff7e36ed67460860a2",
+    "source_root": "asl/prompts",
+    "files": {
+      "fix.md": {
+        "source_sha256": "36d991704df39b2798e39739ad09f0447fe4e48eba0fbc2ea2a0be019964e738",
+        "bundled_sha256": "36d991704df39b2798e39739ad09f0447fe4e48eba0fbc2ea2a0be019964e738"
+      },
+      "workflow_format.md": {
+        "source_sha256": "42ca136be8701bd812f5f9829bdbfebbeaefb128e015b02cea3313991f6c1032",
+        "bundled_sha256": "f3151fb79387fb2f4f4a629956501ae113e7970d7c8c8fc5c8fb168dc6f55ea9"
+      },
+      "generate.md": {
+        "source_sha256": "7607752494f19be6a0e0aed0ed074826d4904b57929ec69e23d726f01580418b",
+        "bundled_sha256": "7607752494f19be6a0e0aed0ed074826d4904b57929ec69e23d726f01580418b"
+      },
+      "improve.md": {
+        "source_sha256": "3aa782cfbb2b8f3fb8676452b59d81fd6ac0e358e612da065f0ab7429365d3d7",
+        "bundled_sha256": "3aa782cfbb2b8f3fb8676452b59d81fd6ac0e358e612da065f0ab7429365d3d7"
+      }
+    },
+    "modifications": "Module namespace relocation only; source text including docs follows namespace. ASL prompts retained as provenance, adapted campaign uses its own task-specific brief."
+  }
+}

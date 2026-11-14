@@ -1,5 +1,7 @@
 """Read-only CPU audit of saved grasp load capacity; never replay control or train."""
 
+from real2sim2real.mujoco_assets import load_model as load_mujoco_model
+
 import argparse
 import json
 import os
@@ -280,7 +282,7 @@ def run(config):
         or "incomplete_pilot" in report["rejected_for"]
     ):
         raise ValueError("Complete saved continuous physics required")
-    m = mujoco.MjModel.from_xml_path(str(path.with_name("scene.xml")))
+    m = load_mujoco_model(str(path.with_name("scene.xml")))
     if m.opt.cone != mujoco.mjtCone.mjCONE_ELLIPTIC:
         raise ValueError("This adapter requires elliptic model contacts")
     d = mujoco.MjData(m)

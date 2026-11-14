@@ -32,6 +32,7 @@ def test_report_paths_allow_media_and_reject_escape_or_private_assets(tmp_path):
     root.mkdir()
     (root / "review.html").write_text("review")
     (root / "clip.webm").write_bytes(b"video")
+    (root / "observed.ply").write_bytes(b"ply\nformat ascii 1.0\nend_header\n")
     (tmp_path / "private.json").write_text("{}")
     (root / "outside.json").symlink_to(tmp_path / "private.json")
     (root / "linked-index").mkdir()
@@ -39,6 +40,7 @@ def test_report_paths_allow_media_and_reject_escape_or_private_assets(tmp_path):
     (root / "model.pkl").write_bytes(b"asset")
     assert resolve_media(root, "/") == root / "review.html"
     assert resolve_media(root, "/clip.webm?cache=1") == root / "clip.webm"
+    assert resolve_media(root, "/observed.ply") == root / "observed.ply"
     for url in [
         "/%2e%2e/private.json",
         "/.git/config",

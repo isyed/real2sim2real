@@ -1,0 +1,38 @@
+real2sim2real
+Copyright 2026 real2sim2real contributors
+
+Original project contributions are licensed under Apache License 2.0.
+Bundled third-party code, documentation and assets retain their own licenses
+and attribution notices. This notice does not relicense those components.
+
+This project includes source derived from NVIDIA work:
+Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+The original upstream notice assigns Apache-2.0 to source code and CC-BY-4.0
+to upstream documentation/skills. Its full text is retained in
+licenses/UPSTREAM-LICENSE. Other component notices remain in licenses/ and
+in source-file headers. See docs/THIRD_PARTY.md in the source repository.
+
+Project modifications include reusable module boundaries, artifact contracts,
+calibrated reconstruction adapters, evaluation and runtime supervision.
+
+Agentic-policy bundled components:
+- graph-as-policy runtime and core: https://github.com/graph-robots/graph-as-policy
+- geometry tool bundle: https://github.com/graph-robots/open-robot-skills
+- higher-level skill definitions, scripts and references: same open-robot-skills
+  repository, retained verbatim under _vendor/robot_skills. That directory's
+  manifest.json pins the commit and every file hash and its LICENSE preserves
+  the upstream Apache-2.0 text. Per-skill license declarations remain intact.
+- reference prompts: https://github.com/graph-robots/agentic-self-learning
+Pinned revisions, original hashes and namespace modifications are listed in
+real2sim2real/agentic_policy/_vendor/provenance.json. Each bundled component
+retains its upstream license/notice files. GaP-core metadata identifies MIT;
+geometry SKILL.md identifies MIT; repository-root license texts are also
+preserved as supplied upstream. No blanket relicensing of third-party code
+is intended. The campaign engine and isolated robot host are project code.
+The articulated-hand skill adaptations are separate project implementations;
+upstream reference scripts have not been rewritten or claimed compatible.
+
+The bundled executable geometry tools also import `typing.Any` so
+`AttachmentResult` annotations resolve during tool-schema inspection. This
+integration patch is recorded in provenance and the vendor refresh script;
+verbatim higher-level skill resources are unchanged.

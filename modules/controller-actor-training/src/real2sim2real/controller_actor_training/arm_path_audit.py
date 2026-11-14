@@ -1,5 +1,7 @@
 """CPU arm IK and collision audit of saved wrist-fixture states, not dynamics."""
 
+from real2sim2real.mujoco_assets import load_model as load_mujoco_model
+
 import argparse
 from copy import deepcopy
 import html
@@ -75,7 +77,7 @@ def build_model(urdf, scene, output):
     compiler.attrib.update(strippath="false", fusestatic="false", balanceinertia="true")
     path = output / "collision-robot.urdf"
     ET.ElementTree(root).write(path)
-    model = mujoco.MjModel.from_xml_path(str(path))
+    model = load_mujoco_model(str(path))
     path = output / "collision-robot.xml"
     mujoco.mj_saveLastXML(str(path), model)
     robot = ET.parse(path).getroot()
@@ -100,7 +102,7 @@ def build_model(urdf, scene, output):
             robot.find("worldbody").append(element)
     path = output / "audit-scene.xml"
     ET.ElementTree(robot).write(path)
-    return mujoco.MjModel.from_xml_path(str(path)), hashes
+    return load_mujoco_model(str(path)), hashes
 
 
 def fit_pose(model, data, body, joints, target, initial, max_nfev):

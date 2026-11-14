@@ -6,9 +6,9 @@ histories in downstream projects. Do not introduce runtime imports or symlinks
 to neighboring repositories.
 
 The modules are reconstruction, egocentric-reconstruction,
-reconstruction-evaluation, reconstruction-repair, retargeting and
-controller-actor-training. Optional heavy dependencies are loaded only by their
-own stage. Preserve upstream copyright/license notices. Keep weights, robot
+reconstruction-evaluation, reconstruction-repair, retargeting,
+controller-actor-training and agentic-policy. Optional heavy dependencies are
+loaded only by their own stage. Preserve upstream copyright/license notices. Keep weights, robot
 meshes, private videos and generated artifacts outside Git.
 
 Use explicit units, coordinate transforms, timestamps and source hashes at

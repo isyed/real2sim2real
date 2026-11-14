@@ -1,5 +1,7 @@
 """Read-only decomposition of planned motion, command changes and tracking error."""
 
+from real2sim2real.mujoco_assets import load_model as load_mujoco_model
+
 import argparse
 import html
 import json
@@ -82,7 +84,7 @@ def force_samples(result, path, start_s, end_s):
     from .support_control import contact_wrench_on_body
     from .table_load_transfer import observe_table_force
 
-    m = mujoco.MjModel.from_xml_path(str(path.with_name("scene.xml")))
+    m = load_mujoco_model(str(path.with_name("scene.xml")))
     d = mujoco.MjData(m)
     obj = m.body("task_object").id
     objects = set(np.flatnonzero(m.geom_bodyid == obj).tolist())

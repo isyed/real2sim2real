@@ -1,0 +1,2 @@
+include README.md SKILLS.md NOTICE
+recursive-include tools *.py

@@ -4,6 +4,8 @@ Only named development runs are exported. No new physics, changed anchors or
 inferred acceptance are introduced; sparse diagnostics retain their limitations.
 """
 
+from real2sim2real.mujoco_assets import load_model as load_mujoco_model
+
 import argparse
 import json
 from copy import deepcopy
@@ -234,7 +236,7 @@ def sampled_collisions(path, source, arms, penetration_limit_m):
     from .arm_path_audit import joint_neighbors
     from .arm_replay_pilot import subtree_geoms
 
-    model = mujoco.MjModel.from_xml_path(str(path.with_name("scene.xml")))
+    model = load_mujoco_model(str(path.with_name("scene.xml")))
     data = mujoco.MjData(model)
     arm_bodies = {model.body(n).id for arm in arms for n in arm["collision_bodies"]}
     arm_geoms = {

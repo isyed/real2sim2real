@@ -1,5 +1,7 @@
 """CPU video review of saved arm dynamics; never recompute the rollout."""
 
+from real2sim2real.mujoco_assets import load_model as load_mujoco_model
+
 import argparse
 import html
 import json
@@ -34,7 +36,7 @@ def render(directory, *, follow_object=False):
             raise ValueError("Saved review input changed")
     with np.load(directory / "states.npz") as f:
         states, times = f["qpos"].copy(), f["timestamps_s"].copy()
-    model = mujoco.MjModel.from_xml_path(str(directory / "scene.xml"))
+    model = load_mujoco_model(str(directory / "scene.xml"))
     data = mujoco.MjData(model)
     # UR imports have collision geometry only. Display it as such; do not edit
     # the saved model or change any collision used by the experiment.

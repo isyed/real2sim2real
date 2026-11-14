@@ -57,6 +57,33 @@ IDs, duration and recorded phase/timestamp samples must match. Different audited
 grasps/paths are explicitly labelled as a visual comparison, not a controlled
 single-variable experiment. Existing state/video artifacts remain unchanged.
 
+## End-to-end diagnostics versus control promotion
+
+For exploratory development, prioritize task-local geometry sufficient for
+meaningful contact, then a nominal end-to-end trial. Completed reconstruction
+of every surface, broad robustness and all final quality limits need not precede
+that diagnostic. ASL can propose bounded phase plans before a successful full
+controller exists; it still requires an explicit scene, tools and evaluator.
+
+Keep three verdicts distinct: task completion, diagnostic quality violations,
+and acceptance for control. An explicitly separate diagnostic protocol may
+continue past declared uncertainty-proxy, tracking or slip warnings while
+recording their original thresholds and witnesses. It must preserve physical
+collision handling, actuator limits, free-object dynamics and numerical checks.
+This permission does not silently change existing hard-gated runners: add and
+test an explicit continuation mode before using one, and never overwrite the
+strict comparison result or report a warning-only run as an acceptance pass.
+
+Once nominal end-to-end behavior is adequate, bounded corrections-actor training
+can address recoverable failures. Broad perturbation tests, numerical and
+sensing checks, and final control criteria remain required before deployment.
+Training a residual is not evidence that any of those checks passed. A fixture
+trial also remains distinct from arm-mounted or physical robot execution.
+
+The hold and path gates below describe control promotion. They can also provide
+useful isolated diagnostics, without forcing every exploratory experiment to
+wait for a complete stationary acceptance pass.
+
 ## Two holds and two kinds of arm check
 
 Initial hand fitting positions the embodiment's real pads and joints at proposed
@@ -231,3 +258,52 @@ object pose errors it reports are relative to the declared diagnostic goal,
 not full-demonstration accuracy scores. `fixture_hold_review` renders saved
 states on CPU with explicit fixture and intentional-pause labels and portable
 video playback. These tools never automatically promote an arm or moving trial.
+
+## Physical initialization is separate from hand-only collision checks
+
+Before the first dynamics step, check the free object against every physical
+obstacle. MuJoCo can omit collision pairs between two fixed bodies. A hand path
+can therefore pass in a static scene even while the object itself overlaps a
+coarse obstacle collider. A successful hand-path audit must not silently imply
+valid physics initialization.
+
+`conditional_fixture_scene.prepare` makes a separate, explicitly assumed
+free-object fork of a fixed hand scene. It preserves declared geometry poses,
+attaches the caller's object geoms to an unactuated free body, and adds bounded
+wrist actuators and finger force ceilings. Mass, inertia and friction are caller
+assumptions. `object_obstacle_preflight` checks named physical obstacles in
+scratch state before stepping and returns the intersecting geometry witnesses.
+Never count an initialization rejection as an integrated rollout or failed hold.
+
+Keep **planning exclusions** separate from **physical material**. A conservative
+convex hull around a rack fills holes; an unknown protrusion envelope marks space
+the hand should avoid. Neither automatically describes a solid that can exert
+contact forces. If these representations intersect, revisit the physical contact
+model using observed surfaces or explicitly declared hypotheses. Preserve the
+planning keep-outs; do not silently disable obstacles or inflate tolerances.
+
+Uncertain reconstruction does not prohibit grasp planning or bounded simulation.
+Conditional tests state what would work under declared geometry/material/control
+assumptions. Specific collision, observability, contact and retention gates govern
+which claims and next experiments are justified; complete reconstruction of every
+background surface is not a prerequisite for every planning experiment.
+
+A geometric pad-seating stop is not the lift gate. Before lift, require the
+specified sustained measured contacts over the complete declared seating window.
+Report per-pad force histories and signed upward support separately from summed
+normal forces. A table-supported object can remain stable while its grasp carries
+almost none of its weight; that is not a passing free-object hold.
+
+[Nominal arm and scene diagnostics](NOMINAL_TASK_DIAGNOSTICS.md) describe the
+explicit warning-continuation helper, hollow-container colliders, connected path
+checks and support-gated release. This separate diagnostic can record conditional
+task completion; it does not alter older strict runner promotion rules.
+
+[Inversion retention](INVERSION_RETENTION.md) distinguishes improved carrying from
+stable placement, and records the effects of timing, opposing force targets and
+current contact normals without changing acceptance criteria.
+## Repeatable trial boundaries and reference comparisons
+
+See [Repeatable reference trials](REPEATABLE_REFERENCE_TRIALS.md) for fixed home
+targets, supported-release return gating, observation-versus-collider views,
+load-bearing geometry audits and separate capture/execution-time scoring.

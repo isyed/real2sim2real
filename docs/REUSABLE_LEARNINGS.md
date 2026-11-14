@@ -534,3 +534,18 @@ separately. Missing samples must not be reported as a solved force infeasibility
 or a measured hold failure. Preserve unsuccessful revisions and compare their
 geometry diagnostics before spending a physics trial. See
 [fresh grasp strategies](FRESH_GRASP_STRATEGIES.md).
+
+## Agentic development and loaded-contact fitting
+
+| Reusable finding | Implementation and validation |
+| --- | --- |
+| Preserve every measured proposal and stop redundant edits. A retain-baseline decision is not a physics trial. | [Author-loop controls](AGENTIC_AUTHOR_LOOP.md), `agentic_policy` history/duplicate guards and `test_author_loop.py` |
+| Keep automated, reviewed and manual development on the same frozen simulator/evaluation; candidate failure is allowed, promotion needs evidence. | [Campaign module](../modules/agentic-policy/README.md), campaign/review/recovery tests |
+| Measured-state correction must preserve the complete controller when disabled, including placement/release/home. | [Contact-conditioned refinement](CONTACT_REFERENCE_REFINEMENT.md), reference-backend tests and separate complete downstream zero-edit replay |
+| Fit a posture across loaded states and reserve checks; include pad position, normals, whole-hand clearance and native joint bounds. | [Loaded posture fitting](LOADED_POSTURE_FITTING.md), `retargeting.loaded_posture`, `test_loaded_posture.py` |
+| Distinguish inherited violations, planning exclusions and physical contacts. Small static gains do not establish recovered load support. | [Loaded contact repair](LOADED_CONTACT_REPAIR.md) and [control readiness](CONTROL_READINESS.md); loaded rollouts remain required |
+| Keep pinned executable components distinct from unadapted upstream skill references. | [Third-party provenance](THIRD_PARTY.md), bundled hash/type-schema tests and standalone wheel acceptance |
+
+Private scene outcomes and fitted offsets remain downstream. These reusable APIs
+and tests do not change any experiment's acceptance thresholds or promote its
+latest candidate.

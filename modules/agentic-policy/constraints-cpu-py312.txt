@@ -1,0 +1,22 @@
+# Linux Python 3.12 standalone acceptance environment; optional test packages included.
+PyOpenGL==3.1.10
+PyYAML==6.0.3
+Pygments==2.21.0
+absl-py==2.5.1
+antlr4-python3-runtime==4.9.3
+etils==1.15.0
+fsspec==2026.9.0
+glfw==2.11.0
+hydra-core==1.3.2
+iniconfig==2.3.1
+mujoco==3.8.1
+numpy==2.4.6
+omegaconf==2.3.1
+packaging==26.3
+pluggy==1.7.0
+pyarrow==26.0.1
+pytest==9.2.0
+scipy==1.17.1
+trimesh==4.12.2
+typing_extensions==4.16.0
+zipp==4.1.2

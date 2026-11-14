@@ -1,5 +1,7 @@
 """Robot/table intersection witnesses from saved arm states, without dynamics."""
 
+from real2sim2real.mujoco_assets import load_model as load_mujoco_model
+
 import argparse
 import json
 from pathlib import Path
@@ -75,7 +77,7 @@ def audit(directory):
     if digest(audit_path) != report["config"]["audit_sha256"]:
         raise ValueError("Arm definition changed")
     source = json.loads(audit_path.read_text())
-    model = mujoco.MjModel.from_xml_path(str(directory / "scene.xml"))
+    model = load_mujoco_model(str(directory / "scene.xml"))
     data = mujoco.MjData(model)
     roles = {}
     for arm in source["config"]["arms"]:

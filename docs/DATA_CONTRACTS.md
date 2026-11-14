@@ -1,5 +1,14 @@
 # Data contracts
 
+`agentic-policy` exports `controller-policy-candidate` artifacts for both
+automated and human-authored routes. Files include the selected graph/scripts,
+the frozen prepared experiment, independent evaluation and `handoff.json`.
+`declared_rl_criteria_passed` records configured simulation criteria;
+`training_admitted` and `control_accepted` remain false until the downstream
+adapter/readiness work is performed. Missing metrics cannot pass acceptance.
+Private scenes and evaluation data stay in downstream artifacts, not the public
+distribution. See [campaign contracts](../modules/agentic-policy/README.md).
+
 Every completed stage writes `artifact.json` with schema
 `real2sim2real.artifact/1`, a kind, named file roles, SHA-256 hashes and metadata.
 Files must reside inside the artifact directory. Consumers verify hashes and

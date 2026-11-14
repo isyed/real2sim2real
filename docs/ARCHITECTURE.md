@@ -1,5 +1,14 @@
 # Architecture and extension
 
+The optional [agentic-policy module](../modules/agentic-policy/README.md) provides
+an interactive campaign interface (`r2s2r agentic`) alongside batch stage recipes.
+Reconstruction and scene preparation are common upstream operations. Automated
+ASL-derived proposals, reviewed proposals and manual submissions share physics,
+evaluation and `controller-policy-candidate` export. SFT/residual RL remains a
+common optional downstream operation with its own embodiment adapter and
+readiness checks. The campaign CLI is not yet a batch stage that can suspend
+`r2s2r run` for human approval.
+
 ```mermaid
 flowchart LR
   V[RGB video and prompts] --> R[reconstruction]

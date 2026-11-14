@@ -1,5 +1,23 @@
 # Egocentric reconstruction
 
+[Native-stereo contact evidence](../../docs/NATIVE_STEREO_CONTACT_EVIDENCE.md)
+checks frozen shape, finite pad coverage and necessary distal-link clearance.
+
+[Local contact geometry audits](../../docs/LOCAL_CONTACT_GEOMETRY_AUDITS.md)
+separate contact-region evidence from distant-image calibration controls.
+
+[Correspondence identity audits](../../docs/CORRESPONDENCE_IDENTITY_AUDITS.md)
+localize RGB errors and check match identity before camera-model fitting.
+
+For a new capture, [observed scene screening](../../docs/OBSERVED_SCENE_SCREENING.md)
+checks stereo coverage, reconstructs partial metric object/support/obstacle
+surfaces, and tests local contact patches and initial finger access on CPU before
+robot fitting. It preserves missing geometry and does not require a learned mesh.
+
+[Tapered-container hypotheses](../../docs/TAPERED_CONTAINER_HYPOTHESES.md)
+provide an optional bounded geometric fit and frozen-shape pose checks for later
+views. Completed shape assumptions remain separate from measured surfaces.
+
 `object_task` exports accepted metric object/table geometry, frame transforms and
 capture timestamps for [object-centric grasp pilots](../../docs/OBJECT_CENTRIC_GRASPS.md).
 It requires no hand reconstruction and does not turn the reference object motion
@@ -646,3 +664,9 @@ separate bounded object-motion control pilot.
 observation-defined image regions, common-ray depth errors, coverage and direct
 stereo features. It preserves unresolved underside contacts and performs no shape
 fit or robot execution. See [VISIBLE_REGION_GEOMETRY.md](../../docs/VISIBLE_REGION_GEOMETRY.md).
+
+`native_tracks`, `planar_stereo`, `bearing_surface`, `axis_motion` and
+`axis_sequence` support observation-derived local bearing surfaces and object
+motion on the measured capture clock. They separate fixed-camera-anchor checks,
+conditional surface completion, directed-axis fitting and explicit rejected
+frames. See [source scene and motion](../../docs/SOURCE_SCENE_MOTION.md).

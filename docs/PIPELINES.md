@@ -1,5 +1,16 @@
 # Composable reconstruction and control pipelines
 
+For the standalone automated or human-in-the-loop route, see
+[agentic-policy campaigns](../modules/agentic-policy/README.md). Both begin from
+the same reconstructed and prepared scene/task bundle and export the same
+`controller-policy-candidate` artifact. Nominal completion precedes robustness
+optimization; SFT, RL and control criteria are configured separately. Scene
+preparation still requires an explicit robot, collision surfaces and physics
+assumptions; an arbitrary reconstruction is not automatically a runnable task.
+These interactive campaigns currently use `r2s2r agentic`, separately from the
+batch recipes below. The policy artifact is a common training handoff, not an
+automatic adapter for every graph or robot.
+
 Use `r2s2r pipelines` to list named recipes. A recipe selects stages; it does not
 certify a reconstruction, grasp, controller or policy. Existing configurations
 with an explicit `stages` list still work, and `--stages` can select a compatible

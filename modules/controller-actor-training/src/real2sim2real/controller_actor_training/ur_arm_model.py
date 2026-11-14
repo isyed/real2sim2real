@@ -4,6 +4,8 @@ Xacro and MuJoCo are optional dependencies. This is an offline model import,
 not a ROS driver, a calibrated installation or a validated torque controller.
 """
 
+from real2sim2real.mujoco_assets import load_model as load_mujoco_model
+
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
@@ -67,7 +69,7 @@ def prepare(description, variant, output, *, joint_limit_overrides=None):
     compiler.attrib.update(fusestatic="false", strippath="false", balanceinertia="true")
     urdf = output / "collision.urdf"
     ET.ElementTree(expanded).write(urdf)
-    model = mujoco.MjModel.from_xml_path(str(urdf))
+    model = load_mujoco_model(str(urdf))
     mjcf = output / "arm.xml"
     mujoco.mj_saveLastXML(str(mjcf), model)
     receipt = dict(

@@ -1,5 +1,7 @@
 """Finite CPU object-centric grasp planning and unassisted lift evaluation."""
 
+from real2sim2real.mujoco_assets import load_model as load_mujoco_model
+
 import argparse
 from copy import deepcopy
 import json
@@ -53,7 +55,7 @@ def load_scene(config):
     import mujoco
 
     root, _ = verify_scene_assets(config)
-    model = mujoco.MjModel.from_xml_path(str(root / "scene.xml"))
+    model = load_mujoco_model(str(root / "scene.xml"))
     verify_unassisted_model(model)
     return (
         model,
@@ -62,14 +64,14 @@ def load_scene(config):
     )
 
 
-def verify_unassisted_model(model):
+def verify_unassisted_model(model, object_body="task_object"):
     import mujoco
 
     if model.neq or model.nmocap or not np.allclose(model.opt.gravity, [0, 0, -9.81]):
         raise ValueError(
             "Grasp pilot prohibits equality/mocap assistance or gravity changes"
         )
-    obj = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "task_object")
+    obj = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, object_body)
     if obj < 1:
         raise ValueError("Named dynamic task object required")
     joint = model.body_jntadr[obj]

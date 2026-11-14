@@ -4,6 +4,8 @@ Collision witnesses are simulator geometry evidence. They are not independent
 observations or a certificate of force closure; stationary dynamics is required.
 """
 
+from real2sim2real.mujoco_assets import load_model as load_mujoco_model
+
 import argparse
 import json
 from pathlib import Path
@@ -201,7 +203,7 @@ def run(config):
         if digest(Path(name)) != sha:
             raise ValueError("Seating source changed")
     parent = json.loads(Path(audit["config"]["trial"]).read_text())
-    model = mujoco.MjModel.from_xml_path(str(path.with_name("scene.xml")))
+    model = load_mujoco_model(str(path.with_name("scene.xml")))
     data = mujoco.MjData(model)
     with np.load(path.with_name("states.npz"), allow_pickle=False) as saved:
         index = int(np.argmin(abs(saved["timestamps_s"] - config["time_s"])))

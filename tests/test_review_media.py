@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from real2sim2real.review_media import prepare, player
+from real2sim2real.review_media import player, prepare
 
 
 def test_portable_video_preserves_frames_and_rejects_stale_cache(tmp_path):
@@ -38,3 +38,26 @@ def test_ide_player_has_self_contained_primary_video(tmp_path):
     webm.write_bytes(b"webm-bytes")
     text = player("original.mp4", "video.webm", "preview.gif", embedded_webm=webm)
     assert 'src="data:video/webm;base64,d2VibS1ieXRlcw=="' in text.split("</video>")[0]
+
+
+def test_single_clock_comparison_preserves_frames_and_rejects_mismatches(tmp_path):
+    from real2sim2real.review_media import comparison_video
+
+    ffmpeg = pytest.importorskip("imageio_ffmpeg")
+    paths = [tmp_path / f"{i}.mp4" for i in range(3)]
+    for path, frames in zip(paths, [4, 4, 3]):
+        writer = ffmpeg.write_frames(str(path), (64, 48), fps=6)
+        writer.send(None)
+        for value in range(frames):
+            writer.send(np.full((48, 64, 3), value * 50, np.uint8))
+        writer.close()
+    with pytest.raises(ValueError, match="matching"):
+        comparison_video(paths[0], paths[2], tmp_path / "bad.mp4")
+    assert not (tmp_path / "bad.mp4").exists()
+    result = comparison_video(paths[0], paths[1], tmp_path / "pair.mp4")
+    assert result["decoded_frames"] == 4
+    assert result["fps"] == 6
+    assert result["size"] == [128, 48]
+    assert not result["physics_rerun"]
+    with pytest.raises(FileExistsError):
+        comparison_video(paths[0], paths[1], tmp_path / "pair.mp4")

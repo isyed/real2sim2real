@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "real2sim2real-agentic-policy"
+version = "0.1.0"
+description = "Standalone graph policy proposals, measured feedback and human review"
+requires-python = ">=3.11,<3.13"
+license = {file = "LICENSE"}
+dependencies = ["real2sim2real==0.1.0", "numpy>=1.26,<3", "scipy>=1.12,<2", "PyYAML>=6,<7"]
+
+[project.optional-dependencies]
+mujoco = ["real2sim2real-controller-actor-training==0.1.0", "real2sim2real-retargeting==0.1.0", "mujoco>=3.8,<3.9"]
+geometry = ["open3d>=0.18,<1", "scikit-learn>=1.4,<2", "opencv-python-headless>=4,<6"]
+
+[project.scripts]
+r2s2r-agentic = "real2sim2real.agentic_policy.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+namespaces = true
+exclude = ["real2sim2real.agentic_policy._vendor.robot_skills*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.json", "*.md", "LICENSE", "*.yaml", "*.yml"]
+"real2sim2real.agentic_policy" = ["_vendor/robot_skills/**/*"]
+
+[tool.setuptools]
+license-files = ["LICENSE", "NOTICE"]

@@ -4,6 +4,8 @@ Mount transforms and collision proxies are declared assumptions, not manufacture
 adapter specifications. Source hands, task geometry and finger actuators are kept.
 """
 
+from real2sim2real.mujoco_assets import load_model as load_mujoco_model
+
 from copy import deepcopy
 from pathlib import Path
 import xml.etree.ElementTree as ET
@@ -127,8 +129,6 @@ def build_assembly(scene, specification, output):
     mount transforms map hand-root coordinates into the selected arm mount body.
     A cylinder proxy may explicitly represent the otherwise unmodelled adapter.
     """
-    import mujoco
-
     output = Path(output)
     task = ET.parse(scene).getroot()
     hashes = absolute_assets(task, scene)
@@ -260,7 +260,7 @@ def build_assembly(scene, specification, output):
         )
     path = output / "audit-scene.xml"
     ET.ElementTree(task).write(path)
-    model = mujoco.MjModel.from_xml_path(str(path))
+    model = load_mujoco_model(str(path))
     write_json(
         output / "assembly.json",
         dict(

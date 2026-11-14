@@ -5,6 +5,8 @@ bias compensation. Optional bounded feedback uses privileged object poses and
 contact forces. The object remains free in every condition.
 """
 
+from real2sim2real.mujoco_assets import load_model as load_mujoco_model
+
 import argparse
 import json
 import os
@@ -327,7 +329,7 @@ def rollout(config, interaction=None, *, phase_handoff=False):
         option.set("timestep", str(step))
     scene = out / "scene.xml"
     ET.ElementTree(root).write(scene)
-    model = mujoco.MjModel.from_xml_path(str(scene))
+    model = load_mujoco_model(str(scene))
     verify_unassisted_model(model)
     if any("fixture_" in (model.joint(j).name or "") for j in range(model.njnt)):
         raise ValueError("No Cartesian wrist fixtures allowed")
@@ -433,7 +435,7 @@ def rollout(config, interaction=None, *, phase_handoff=False):
         # remain unchanged because only contact exclusions have been added.
         initial_q = data.qpos.copy()
         ET.ElementTree(root).write(scene)
-        model = mujoco.MjModel.from_xml_path(str(scene))
+        model = load_mujoco_model(str(scene))
         place_bases(model, audit["config"], row["placement"])
         data = mujoco.MjData(model)
         mujoco.mj_setConst(model, data)

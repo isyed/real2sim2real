@@ -22,9 +22,13 @@ checks observation agreement before accepting a physically settled pose.
 wrist trajectories before dynamic integration.
 
 For offline controller proposals, the optional
-[ASL/GaP integration](docs/BOUNDED_POLICY_PROPOSALS.md) lives within
-`controller-actor-training`. It preserves the existing simulator and requires
-zero-correction reproduction before bounded changes and measured feedback.
+[agentic-policy module](modules/agentic-policy/README.md) supports automatic
+proposal/feedback campaigns, human review, and manual submissions with a common
+evaluator. It bundles a pinned graph runtime and selected geometry tools, so no
+neighboring ASL/GaP/RoboSimStudio checkout is needed. Reconstruction supplies the
+common prepared scene; optional SFT/residual RL consumes the selected policy
+through a separately validated training adapter. Existing bounded controller
+adapters remain in `controller-actor-training`.
 
 Original project contributions are licensed under [Apache License 2.0](LICENSE).
 Bundled third-party components and upstream documentation retain their own
@@ -38,6 +42,7 @@ terms; see [NOTICE](NOTICE) and [component licenses](docs/THIRD_PARTY.md).
 | [reconstruction-repair](modules/reconstruction-repair/README.md) | Reconstruction and explicit image/depth evidence | Accepted repaired reference, retained parent, per-stage gate results |
 | [retargeting](modules/retargeting/README.md) | Human/object reference, robot definition, body-model assets | Robot joint/root targets, object motion and geometric contact schedule |
 | [controller-actor-training](modules/controller-actor-training/README.md) | Robot reference and controller assets, or a metric object/table task and robot hand | FlashSAC correction actor, or bounded grasp/lift diagnostics |
+| [agentic-policy](modules/agentic-policy/README.md) | Prepared scene/task, author or human proposals, fixed evaluation protocol | Archived policies, measured feedback and a common policy-candidate handoff |
 
 The current implementations use SAM2, MoGe2, calibrated stereo, SAM 3D Body, depth-conditioned
 SAM 3D Objects, FoundationPose, SOMA/Pink IK, and FlashCHORD/FlashSAC. The

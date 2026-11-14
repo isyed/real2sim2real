@@ -1,5 +1,10 @@
 # Retargeting
 
+For small finger corrections around saved loaded configurations, see
+[loaded-snapshot posture fitting](../../docs/LOADED_POSTURE_FITTING.md). It fits
+owned joint offsets and supports independent whole-hand clearance checks before
+any loaded rollout; it does not certify dynamic grasp retention.
+
 `object_grasp` and `grasp_kinematics` provide a separate object-centric path:
 surface contact proposals and bounded hand IK from calibrated scene geometry,
 without a human finger reference. See the
@@ -86,3 +91,41 @@ hand proximity alone is not a reason to reject its reference.
 and bounds swept-sphere clearance with explicit sampling allowances. These are
 geometry diagnostics, not whole-robot or physical grasp certificates. See
 [HANDLE_INSERTION.md](../../docs/HANDLE_INSERTION.md) for the prepared-scene audit.
+
+For completed surfaces, `conditional_hand_scene` builds explicitly conditional
+kinematic scenes, initializes wrist seeds from actual pad frames, and checks
+sampled paths using all enabled hand collision geometry, including palm and
+proximal links. See [surface envelopes and full-hand fitting](../../docs/CONDITIONAL_HAND_ENVELOPES.md).
+These checks do not admit observed geometry or establish loaded retention.
+
+`articulated_acquisition` adds explicit mirrored target ordering, bounded
+preshape/insertion waypoint construction and full-path candidate checking.
+See [articulated acquisition](../../docs/ARTICULATED_ACQUISITION.md) for convention
+audits, unused-finger posture and complete obstacle restoration before holds.
+
+`contact_uncertainty` adds convex-pad sampling, explicit tapered-wall support
+evidence and a fail-closed geometric closure-stop diagnostic. See
+[contact support versus clearance](../../docs/CONTACT_UNCERTAINTY.md). These
+checks distinguish a separated pad from a well-seated grasp and preserve the
+boundary between hypothetical kinematics and force/retention validation.
+
+`CollisionReserve` can add selected-link collision costs from aligned uncertainty
+scenes to pad fitting while preserving all primary and evaluation collisions.
+Bounded normal-residual weighting helps diagnose seating/clearance tradeoffs.
+See [contact uncertainty](../../docs/CONTACT_UNCERTAINTY.md) for full-path gates,
+default compatibility, and the distinction between geometric support and hold
+validation.
+
+`collision_visualization.CollisionRenderer` caches enabled convex collision
+surfaces for CPU-only kinematic/saved-state reviews. It never steps the simulator
+or changes collision geometry. Label animations by their evidence type and verify
+encoded frames; playback alone is not a physical rollout or retention result.
+
+`loaded_contact_repair.propose` generates bounded wrist/finger changes while
+retaining pad frames from an actual loaded snapshot. It does not certify force
+retention; replay the full acquisition and hold. See
+[loaded contact repair](../../docs/LOADED_CONTACT_REPAIR.md).
+
+Hollow-container collision hypotheses use separate convex walls and a bottom,
+preserving the opening for inversion and placement. See
+[nominal arm and scene diagnostics](../../docs/NOMINAL_TASK_DIAGNOSTICS.md).

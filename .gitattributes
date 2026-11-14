@@ -1,0 +1,2 @@
+# Preserve pinned upstream snapshots, including their trailing blank lines.
+modules/agentic-policy/src/real2sim2real/agentic_policy/_vendor/** whitespace=-blank-at-eof linguist-vendored

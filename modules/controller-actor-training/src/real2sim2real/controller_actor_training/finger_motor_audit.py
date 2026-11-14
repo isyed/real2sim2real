@@ -5,6 +5,8 @@ This avoids a new contact solve or warmstart dependency. It is sampled actuator
 effort, not contact force, pad pressure, or proof of a stable grasp.
 """
 
+from real2sim2real.mujoco_assets import load_model as load_mujoco_model
+
 import argparse
 import json
 from pathlib import Path
@@ -64,7 +66,7 @@ def run(source_path, output, *, deadline_s=60):
     for name, key in (("scene.xml", "scene_sha256"), ("states.npz", "states_sha256")):
         if digest(source_path.with_name(name)) != source[key]:
             raise ValueError("Motor audit artifacts changed")
-    model = mujoco.MjModel.from_xml_path(str(source_path.with_name("scene.xml")))
+    model = load_mujoco_model(str(source_path.with_name("scene.xml")))
     # Arm motors use a different controller and are explicitly excluded.
     aids = np.array(
         [

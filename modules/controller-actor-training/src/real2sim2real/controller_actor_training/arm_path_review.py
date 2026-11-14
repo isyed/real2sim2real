@@ -1,5 +1,7 @@
 """Schematic arm-path failure review from saved IK, without contact dynamics."""
 
+from real2sim2real.mujoco_assets import load_model as load_mujoco_model
+
 import argparse
 import html
 import json
@@ -25,10 +27,10 @@ def review(path):
     parent = json.loads(Path(config["trial"]).read_text())
     if digest(Path(config["trial"])) != config["sources"][config["trial"]]:
         raise ValueError("Trial changed")
-    old = mujoco.MjModel.from_xml_path(
+    old = load_mujoco_model(
         str(Path(parent["configuration"]["output"]) / "scene/scene.xml")
     )
-    model = mujoco.MjModel.from_xml_path(str(path.parent / "audit-scene.xml"))
+    model = load_mujoco_model(str(path.parent / "audit-scene.xml"))
     data = mujoco.MjData(model)
     states_path = Path(config["trial"]).with_name("states.npz")
     if digest(states_path) != parent["states_sha256"]:

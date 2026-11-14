@@ -1,0 +1,180 @@
+{
+  "capture": "/data/input/capture.json",
+  "calibration": "/data/prepared/calibration.json",
+  "camera_motion": "/data/prepared/camera_motion.npz",
+  "sources": {
+    "/data/input/capture.json": "REPLACE_WITH_SHA256",
+    "/data/prepared/calibration.json": "REPLACE_WITH_SHA256",
+    "/data/prepared/camera_motion.npz": "REPLACE_WITH_SHA256"
+  },
+  "output": "/data/runs/observed-scene-001",
+  "annotation_frame": 0,
+  "fit_frames": [
+    0,
+    8
+  ],
+  "validation_frames": [
+    4,
+    12
+  ],
+  "static_scene_assumption": "Inspect the selected interval and replace these example polygons before running",
+  "mask_erosion_px": 3,
+  "maximum_mesh_edge_m": 0.012,
+  "voxel_m": 0.002,
+  "table_region": "support",
+  "contact_region": "contact",
+  "table_checks": {
+    "inlier_m": 0.008,
+    "median_m": 0.01,
+    "p90_m": 0.02,
+    "slab_thickness_m": 0.03
+  },
+  "stereo_checks": {
+    "minimum_texture_std": 5.0,
+    "maximum_roundtrip_px": 1.0,
+    "depth_range_m": [
+      0.15,
+      2.0
+    ]
+  },
+  "sparse_samples_per_region": 48,
+  "sparse_checks": {
+    "radius": 3,
+    "minimum_disparity": 1,
+    "maximum_disparity": 160,
+    "vertical_radius": 2,
+    "minimum_std": 5.0,
+    "minimum_correlation": 0.85,
+    "minimum_uniqueness": 0.08,
+    "maximum_roundtrip_px": 1.5
+  },
+  "maximum_patch_candidates": 40,
+  "patch_checks": {
+    "minimum_points": 9,
+    "radius_m": 0.012,
+    "pad_radius_m": 0.004,
+    "maximum_p90_residual_m": 0.001,
+    "maximum_normal_error_deg": 15
+  },
+  "repeatability_checks": {
+    "minimum_frames": 3,
+    "maximum_spread_deg": 10
+  },
+  "finger_probe": {
+    "length_m": 0.03,
+    "radius_m": 0.005,
+    "endpoint_gap_m": 0.006
+  },
+  "visibility_margin_m": 0.005,
+  "minimum_table_clearance_m": 0.005,
+  "regions": {
+    "object": {
+      "color": [
+        70,
+        140,
+        255
+      ],
+      "polygons_px": [
+        [
+          [
+            100,
+            100
+          ],
+          [
+            200,
+            100
+          ],
+          [
+            200,
+            200
+          ],
+          [
+            100,
+            200
+          ]
+        ]
+      ]
+    },
+    "contact": {
+      "color": [
+        255,
+        110,
+        50
+      ],
+      "polygons_px": [
+        [
+          [
+            110,
+            120
+          ],
+          [
+            180,
+            120
+          ],
+          [
+            180,
+            180
+          ],
+          [
+            110,
+            180
+          ]
+        ]
+      ]
+    },
+    "support": {
+      "color": [
+        60,
+        210,
+        110
+      ],
+      "polygons_px": [
+        [
+          [
+            50,
+            220
+          ],
+          [
+            250,
+            220
+          ],
+          [
+            250,
+            270
+          ],
+          [
+            50,
+            270
+          ]
+        ]
+      ]
+    },
+    "obstacle": {
+      "color": [
+        220,
+        180,
+        255
+      ],
+      "polygons_px": [
+        [
+          [
+            220,
+            100
+          ],
+          [
+            300,
+            100
+          ],
+          [
+            300,
+            200
+          ],
+          [
+            220,
+            200
+          ]
+        ]
+      ]
+    }
+  }
+}
